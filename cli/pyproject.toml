@@ -1,0 +1,31 @@
+# Copyright 2026 The Punit Authors
+# SPDX-License-Identifier: Apache-2.0
+
+# Packaging for the `ota` CLI. Build it locally with ./scripts/build_cli.sh (it adds LICENSE,
+# NOTICE and THIRD_PARTY_NOTICES.md from the repository root). Not published to PyPI.
+
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "punit-cli"
+version = "0.1.0a0"   # = 0.1.0-alpha
+description = "Command-line tool for the Punit self-hosted Flutter OTA server (experimental)"
+readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE", "THIRD_PARTY_NOTICES.md"]
+requires-python = ">=3.10"
+dependencies = ["httpx>=0.27", "bsdiff4>=1.4.0,<1.4.2"]   # see docs/known-issues.md KI-7
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "Programming Language :: Python :: 3",
+]
+
+[project.scripts]
+ota = "ota:main"
+
+[tool.setuptools]
+# The CLI is three top-level modules today; keep their names so `import android` keeps working.
+py-modules = ["ota", "android", "otadiff"]
