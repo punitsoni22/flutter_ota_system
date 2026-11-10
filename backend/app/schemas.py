@@ -123,6 +123,9 @@ class PatchOut(BaseModel):
 class RolloutRequest(BaseModel):
     channel: str = Field(min_length=1, max_length=64)
     rollout_percent: float = Field(ge=0, le=100)
+    # Skip the promotion checks of a protected channel (KI-4). Needs a reason; it is logged.
+    force: bool = False
+    reason: str | None = Field(default=None, max_length=1000)
 
 
 # ---- devices -----------------------------------------------------------------------------

@@ -22,6 +22,7 @@ in tests). The local Docker stack overrides several of them; see the next column
 | `OTA_DEVICE_TOKEN_TTL_SECONDS` | `2592000` (30 days) | default | Lifetime of a device token |
 | `OTA_ROLLOUT_HMAC_SECRET` | `dev-rollout-secret-change-me` | from `.env` | Secret for rollout buckets. **Changing it reshuffles every rollout group** |
 | `OTA_CHECK_INTERVAL_SECONDS` | `1800` | default | `next_check_after_seconds` sent to devices. The client adds ±20% jitter |
+| `OTA_PROTECTED_CHANNELS` | `production` | default | Comma-separated channels where the server enforces the promotion checks (tested on another channel first, no boot failures; see [rollouts.md](rollouts.md)). Empty = no checks |
 | `OTA_STORAGE_BACKEND` | `local` | `local` | `local` (disk) or `s3` (S3-compatible buckets) |
 | `OTA_STORAGE_DIR` | `backend/data/artifacts` | `/data/artifacts` (volume) | Where `local` storage keeps files |
 | `OTA_CDN_BASE_URL` | `http://127.0.0.1:8000/cdn` | from `.env` (`http://localhost:8080/cdn`) | Public base URL devices download patches from. Download URLs are `<this>/patches/<sha256>` |

@@ -34,8 +34,8 @@ commands).
 
 | Command | Purpose |
 |---|---|
-| `ota release android <app> [--project DIR] [--kind aab\|apk] [--artifact FILE] [--tree-shake-icons] -- <flutter build args>` | Build (or take `--artifact`) a release APK/AAB, register it, upload its `libapp.so` per ABI and its fingerprint. For Android code patches. Default `--kind aab`, `--project .` |
-| `ota release create <app> --platform android\|ios --version <x.y.z+n> [--flutter-version V] [--engine-revision R] [--runtime-abi ABI] [--base ARCH=PATH]…` | Register a release manually (e.g. for `mock-v1`). Default runtime ABI `ota-runtime-v1` |
+| `ota release android <app> [--project DIR] [--kind aab\|apk] [--artifact FILE] [--tree-shake-icons] [--replace] -- <flutter build args>` | Build (or take `--artifact`) a release APK/AAB, register it, upload its `libapp.so` per ABI and its fingerprint. For Android code patches. Default `--kind aab`, `--project .`. `--replace`: see below |
+| `ota release create <app> --platform android\|ios --version <x.y.z+n> [--flutter-version V] [--engine-revision R] [--runtime-abi ABI] [--base ARCH=PATH]… [--replace]` | Register a release manually (e.g. for `mock-v1`). Default runtime ABI `ota-runtime-v1`. `--replace` registers a version again that devices still report from a deleted release: their old patches are dropped ([KI-1](known-issues.md#ki-1-re-creating-a-deleted-release-breaks-existing-installs)) |
 | `ota release list <app>` | List releases with their artifacts and fingerprints |
 | `ota release delete <app> --version <v> [--platform android\|ios]` | Delete a release and its patches. Refused while a patch is published |
 
@@ -47,9 +47,9 @@ commands).
 | `ota patch create <app> --platform P --release V --file ARCH=PATH… [--format F] [--result-sha256 H] [--note T] [--channel C] [--percent P]` | Create a patch from files you provide. Default format `mock-v1`. `--result-sha256` is required for `aot-bidiff-android-v1` |
 | `ota patch list <app> --platform P --release V` | One line per patch: number, status, format, deployments, id |
 | `ota patch show <patch_id>` | Full patch JSON, including `event_counts` |
-| `ota patch publish <patch_id> --channel C --percent P` | Publish a `draft` or `rolled_back` patch to a channel |
-| `ota patch rollout <patch_id> --channel C --percent P` | Set the rollout of a published patch on a channel (adds the channel if needed) |
-| `ota patch promote <patch_id> [--from staging] [--to production] [--percent 100] [--force]` | Copy a tested patch to another channel. Refuses unless it is live on `--from` and has no boot failures; `--force` skips both checks |
+| `ota patch publish <patch_id> --channel C --percent P [--force --reason R]` | Publish a `draft` or `rolled_back` patch to a channel |
+| `ota patch rollout <patch_id> --channel C --percent P [--force --reason R]` | Set the rollout of a published patch on a channel (adds the channel if needed) |
+| `ota patch promote <patch_id> [--from staging] [--to production] [--percent 100] [--force --reason R]` | Copy a tested patch to another channel. Refuses unless it is live on `--from` and has no boot failures; `--force --reason` skips both checks (the server logs the reason) |
 | `ota patch rollback <patch_id>` | Mark a published patch `rolled_back` |
 | `ota patch revoke <patch_id> [--yes]` | Permanently revoke. Asks you to type `revoke` unless `--yes` |
 
@@ -60,9 +60,15 @@ Example output of `ota patch list`:
 #2   revoked      mock-v1                dev=100%                       54702757-62d7-44af-a69b-60b354385153
 ```
 
-The `promote` checks run **in the CLI**, not on the server. The API itself does not stop you from
-publishing an untested patch to production
-([KI-4](known-issues.md#ki-4-promote-safety-checks-are-enforced-only-by-the-cli)).
+**Promotion checks.** The server enforces them for protected channels (`OTA_PROTECTED_CHANNELS`,
+default `production`), whichever command or tool you use: raising a patch's percentage there needs
+an earlier deployment on another channel (e.g. `staging`) and no reported boot failures. Otherwise
+`publish`, `rollout`, `promote`, and `patch create`/`patch android` with `--channel production`
+fail with `error 409: promotion_checks_failed: …`; a newly created patch then stays a **draft**
+(its id is printed before publishing). Publish it to `staging` first, or override with
+`--force --reason "…"` on `publish`, `rollout` or `promote`. Lowering a percentage is never
+blocked. `promote` also checks in the CLI first, for a clearer message
+([KI-4](known-issues.md#ki-4-promote-safety-checks-are-enforced-only-by-the-cli), fixed).
 
 ## `ota key`
 

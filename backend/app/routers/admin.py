@@ -4,6 +4,7 @@
 """Admin API for the `ota` CLI and CI. Everything here needs X-API-Key."""
 
 import json
+import logging
 import re
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
@@ -13,6 +14,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
 from app.auth import require_admin
+from app.config import Settings, get_settings
 from app.canonical import SignedFields
 from app.db import get_db
 from app.deps import get_signer, get_storage
@@ -429,6 +431,50 @@ def upload_patch_artifact(
     return _patch_out(db, _patch(db, patch.id), storage)
 
 
+log = logging.getLogger("punit.admin")
+
+
+def _check_promotion(db: Session, patch: Patch, body: RolloutRequest, settings: Settings) -> None:
+    """KI-4: a protected channel (production) only gets a patch that was tested elsewhere.
+
+    Raising the percentage on a protected channel needs (1) a deployment above 0% on another,
+    unprotected channel (e.g. staging) or on this channel already, and (2) no reported boot
+    failures. Lowering a percentage, rolling back and revoking are never blocked.
+    """
+    protected = settings.protected_channel_names()
+    if body.channel not in protected:
+        return
+    current = next((d for d in patch.deployments if d.channel.name == body.channel), None)
+    current_bps = current.rollout_bps if current and patch.status == "published" else 0
+    if round(body.rollout_percent * 100) <= current_bps:
+        return
+    problems = []
+    tested = any(d.rollout_bps > 0 and d.channel.name not in protected for d in patch.deployments)
+    if not tested and current_bps == 0:
+        problems.append(f"it has not been on a test channel (e.g. staging) before '{body.channel}'")
+    failed = db.scalar(
+        select(PatchEventCount.count).where(
+            PatchEventCount.patch_id == patch.id, PatchEventCount.event_type == "patch_boot_failed"
+        )
+    ) or 0
+    if failed:
+        problems.append(f"{failed} device(s) reported a boot failure")
+    if not problems:
+        return
+    if not body.force:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            f"promotion_checks_failed: patch #{patch.number}: " + "; ".join(problems)
+            + ". Fix it, or send force=true with a reason (CLI: --force --reason)",
+        )
+    if not body.reason or len(body.reason.strip()) < 3:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "force=true needs a reason (3+ characters)")
+    log.warning(
+        "Promotion checks overridden: patch %s (#%s) -> %s %.2f%%: %s. Reason: %s",
+        patch.id, patch.number, body.channel, body.rollout_percent, "; ".join(problems), body.reason.strip(),
+    )
+
+
 def _set_rollout(db: Session, patch: Patch, body: RolloutRequest) -> None:
     channel = _channel(db, patch.release.application_id, body.channel)
     bps = round(body.rollout_percent * 100)
@@ -445,6 +491,7 @@ def publish_patch(
     body: RolloutRequest,
     db: Session = Depends(get_db),
     storage: Storage = Depends(get_storage),
+    settings: Settings = Depends(get_settings),
 ):
     patch = _patch(db, patch_id)
     if patch.status not in ("draft", "rolled_back"):
@@ -462,6 +509,7 @@ def publish_patch(
             "policy_review_required: AOT code patches for public store apps need "
             "`ota app approve-policy` first (ADR-0011)",
         )
+    _check_promotion(db, patch, body, settings)
     _set_rollout(db, patch, body)
     patch.status = "published"
     db.commit()
@@ -475,10 +523,12 @@ def change_rollout(
     body: RolloutRequest,
     db: Session = Depends(get_db),
     storage: Storage = Depends(get_storage),
+    settings: Settings = Depends(get_settings),
 ):
     patch = _patch(db, patch_id)
     if patch.status != "published":
         raise HTTPException(status.HTTP_409_CONFLICT, "Only published patches have a rollout")
+    _check_promotion(db, patch, body, settings)
     _set_rollout(db, patch, body)
     db.commit()
     db.expire_all()

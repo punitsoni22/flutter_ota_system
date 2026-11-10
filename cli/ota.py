@@ -53,6 +53,16 @@ def call(method: str, path: str, **kwargs):
     return r.json()
 
 
+def rollout_body(channel: str, percent: float, a) -> dict:
+    """Body for publish/rollout. --force skips the server's promotion checks and needs --reason."""
+    body = {"channel": channel, "rollout_percent": percent}
+    if getattr(a, "force", False):
+        if not (getattr(a, "reason", None) or "").strip():
+            sys.exit("error: --force needs --reason \"why the checks are skipped\" (the server logs it)")
+        body.update(force=True, reason=a.reason)
+    return body
+
+
 def show(data) -> None:
     print(json.dumps(data, indent=2, default=str))
 
@@ -141,10 +151,8 @@ def patch_create(a):
                 data=data, files={"file": (path.name, f)},
             )
     if a.channel:
-        patch = call(
-            "POST", f"/v1/admin/patches/{patch['id']}/publish",
-            json={"channel": a.channel, "rollout_percent": a.percent},
-        )
+        print(f"Created patch #{patch['number']} (id {patch['id']}); publishing it to {a.channel}", file=sys.stderr)
+        patch = call("POST", f"/v1/admin/patches/{patch['id']}/publish", json=rollout_body(a.channel, a.percent, a))
     show(patch)
 
 
@@ -161,22 +169,26 @@ def patch_show(a):
 
 
 def patch_publish(a):
-    show(call("POST", f"/v1/admin/patches/{a.patch_id}/publish", json={"channel": a.channel, "rollout_percent": a.percent}))
+    show(call("POST", f"/v1/admin/patches/{a.patch_id}/publish", json=rollout_body(a.channel, a.percent, a)))
 
 
 def patch_rollout(a):
-    show(call("POST", f"/v1/admin/patches/{a.patch_id}/rollout", json={"channel": a.channel, "rollout_percent": a.percent}))
+    show(call("POST", f"/v1/admin/patches/{a.patch_id}/rollout", json=rollout_body(a.channel, a.percent, a)))
 
 
 def patch_promote(a):
-    """Move a patch that was tested on one channel (staging) to another (production)."""
+    """Move a patch that was tested on one channel (staging) to another (production).
+
+    These checks give an early, clear error; the server enforces the same rules (KI-4).
+    """
+    body = rollout_body(a.to, a.percent, a)
     patch = call("GET", f"/v1/admin/patches/{a.patch_id}")
     if not any(d["channel"] == a.source and d["rollout_percent"] > 0 for d in patch["deployments"]) and not a.force:
         sys.exit(f"error: patch #{patch['number']} is not on '{a.source}'. Test it there first, or pass --force")
     failed = patch["event_counts"].get("patch_boot_failed", 0)
     if failed and not a.force:
         sys.exit(f"error: patch #{patch['number']} has {failed} boot failure(s). Fix or pass --force")
-    show(call("POST", f"/v1/admin/patches/{a.patch_id}/rollout", json={"channel": a.to, "rollout_percent": a.percent}))
+    show(call("POST", f"/v1/admin/patches/{a.patch_id}/rollout", json=body))
 
 
 def patch_rollback(a):
@@ -200,6 +212,12 @@ def key_show(a):
 
 
 # ---- argument parsing --------------------------------------------------------------------
+
+
+def add_force_args(c) -> None:
+    c.add_argument("--force", action="store_true",
+                   help="Skip the staging and boot-failure checks for a protected channel (needs --reason)")
+    c.add_argument("--reason", help="Why the checks are skipped; logged by the server")
 
 
 def main() -> None:
@@ -278,6 +296,7 @@ def main() -> None:
         c.add_argument("patch_id")
         c.add_argument("--channel", required=True)
         c.add_argument("--percent", type=float, required=True)
+        add_force_args(c)
         c.set_defaults(fn=fn)
 
     c = g.add_parser("android", help="Rebuild the app and send its Dart changes as a code patch")
@@ -297,7 +316,7 @@ def main() -> None:
     c.add_argument("--from", dest="source", default="staging")
     c.add_argument("--to", default="production")
     c.add_argument("--percent", type=float, default=100)
-    c.add_argument("--force", action="store_true", help="Skip the staging and boot-failure checks")
+    add_force_args(c)
     c.set_defaults(fn=patch_promote)
 
     g = sub.add_parser("key").add_subparsers(dest="cmd", required=True)

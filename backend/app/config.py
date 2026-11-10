@@ -59,6 +59,13 @@ class Settings(BaseSettings):
     # Client polling hints (with jitter applied on the device).
     check_interval_seconds: int = 1800
 
+    # Channels that only take a patch after it ran on another channel without boot failures
+    # (KI-4). Comma-separated. Empty = no server-side promotion checks.
+    protected_channels: str = "production"
+
+    def protected_channel_names(self) -> set[str]:
+        return {c.strip() for c in self.protected_channels.split(",") if c.strip()}
+
     # "production" turns on the startup checks in production_problems().
     env: str = "development"
 

@@ -113,6 +113,19 @@ async function api(method, path, body) {
   return data;
 }
 
+// Publish/rollout. The server enforces the promotion checks for production (KI-4); if they
+// fail, show why and allow an override only with a typed reason, which the server logs.
+async function rolloutApi(path, body) {
+  try {
+    return await api('POST', path, body);
+  } catch (e) {
+    if (!e.message.startsWith('promotion_checks_failed')) throw e;
+    const reason = prompt(`${e.message.replace(/^promotion_checks_failed: /, 'Refused: ')}\n\nTo send it anyway, type the reason (it is logged):`);
+    if (!reason || !reason.trim()) throw new Error('Not published: ' + e.message.replace(/^promotion_checks_failed: /, ''));
+    return api('POST', path, { ...body, force: true, reason: reason.trim() });
+  }
+}
+
 async function run(fn, okMsg) {
   try { await fn(); if (okMsg) toast(okMsg); } catch (e) { toast(e.message, true); }
 }
@@ -276,23 +289,20 @@ $('#detail').addEventListener('click', e => {
   if (!b) return;
   const tr = b.closest('tr'), id = tr.dataset.id, n = tr.dataset.n, act = b.dataset.act;
   const body = () => ({ channel: $('[data-f=channel]', tr).value, rollout_percent: +$('[data-f=percent]', tr).value });
-  const { ok, failed, staging } = tr.dataset;
+  const { ok, failed } = tr.dataset;
   const stagingNote = `Staging results: ${ok} boot ok, ${failed} failed.` + (+failed ? `\n\nWARNING: it crashed on ${failed} device(s).` : '');
   const promotePct = () => +($('[data-f=promote-pct]', tr)?.value ?? 100); // only rows that can be promoted have it
   const steps = {
-    promote: [`Patch #${n} promoted to production`, () => api('POST', `/patches/${id}/rollout`, { channel: 'production', rollout_percent: promotePct() }),
+    promote: [`Patch #${n} promoted to production`, () => rolloutApi(`/patches/${id}/rollout`, { channel: 'production', rollout_percent: promotePct() }),
               `Promote patch #${n} to production at ${promotePct()}%?\n\n${stagingNote}\n\nThe exact file tested on staging is used, nothing is rebuilt.`],
-    rollout: ['Rollout updated', () => api('POST', `/patches/${id}/rollout`, body())],
-    publish: ['Published', () => api('POST', `/patches/${id}/publish`, body())],
+    rollout: ['Rollout updated', () => rolloutApi(`/patches/${id}/rollout`, body())],
+    publish: ['Published', () => rolloutApi(`/patches/${id}/publish`, body())],
     rollback: [`Patch #${n} rolled back`, () => api('POST', `/patches/${id}/rollback`),
                `Roll back patch #${n}? Devices on it go back to the previous patch on their next check. It can be published again later.`],
     revoke: [`Patch #${n} revoked`, () => api('POST', `/patches/${id}/revoke`),
              `Revoke patch #${n}? This is permanent: it will never run again on any device.`],
   };
-  let [msg, fn, confirmText] = steps[act];
-  if ((act === 'rollout' || act === 'publish') && body().channel === 'production' && !(+staging > 0) && body().rollout_percent > 0) {
-    confirmText = `Patch #${n} has not been on staging. Send it to production without testing?`;
-  }
+  const [msg, fn, confirmText] = steps[act];
   if (confirmText && !confirm(confirmText)) return;
   b.disabled = true;
   run(async () => { await fn(); await render(); }, msg).finally(() => b.disabled = false);
@@ -320,7 +330,14 @@ $('#detail').addEventListener('submit', e => {
         const fd = new FormData(); fd.append('arch', arch); fd.append('file', blob, file && file.size ? file.name : 'patch.json');
         await api('POST', `/patches/${p.id}/artifacts`, fd);
       }
-      if (f.get('channel')) await api('POST', `/patches/${p.id}/publish`, { channel: f.get('channel'), rollout_percent: +f.get('percent') });
+      if (f.get('channel')) {
+        try {
+          await rolloutApi(`/patches/${p.id}/publish`, { channel: f.get('channel'), rollout_percent: +f.get('percent') });
+        } catch (err) {
+          await render();
+          throw new Error(`Patch #${p.number} was created as a draft. ${err.message}`);
+        }
+      }
       e.target.reset(); await render();
     }, 'Patch created').finally(() => btn.disabled = false);
   }

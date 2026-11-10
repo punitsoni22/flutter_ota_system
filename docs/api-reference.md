@@ -246,7 +246,7 @@ curl -X POST -H "X-API-Key: $OTA_API_KEY" -F name=qa http://localhost:8000/v1/ad
 
 | Method and path | Body | Success | Errors |
 |---|---|---|---|
-| `POST /v1/admin/apps/{slug}/releases` | JSON `{platform, version, flutter_version?, engine_revision?, runtime_abi? (default "ota-runtime-v1"), fingerprint? (object, ≤ 256 kB)}` | `201 ReleaseOut` | `404`, `409 Release <platform> <version> already exists`, `422` |
+| `POST /v1/admin/apps/{slug}/releases` | JSON `{platform, version, flutter_version?, engine_revision?, runtime_abi? (default "ota-runtime-v1"), fingerprint? (object, ≤ 256 kB), replace? (default false)}` | `201 ReleaseOut` | `404`, `409 Release <platform> <version> already exists`, `409 <n> device(s) still report <platform> <version> from a deleted release…` (send `replace: true` to register it anyway; [KI-1](known-issues.md#ki-1-re-creating-a-deleted-release-breaks-existing-installs)), `422` |
 | `GET /v1/admin/apps/{slug}/releases` | — | `200 [ReleaseOut]` | `404` |
 | `POST /v1/admin/releases/{release_id}/artifacts` | **form** `arch` + file `file`. The base file patches are diffed against (`libapp.so`) | `201 ReleaseOut` | `404 Release not found`, `409 Release already has a <arch> artifact` |
 | `GET /v1/admin/releases/{release_id}/artifacts/{arch}` | — | `200` file bytes (`application/octet-stream`) | `404 Release has no <arch> artifact` |
@@ -260,13 +260,21 @@ curl -X POST -H "X-API-Key: $OTA_API_KEY" -F name=qa http://localhost:8000/v1/ad
 | `GET /v1/admin/releases/{release_id}/patches` | — | `200 [PatchOut]` ordered by number | `404` |
 | `GET /v1/admin/patches/{patch_id}` | — | `200 PatchOut` | `404 Patch not found` |
 | `POST /v1/admin/patches/{patch_id}/artifacts` | **form** `arch`, file `file`, `result_sha256?` (64 lowercase hex). The server stores the file and **signs** the artifact | `201 PatchOut` | `404`, `409 Artifacts can only be added to a draft patch`, `409 Patch already has a <arch> artifact`, `422` (AOT: base artifact missing, or `result_sha256` missing/invalid) |
-| `POST /v1/admin/patches/{patch_id}/publish` | JSON `{channel, rollout_percent (0–100)}` | `200 PatchOut` (`published`) | `404`, `409 Cannot publish a <status> patch` (only `draft`/`rolled_back`), `422 Patch has no artifacts`, `403 policy_review_required: …` |
-| `POST /v1/admin/patches/{patch_id}/rollout` | JSON `{channel, rollout_percent}` | `200 PatchOut` | `404` (patch or `Channel '<name>' not found`), `409 Only published patches have a rollout` |
+| `POST /v1/admin/patches/{patch_id}/publish` | JSON `{channel, rollout_percent (0–100), force? (default false), reason? (≤ 1000)}` | `200 PatchOut` (`published`) | `404`, `409 Cannot publish a <status> patch` (only `draft`/`rolled_back`), `409 promotion_checks_failed: …`, `422 Patch has no artifacts`, `422 force=true needs a reason (3+ characters)`, `403 policy_review_required: …` |
+| `POST /v1/admin/patches/{patch_id}/rollout` | JSON `{channel, rollout_percent, force?, reason?}` | `200 PatchOut` | `404` (patch or `Channel '<name>' not found`), `409 Only published patches have a rollout`, `409 promotion_checks_failed: …`, `422 force=true needs a reason (3+ characters)` |
 | `POST /v1/admin/patches/{patch_id}/rollback` | — | `200 PatchOut` (`rolled_back`) | `404`, `409 Cannot roll back a <status> patch` |
 | `POST /v1/admin/patches/{patch_id}/revoke` | — | `200 PatchOut` (`revoked`, final) | `404`, `409 Patch is already revoked` |
 
 `rollout_percent` is stored as basis points (`round(percent × 100)`), so the smallest step is
 0.01%. `publish` and `rollout` create the deployment for that channel if it does not exist yet.
+
+**Promotion checks** ([KI-4](known-issues.md#ki-4-promote-safety-checks-are-enforced-only-by-the-cli), fixed): when `channel` is protected
+(`OTA_PROTECTED_CHANNELS`, default `production`) and the new percentage is higher than the
+current one, the server requires (1) a deployment above 0% on another, unprotected channel, or
+already on this channel, and (2) no `patch_boot_failed` events. Otherwise it answers `409
+promotion_checks_failed: patch #N: <problems>`. `force: true` with a `reason` skips the checks; the
+server logs the override with the reason (there is no audit log yet). Lowering a percentage is
+never checked.
 
 ```bash
 curl -X POST http://localhost:8000/v1/admin/patches/$PATCH_ID/rollout \

@@ -14,6 +14,8 @@ os.environ.update(
     OTA_SIGNING_KEY_PATH=str(_TMP / "keys" / "signing.pem"),
     OTA_CDN_BASE_URL="http://cdn.test/cdn",
     OTA_ADMIN_API_KEY="test-admin",
+    # Most tests publish straight to production; the promotion checks have their own tests.
+    OTA_PROTECTED_CHANNELS="",
 )
 
 from fastapi.testclient import TestClient  # noqa: E402

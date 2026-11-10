@@ -84,7 +84,7 @@ You can reproduce what the server decides with the same query the app sends
 | `replay: patch N is not newer than M` | The device already accepted a higher patch number | Publish a newer patch, or roll back the newer one so the server offers N as the rollback target |
 | `patch previously failed on this device` | It crashed here before | Fix it in a new patch |
 | `arch mismatch`, `runtime abi mismatch`, `unsupported format` | Patch made for another build type (e.g. a `mock-v1` release patched for a code-patch app) | Patch the right release; code-patch releases must come from `ota release android` |
-| `release id changed` | The release was **deleted and created again** with the same version, so this install remembers the old release id | Known bug ([KI-1](known-issues.md#ki-1-re-creating-a-deleted-release-breaks-existing-installs)): reinstall the app, or register a new build number instead of re-creating a version |
+| `release id changed` | The server answered with a release id this install retired earlier (a deleted and re-created release id going back), or the app uses `ota_client` older than this fix and the release was deleted and created again | Current `ota_client` switches to a re-created release by itself and drops the old patches ([KI-1](known-issues.md#ki-1-re-creating-a-deleted-release-breaks-existing-installs), fixed). Older builds: reinstall the app. Prefer a new build number over re-creating a version |
 | `application id mismatch` | `OtaConfig.applicationId` is pinned to another app | Fix the pinned id |
 
 `failed` (not `rejected`) with `download failed: HTTP 404` means the file server cannot find the
@@ -128,7 +128,9 @@ internals and have only been tested with the Flutter versions the maintainers us
 
 | Message | Cause | Fix |
 |---|---|---|
-| `error 409: Release android X already exists` | Version registered before | Delete the test release (`ota release delete`) or bump the build number. Note the `release id changed` issue above for existing installs |
+| `error 409: Release android X already exists` | Version registered before | Delete the test release (`ota release delete`) or bump the build number |
+| `error 409: N device(s) still report android X from a deleted release…` | You deleted a release that devices use and are registering the same version again | Prefer a new build number. To re-use the version, pass `--replace`: those installs drop the old release's patches |
+| `error 409: promotion_checks_failed: patch #N: …` | Raising a patch on `production` that was not tested on another channel, or that has boot failures | Publish it to `staging` and test it first. To override on purpose: `--force --reason "…"` (logged). A patch created with `--channel production` stays a draft; its id was printed |
 | `error 409: Roll back or revoke its published patches first` | Deleting a release with live patches | Roll back or revoke them first |
 | `error 409: Cannot publish a revoked patch` | Revoked patches are final | Create a new patch |
 | `error 409: Only published patches have a rollout` | `rollout` on a draft or rolled-back patch | `ota patch publish` first |

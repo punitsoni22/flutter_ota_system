@@ -212,6 +212,7 @@ def patch_android(a, call, client, show):
                              data={"arch": abi, "result_sha256": new["libapp"][abi]},
                              files={"file": (path.name, f)})
     if a.channel:
+        print(f"Created patch #{patch['number']} (id {patch['id']}); publishing it to {a.channel}", flush=True)
         patch = call("POST", f"/v1/admin/patches/{patch['id']}/publish",
                      json={"channel": a.channel, "rollout_percent": a.percent})
     where = f"published to {a.channel} at {a.percent:g}%" if a.channel else "draft (publish it from the admin page)"

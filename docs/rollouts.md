@@ -4,7 +4,7 @@ How to move a patch from testers to all users safely, and how to stop it. Backgr
 [concepts.md](concepts.md#staged-rollout). Commands: [cli-reference.md](cli-reference.md).
 
 > **What exists today.** Channels, percentage rollouts, rollback, revoke, boot success/failure
-> counters, and a CLI promotion check. **Not implemented:** automatic pausing, alerts, dashboards,
+> counters, and server-side promotion checks for `production`. **Not implemented:** automatic pausing, alerts, dashboards,
 > targeting beyond channel/release/arch, scheduled rollouts. Every step below is manual.
 
 ## Channels
@@ -64,8 +64,10 @@ Testers restart the app twice (download, then run). Check the counters:
 ota patch show <id>          # "event_counts": {"patch_boot_succeeded": 6, ...}
 ```
 
-**2. Canary: 1% of production.** `promote` refuses unless the patch is live on `staging` and has
-**no** boot failures (`--force` skips both checks):
+**2. Canary: 1% of production.** The server refuses to raise a patch on `production` unless it
+has been live on another channel (such as `staging`) and has **no** reported boot failures. This
+applies to `promote`, `publish`, `rollout`, the admin page and direct API calls. To skip the checks
+on purpose, add `--force --reason "…"`; the server logs the reason:
 
 ```bash
 ota patch promote <id> --percent 1
@@ -103,9 +105,12 @@ The counters are **totals per patch** across all channels, not per percentage st
 | The patch must never run again | `ota patch revoke <id> --yes` |
 
 The admin page offers the same: **Promote to production**, **Set %**, **Publish**, **Roll back**,
-**Revoke**. Its promote button shows the staging results and warns about boot failures, but the
-hard refusal exists only in the CLI. The server does not enforce these checks, so `publish`/`rollout`
-to `production` skip them: [KI-4](known-issues.md#ki-4-promote-safety-checks-are-enforced-only-by-the-cli).
+**Revoke**. Its promote button shows the staging results. When the server refuses (untested
+patch, or boot failures), the page shows the reason and asks you to type why before it overrides
+the checks. Lowering a percentage, rolling back and revoking are never blocked. Which channels are
+protected is set with `OTA_PROTECTED_CHANNELS` (default `production`,
+[configuration.md](configuration.md)). Before this fix only the CLI checked:
+[KI-4](known-issues.md#ki-4-promote-safety-checks-are-enforced-only-by-the-cli).
 
 ## Rollback in detail
 

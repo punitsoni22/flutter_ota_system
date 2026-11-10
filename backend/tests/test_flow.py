@@ -349,3 +349,55 @@ def test_recreating_a_deleted_release_that_devices_use_needs_replace(client):
     assert r.status_code == 201 and r.json()["id"] != rel["id"]
     r = client.post("/v1/admin/apps/demo/releases", json=body | {"replace": True}, headers=ADMIN)
     assert r.status_code == 409 and "already exists" in r.json()["detail"]  # replace never overwrites
+
+
+def _protect_production():
+    from app.config import Settings, get_settings
+    from app.main import app as fastapi_app
+
+    fastapi_app.dependency_overrides[get_settings] = lambda: Settings(protected_channels="production")
+    return lambda: fastapi_app.dependency_overrides.pop(get_settings, None)
+
+
+def test_server_enforces_promotion_checks_for_production(client):
+    """KI-4: the server, not only the CLI, refuses untested or crashing patches on production."""
+    undo = _protect_production()
+    try:
+        make_app(client)
+        rel = make_release(client, "1.0.0+1")
+        prod = {"channel": "production", "rollout_percent": 10}
+
+        # Straight to production: refused, stays a draft; force needs a reason.
+        p1 = make_patch(client, rel["id"], {"n": 1}, channel=None)
+        r = client.post(f"/v1/admin/patches/{p1['id']}/publish", json=prod, headers=ADMIN)
+        assert r.status_code == 409 and "promotion_checks_failed" in r.json()["detail"]
+        assert client.get(f"/v1/admin/patches/{p1['id']}", headers=ADMIN).json()["status"] == "draft"
+        r = client.post(f"/v1/admin/patches/{p1['id']}/publish", json=prod | {"force": True}, headers=ADMIN)
+        assert r.status_code == 422
+        r = client.post(f"/v1/admin/patches/{p1['id']}/publish",
+                        json=prod | {"force": True, "reason": "hotfix, tested by hand"}, headers=ADMIN)
+        assert r.status_code == 200
+
+        # Via staging: allowed, and raising the percentage later is allowed too.
+        p2 = make_patch(client, rel["id"], {"n": 2}, channel="staging")
+        r = client.post(f"/v1/admin/patches/{p2['id']}/rollout", json=prod, headers=ADMIN)
+        assert r.status_code == 200, r.text
+        r = client.post(f"/v1/admin/patches/{p2['id']}/rollout", json=prod | {"rollout_percent": 50}, headers=ADMIN)
+        assert r.status_code == 200
+
+        # A boot failure blocks raising it further, but lowering and rollback stay possible.
+        tester = register(client, "tester-1", "1.0.0+1", channel="staging")
+        r = client.post("/v1/events/batch", json={"events": [{"type": "patch_boot_failed", "patch_id": p2["id"]}]},
+                        headers=tester)
+        assert r.status_code == 202, r.text
+        r = client.post(f"/v1/admin/patches/{p2['id']}/rollout", json=prod | {"rollout_percent": 100}, headers=ADMIN)
+        assert r.status_code == 409 and "boot failure" in r.json()["detail"]
+        r = client.post(f"/v1/admin/patches/{p2['id']}/rollout", json=prod | {"rollout_percent": 0}, headers=ADMIN)
+        assert r.status_code == 200
+        assert client.post(f"/v1/admin/patches/{p2['id']}/rollback", headers=ADMIN).status_code == 200
+
+        # Other channels are never restricted.
+        p3 = make_patch(client, rel["id"], {"n": 3}, channel="dev")
+        assert p3["status"] == "published"
+    finally:
+        undo()
