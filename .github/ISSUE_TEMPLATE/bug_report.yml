@@ -1,0 +1,60 @@
+name: Bug report
+description: Something in Punit does not work as documented. NOT for security vulnerabilities.
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Security vulnerability?** Do not file it here. Follow [SECURITY.md](../blob/main/SECURITY.md).
+
+        **Remove secrets** (API keys, tokens, private keys, passwords, internal URLs, personal data) from everything you paste.
+  - type: input
+    id: version
+    attributes: { label: Punit version or commit, placeholder: "v0.1.0-alpha or a1b2c3d" }
+    validations: { required: true }
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      options: [backend / API, ota_client (Flutter), CLI, admin page, Docker / scripts, docs, other]
+    validations: { required: true }
+  - type: input
+    id: os
+    attributes: { label: Host OS, placeholder: "Ubuntu 24.04 / macOS 15 / Windows 11 + WSL2" }
+    validations: { required: true }
+  - type: input
+    id: docker
+    attributes: { label: Docker and Compose versions, description: "`docker version` and `docker compose version`" }
+  - type: input
+    id: flutter
+    attributes: { label: Flutter version, description: "`flutter --version` (if the app or client is involved)" }
+  - type: input
+    id: device
+    attributes: { label: Device / emulator, placeholder: "Pixel 8, Android 15 / emulator API 35 x86_64" }
+  - type: textarea
+    id: steps
+    attributes: { label: Steps to reproduce, placeholder: "1. ./scripts/setup_local.sh\n2. ...\n3. ..." }
+    validations: { required: true }
+  - type: textarea
+    id: expected
+    attributes: { label: Expected behaviour }
+    validations: { required: true }
+  - type: textarea
+    id: actual
+    attributes: { label: Actual behaviour }
+    validations: { required: true }
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs (secrets removed)
+      description: "`docker compose logs api`, `./scripts/verify_demo.sh` output, `flutter run` output"
+      render: text
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: I removed secrets, tokens, keys and personal data from this report.
+          required: true
+        - label: This is not a security vulnerability.
+          required: true

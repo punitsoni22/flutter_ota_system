@@ -1,0 +1,11 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <!-- Runs at process start, before Application.onCreate and before any Flutter engine,
+             so every engine in the process (UI, push, background work) loads the same code. -->
+        <provider
+            android:name="dev.flutterota.ota_client.OtaBootProvider"
+            android:authorities="${applicationId}.ota_boot"
+            android:exported="false"
+            android:initOrder="1000" />
+    </application>
+</manifest>

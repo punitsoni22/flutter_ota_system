@@ -1,0 +1,20 @@
+# Build contexts are ./backend (see backend/.dockerignore); this file guards any root-context build.
+.git
+.github
+.env
+.env.*
+!.env.example
+.local
+keys
+secrets
+**/*.pem
+**/*.key
+.venv
+**/__pycache__
+**/.pytest_cache
+**/.dart_tool
+**/build
+demo_video
+example_app
+packages
+docs

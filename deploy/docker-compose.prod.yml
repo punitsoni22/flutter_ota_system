@@ -1,0 +1,66 @@
+# Production stack for one VPS (Ubuntu + Docker). See docs/deploy.md.
+#   cp .env.example .env   # fill it in
+#   docker compose -f docker-compose.prod.yml up -d --build
+# Caddy gets the HTTPS certificate automatically for OTA_DOMAIN.
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ota
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ota
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ota -d ota"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  api:
+    build: ../backend
+    restart: unless-stopped
+    depends_on:
+      postgres: { condition: service_healthy }
+    environment:
+      OTA_ENV: production
+      OTA_DATABASE_URL: postgresql+psycopg://ota:${POSTGRES_PASSWORD}@postgres:5432/ota
+      OTA_STORAGE_DIR: /data/artifacts
+      OTA_SIGNING_KEY_PATH: /data/keys/ota_signing_private.pem
+      OTA_SIGNING_KEY_ID: ${OTA_SIGNING_KEY_ID:-prod-1}
+      OTA_AUTO_GENERATE_SIGNING_KEY: "false"
+      OTA_SERVE_ARTIFACTS_LOCALLY: "false"
+      OTA_CDN_BASE_URL: https://${OTA_DOMAIN:?set OTA_DOMAIN in .env}/cdn
+      OTA_ADMIN_API_KEY: ${OTA_ADMIN_API_KEY:?}
+      OTA_DEVICE_JWT_SECRET: ${OTA_DEVICE_JWT_SECRET:?}
+      OTA_ROLLOUT_HMAC_SECRET: ${OTA_ROLLOUT_HMAC_SECRET:?}
+      FORWARDED_ALLOW_IPS: "*" # only Caddy can reach the API (no published port)
+    volumes:
+      - artifacts:/data/artifacts
+      - keys:/data/keys
+
+  cdn:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    volumes:
+      - artifacts:/data/artifacts:ro
+      - ../docker/nginx-cdn.conf:/etc/nginx/conf.d/default.conf:ro
+
+  caddy:
+    image: caddy:2.8-alpine
+    restart: unless-stopped
+    depends_on: [api, cdn]
+    ports: ["80:80", "443:443"]
+    environment:
+      OTA_DOMAIN: ${OTA_DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  pgdata:
+  artifacts:
+  keys:
+  caddy_data:
+  caddy_config:

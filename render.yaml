@@ -1,0 +1,31 @@
+# Render Blueprint: free cloud test hosting for the OTA API (see docs/setup-guide.md, Part A).
+# Database and files live on Supabase (or Cloudflare R2); Render runs only the API container.
+services:
+  - type: web
+    name: flutter-ota
+    runtime: docker
+    plan: free
+    dockerContext: ./backend
+    dockerfilePath: ./backend/Dockerfile
+    healthCheckPath: /health/ready
+    envVars:
+      - { key: OTA_ENV, value: production }
+      - { key: WEB_CONCURRENCY, value: "1" }        # free instance: 512 MB RAM
+      - { key: FORWARDED_ALLOW_IPS, value: "*" }    # behind Render's proxy
+      - { key: OTA_STORAGE_BACKEND, value: s3 }
+      - { key: OTA_SERVE_ARTIFACTS_LOCALLY, value: "false" }
+      - { key: OTA_AUTO_GENERATE_SIGNING_KEY, value: "false" }
+      - { key: OTA_DB_POOL_SIZE, value: "3" }       # free Postgres poolers allow few connections
+      - { key: OTA_SIGNING_KEY_ID, value: cloud-1 }
+      - { key: OTA_ADMIN_API_KEY, generateValue: true }
+      - { key: OTA_DEVICE_JWT_SECRET, generateValue: true }
+      - { key: OTA_ROLLOUT_HMAC_SECRET, generateValue: true }
+      # Asked for when you create the Blueprint:
+      - { key: OTA_DATABASE_URL, sync: false }
+      - { key: OTA_SIGNING_KEY_PEM, sync: false }
+      - { key: OTA_CDN_BASE_URL, sync: false }
+      - { key: OTA_S3_ENDPOINT_URL, sync: false }
+      - { key: OTA_S3_REGION, sync: false }
+      - { key: OTA_S3_ACCESS_KEY_ID, sync: false }
+      - { key: OTA_S3_SECRET_ACCESS_KEY, sync: false }
+      - { key: OTA_S3_SESSION_TOKEN, sync: false }     # Supabase service_role key (see guide)

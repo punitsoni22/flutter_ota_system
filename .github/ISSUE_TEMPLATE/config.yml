@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability (private)
+    url: https://github.com/punitsoni22/flutter_ota_system/security/advisories/new
+    about: Never report vulnerabilities in public issues. See SECURITY.md.

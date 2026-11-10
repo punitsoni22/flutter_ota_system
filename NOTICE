@@ -1,0 +1,9 @@
+Punit
+Copyright 2026 The Punit Authors
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+This product includes an implementation of the bsdiff 4 patch algorithm (control/diff/extra
+block layout) designed by Colin Percival. See THIRD_PARTY_NOTICES.md.
+
+Third-party dependencies are listed with their licences in THIRD_PARTY_NOTICES.md.

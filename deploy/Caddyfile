@@ -1,0 +1,20 @@
+# HTTPS front door. Certificates come from Let's Encrypt automatically.
+{$OTA_DOMAIN} {
+	encode gzip
+	# Patch files: immutable and public (devices download them).
+	handle /cdn/patches/* {
+		reverse_proxy cdn:80
+	}
+	# Anything else under /cdn (e.g. store builds) is never public.
+	handle /cdn/* {
+		respond 404
+	}
+	handle {
+		reverse_proxy api:8000
+	}
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		-Server
+	}
+}

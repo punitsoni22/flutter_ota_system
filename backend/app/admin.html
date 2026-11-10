@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OTA Admin</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --panel: #fff; --text: #1d2330; --muted: #677085; --line: #e2e5eb;
+    --accent: #2f6fde; --accent-text: #fff; --ok: #1f8a4c; --warn: #b26b00; --bad: #c62f2f; --soft: #eef1f6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #12151b; --panel: #1a1e26; --text: #e6e9ef; --muted: #98a0b3; --line: #2b313d;
+      --accent: #5b8ff0; --accent-text: #0d1117; --ok: #4cc283; --warn: #e3a33b; --bad: #f06a6a; --soft: #232834;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 14px/1.45 system-ui, -apple-system, Segoe UI, sans-serif; background: var(--bg); color: var(--text); }
+  header { display: flex; gap: 12px; align-items: center; padding: 12px 20px; background: var(--panel); border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+  header h1 { font-size: 16px; margin: 0 auto 0 0; }
+  main { display: grid; grid-template-columns: 240px 1fr; gap: 16px; padding: 16px 20px; max-width: 1400px; margin: 0 auto; }
+  @media (max-width: 800px) { main { grid-template-columns: 1fr; padding: 12px 16px; } }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px; margin-bottom: 16px; }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 0 0 10px; }
+  h3 { font-size: 18px; margin: 0; }
+  input, select, textarea, button { font: inherit; color: inherit; }
+  input, select, textarea { background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; min-width: 0; }
+  textarea { width: 100%; font-family: ui-monospace, Menlo, monospace; font-size: 12px; }
+  button { border: 1px solid var(--line); background: var(--soft); border-radius: 6px; padding: 6px 10px; cursor: pointer; white-space: nowrap; }
+  button.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+  button.danger { color: var(--bad); }
+  button:disabled { opacity: .5; cursor: default; }
+  .list button { display: block; width: 100%; text-align: left; margin-bottom: 4px; background: transparent; border-color: transparent; }
+  .list button.on { background: var(--soft); border-color: var(--line); font-weight: 600; }
+  .list small { display: block; color: var(--muted); font-weight: 400; }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .stack > * + * { margin-top: 8px; }
+  .muted { color: var(--muted); }
+  .mono { font-family: ui-monospace, Menlo, monospace; font-size: 12px; word-break: break-all; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: 12px; color: var(--muted); font-weight: 600; }
+  .scroll { overflow-x: auto; }
+  .badge { display: inline-block; padding: 1px 8px; border-radius: 99px; font-size: 12px; font-weight: 600; background: var(--soft); }
+  .s-published { color: var(--ok); } .s-rolled_back { color: var(--warn); } .s-revoked { color: var(--bad); } .s-draft { color: var(--muted); }
+  .bad { color: var(--bad); font-weight: 600; }
+  .warnrow td { background: color-mix(in srgb, var(--bad) 8%, transparent); }
+  .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin: 12px 0; }
+  .tabs button.on { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+  details summary { cursor: pointer; color: var(--muted); }
+  #toast { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); padding: 10px 16px; border-radius: 8px; background: var(--text); color: var(--bg); display: none; max-width: 90vw; }
+  #toast.err { background: var(--bad); color: #fff; }
+  .empty { color: var(--muted); padding: 12px 0; }
+  .pipeline { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 12px 0; }
+  .stage { border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; min-width: 110px; background: var(--bg); }
+  .arrow { color: var(--muted); }
+  .chip { display: inline-block; padding: 0 7px; border-radius: 5px; font-size: 12px; background: var(--soft); }
+  .ch-staging { color: var(--warn); } .ch-production { color: var(--ok); }
+</style>
+</head>
+<body>
+<header>
+  <h1>OTA Admin</h1>
+  <input id="key" type="password" placeholder="Admin API key" size="22" autocomplete="off">
+  <button id="connect" class="primary">Connect</button>
+</header>
+
+<main>
+  <aside>
+    <div class="panel">
+      <h2>Apps</h2>
+      <div id="apps" class="list"></div>
+      <details style="margin-top:10px">
+        <summary>New app</summary>
+        <form id="newApp" class="stack" style="margin-top:8px">
+          <input name="slug" placeholder="slug, e.g. shop-app" required pattern="[a-z0-9][a-z0-9-]{1,98}[a-z0-9]">
+          <input name="name" placeholder="Display name" required>
+          <select name="distribution"><option value="enterprise">enterprise</option><option value="public_store">public_store</option></select>
+          <button class="primary">Create app</button>
+        </form>
+      </details>
+    </div>
+  </aside>
+
+  <section id="detail"><div class="panel empty">Enter the admin API key and connect. Default for local Docker: <span class="mono">dev-admin-key</span></div></section>
+</main>
+<div id="toast"></div>
+
+<script>
+const $ = (s, el = document) => el.querySelector(s);
+const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const store = { get(k) { try { return sessionStorage.getItem(k); } catch { return null; } },
+                set(k, v) { try { sessionStorage.setItem(k, v); } catch {} } };
+
+let key = store.get('ota-key') || '';
+let apps = [], app = null, releases = [], release = null, channels = [];
+
+function toast(msg, err) {
+  const t = $('#toast'); t.textContent = msg; t.className = err ? 'err' : ''; t.style.display = 'block';
+  clearTimeout(toast.t); toast.t = setTimeout(() => t.style.display = 'none', err ? 6000 : 2500);
+}
+
+async function api(method, path, body) {
+  const opts = { method, headers: { 'X-API-Key': key } };
+  if (body instanceof FormData) opts.body = body;
+  else if (body !== undefined) { opts.body = JSON.stringify(body); opts.headers['Content-Type'] = 'application/json'; }
+  const r = await fetch('/v1/admin' + path, opts);
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(typeof data.detail === 'string' ? data.detail : `HTTP ${r.status}: ${JSON.stringify(data.detail ?? data)}`);
+  return data;
+}
+
+async function run(fn, okMsg) {
+  try { await fn(); if (okMsg) toast(okMsg); } catch (e) { toast(e.message, true); }
+}
+
+// ---- apps ----------------------------------------------------------------------------------
+
+async function loadApps() {
+  apps = await api('GET', '/apps');
+  $('#apps').innerHTML = apps.length ? apps.map(a =>
+    `<button data-slug="${esc(a.slug)}" class="${app?.slug === a.slug ? 'on' : ''}">${esc(a.name)}<small>${esc(a.slug)} · ${esc(a.distribution)}</small></button>`
+  ).join('') : '<div class="empty">No apps yet</div>';
+}
+
+$('#apps').addEventListener('click', e => {
+  const b = e.target.closest('button[data-slug]');
+  if (b) run(() => selectApp(b.dataset.slug));
+});
+
+$('#newApp').addEventListener('submit', e => {
+  e.preventDefault();
+  const f = new FormData(e.target);
+  run(async () => {
+    await api('POST', '/apps', { slug: f.get('slug'), name: f.get('name'), distribution: f.get('distribution') });
+    e.target.reset(); await loadApps(); await selectApp(f.get('slug'));
+  }, 'App created');
+});
+
+async function selectApp(slug) {
+  app = apps.find(a => a.slug === slug); release = null;
+  [releases, channels] = await Promise.all([api('GET', `/apps/${slug}/releases`), api('GET', `/apps/${slug}/channels`)]);
+  releases.sort((a, b) => b.created_at.localeCompare(a.created_at));
+  release = releases[0] || null;
+  await loadApps();
+  await render();
+}
+
+// ---- detail --------------------------------------------------------------------------------
+
+async function render() {
+  if (!app) return;
+  const [patches, devices, signing] = await Promise.all([
+    release ? api('GET', `/releases/${release.id}/patches`) : [],
+    api('GET', `/apps/${app.slug}/devices/summary`),
+    api('GET', '/signing-key'),
+  ]);
+  // Devices of this release on patch n, per channel: {staging: 3, production: 120}
+  const onPatch = n => devices.filter(d => release && d.platform === release.platform && d.release_version === release.version && d.patch_number === n)
+                              .reduce((m, d) => (m[d.channel] = (m[d.channel] || 0) + d.devices, m), {});
+  const totalDevices = devices.reduce((s, d) => s + d.devices, 0);
+  // What each channel serves right now: the newest published patch with a rollout above 0%.
+  const live = Object.fromEntries(channels.map(c => [c, patches.filter(p => p.status === 'published' && p.deployments.some(d => d.channel === c && d.rollout_percent > 0))
+                                                              .sort((a, b) => b.number - a.number)[0]]));
+  const pipeline = channelOrder(channels).map(c => {
+    const p = live[c], d = p?.deployments.find(x => x.channel === c);
+    return `<div class="stage"><div class="muted">${esc(c)}</div><b>${p ? '#' + p.number : 'store build'}</b>${p ? ` <span class="muted">${+d.rollout_percent.toFixed(2)}%</span>` : ''}</div>`;
+  }).join('<div class="arrow">→</div>');
+
+  $('#detail').innerHTML = `
+    <div class="panel">
+      <div class="row"><h3>${esc(app.name)}</h3><span class="badge">${esc(app.slug)}</span><span class="badge">${esc(app.distribution)}</span>
+        <span class="muted" style="margin-left:auto">${totalDevices} device${totalDevices === 1 ? '' : 's'} · channels: ${channels.map(esc).join(', ')}</span></div>
+      <div class="tabs">
+        ${releases.map(r => `<button data-rel="${r.id}" class="${release?.id === r.id ? 'on' : ''}">${esc(r.platform)} ${esc(r.version)}</button>`).join('')}
+      </div>
+      <details><summary>New release</summary>
+        <form id="newRelease" class="row" style="margin-top:8px">
+          <select name="platform"><option>android</option><option>ios</option></select>
+          <input name="version" placeholder="1.0.0+1 (must match pubspec)" required>
+          <button class="primary">Create release</button>
+        </form>
+      </details>
+      <details style="margin-top:6px"><summary>Public key for the app (OTA_PUBLIC_KEY)</summary>
+        <div class="row" style="margin-top:8px"><span class="mono" id="pubkey">${esc(signing.key_id + ':' + signing.uncompressed_point_base64)}</span><button id="copyKey">Copy</button></div>
+      </details>
+    </div>
+
+    ${release ? `
+    <div class="panel">
+      <div class="row"><h2 style="margin:0">Patches for ${esc(release.platform)} ${esc(release.version)}</h2>
+        <span class="muted" style="margin-left:auto">${sum(onPatch(0))} device(s) on the store build</span></div>
+      <div class="pipeline">${pipeline}</div>
+      <p class="muted" style="margin:0 0 8px">Flow: publish a new patch to <b>staging</b>, test it on tester phones (app switched to staging), then <b>Promote to production</b>, ideally at a small % first.</p>
+      <div class="scroll"><table>
+        <thead><tr><th>#</th><th>Status</th><th>Rollout</th><th>Devices on it</th><th>Boot ok / failed</th><th>Note</th><th>Created</th><th>Actions</th></tr></thead>
+        <tbody>${patches.length ? patches.slice().reverse().map(p => patchRow(p, onPatch(p.number))).join('') : '<tr><td colspan="8" class="empty">No patches yet</td></tr>'}</tbody>
+      </table></div>
+    </div>
+
+    <div class="panel">
+      <h2>New patch</h2>
+      <form id="newPatch" class="stack">
+        <textarea name="json" rows="3" placeholder='Patch content (mock-v1 JSON), e.g. {"banner":"Hello from OTA","color":"#4CAF50"}'></textarea>
+        <div class="row"><span class="muted">or a file:</span><input type="file" name="file"></div>
+        <div class="row">
+          <span class="muted">Arch:</span>
+          ${['arm64-v8a', 'x86_64', 'armeabi-v7a'].map(a => `<label><input type="checkbox" name="arch" value="${a}" ${a !== 'armeabi-v7a' ? 'checked' : ''}> ${a}</label>`).join(' ')}
+        </div>
+        <div class="row">
+          <input name="note" placeholder="Note (what changed)" style="flex:1">
+          <select name="channel">${chanOptions(channels.includes('staging') ? 'staging' : channels[0])}<option value="">don't publish yet</option></select>
+          <input name="percent" type="number" min="0" max="100" step="0.1" value="100" style="width:80px"> %
+          <button class="primary">Create &amp; publish</button>
+        </div>
+      </form>
+    </div>` : '<div class="panel empty">No releases yet. Create one for the store build (version must match the app\'s pubspec).</div>'}
+
+    <div class="panel">
+      <h2>Devices</h2>
+      <div class="scroll"><table>
+        <thead><tr><th>Platform</th><th>Release</th><th>Channel</th><th>Patch</th><th>Devices</th></tr></thead>
+        <tbody>${devices.length ? devices.sort((a, b) => b.devices - a.devices).map(d =>
+          `<tr><td>${esc(d.platform)}</td><td>${esc(d.release_version)}</td><td>${esc(d.channel)}</td><td>${d.patch_number ? '#' + d.patch_number : 'store build'}</td><td>${d.devices}</td></tr>`
+        ).join('') : '<tr><td colspan="5" class="empty">No devices have checked in yet</td></tr>'}</tbody>
+      </table></div>
+    </div>`;
+}
+
+const sum = m => Object.values(m).reduce((a, b) => a + b, 0);
+const STAGE_ORDER = ['dev', 'staging', 'production'];
+const channelOrder = cs => [...cs].sort((a, b) => (STAGE_ORDER.indexOf(a) + 1 || 99) - (STAGE_ORDER.indexOf(b) + 1 || 99));
+const chanOptions = sel => channelOrder(channels).map(c => `<option ${c === sel ? 'selected' : ''}>${esc(c)}</option>`).join('');
+const pct = (p, c) => p.deployments.find(d => d.channel === c)?.rollout_percent || 0;
+
+function patchRow(p, devicesBy) {
+  const ec = p.event_counts || {};
+  const ok = ec.patch_boot_succeeded || 0, failed = ec.patch_boot_failed || 0;
+  const rollout = channelOrder(p.deployments.map(d => d.channel)).map(c => `<div><span class="chip ch-${esc(c)}">${esc(c)}</span> ${+pct(p, c).toFixed(2)}%</div>`).join('')
+    || '<span class="muted">not published</span>';
+  const devs = sum(devicesBy) ? channelOrder(Object.keys(devicesBy)).map(c => `<div>${esc(c)}: ${devicesBy[c]}</div>`).join('') : '0';
+  const live = p.status === 'published';
+  const canPromote = live && pct(p, 'staging') > 0 && pct(p, 'production') < 100 && channels.includes('production');
+  const actions = [];
+  if (canPromote) {
+    actions.push(`<span class="row"><input data-f="promote-pct" type="number" min="0.1" max="100" step="0.1" value="${pct(p, 'production') ? 100 : 10}" style="width:70px">%
+      <button data-act="promote" class="primary">${pct(p, 'production') ? 'Production → this %' : 'Promote to production'}</button></span>`);
+  }
+  if (live || p.status === 'draft' || p.status === 'rolled_back') {
+    actions.push(`<span class="row"><select data-f="channel">${chanOptions(live ? 'production' : 'staging')}</select><input data-f="percent" type="number" min="0" max="100" step="0.1" value="100" style="width:70px">
+      <button data-act="${live ? 'rollout' : 'publish'}">${live ? 'Set %' : 'Publish'}</button></span>`);
+  }
+  if (live) actions.push(`<button data-act="rollback">Roll back</button>`);
+  if (p.status !== 'revoked') actions.push(`<button data-act="revoke" class="danger">Revoke</button>`);
+  return `<tr data-id="${p.id}" data-n="${p.number}" data-ok="${ok}" data-failed="${failed}" data-staging="${pct(p, 'staging')}" class="${live && failed ? 'warnrow' : ''}">
+    <td><b>#${p.number}</b></td>
+    <td><span class="badge s-${esc(p.status)}">${esc(p.status.replace('_', ' '))}</span><div class="muted">${esc(p.artifact_format)}</div></td>
+    <td>${rollout}</td>
+    <td>${devs}</td>
+    <td>${ok} / <span class="${failed ? 'bad' : ''}">${failed}</span>${live && failed ? '<div class="bad">Crashing: consider revoke</div>' : ''}</td>
+    <td>${esc(p.note) || '<span class="muted">–</span>'}<div class="muted">${p.artifacts.map(a => esc(a.arch)).join(', ')}</div></td>
+    <td class="muted">${new Date(p.created_at).toLocaleString()}</td>
+    <td><div class="stack">${actions.join('')}</div></td>
+  </tr>`;
+}
+
+$('#detail').addEventListener('click', e => {
+  const tab = e.target.closest('button[data-rel]');
+  if (tab) { release = releases.find(r => r.id === tab.dataset.rel); return run(render); }
+  if (e.target.id === 'copyKey') { navigator.clipboard?.writeText($('#pubkey').textContent).then(() => toast('Copied')); return; }
+
+  const b = e.target.closest('button[data-act]');
+  if (!b) return;
+  const tr = b.closest('tr'), id = tr.dataset.id, n = tr.dataset.n, act = b.dataset.act;
+  const body = () => ({ channel: $('[data-f=channel]', tr).value, rollout_percent: +$('[data-f=percent]', tr).value });
+  const { ok, failed, staging } = tr.dataset;
+  const stagingNote = `Staging results: ${ok} boot ok, ${failed} failed.` + (+failed ? `\n\nWARNING: it crashed on ${failed} device(s).` : '');
+  const promotePct = () => +($('[data-f=promote-pct]', tr)?.value ?? 100); // only rows that can be promoted have it
+  const steps = {
+    promote: [`Patch #${n} promoted to production`, () => api('POST', `/patches/${id}/rollout`, { channel: 'production', rollout_percent: promotePct() }),
+              `Promote patch #${n} to production at ${promotePct()}%?\n\n${stagingNote}\n\nThe exact file tested on staging is used, nothing is rebuilt.`],
+    rollout: ['Rollout updated', () => api('POST', `/patches/${id}/rollout`, body())],
+    publish: ['Published', () => api('POST', `/patches/${id}/publish`, body())],
+    rollback: [`Patch #${n} rolled back`, () => api('POST', `/patches/${id}/rollback`),
+               `Roll back patch #${n}? Devices on it go back to the previous patch on their next check. It can be published again later.`],
+    revoke: [`Patch #${n} revoked`, () => api('POST', `/patches/${id}/revoke`),
+             `Revoke patch #${n}? This is permanent: it will never run again on any device.`],
+  };
+  let [msg, fn, confirmText] = steps[act];
+  if ((act === 'rollout' || act === 'publish') && body().channel === 'production' && !(+staging > 0) && body().rollout_percent > 0) {
+    confirmText = `Patch #${n} has not been on staging. Send it to production without testing?`;
+  }
+  if (confirmText && !confirm(confirmText)) return;
+  b.disabled = true;
+  run(async () => { await fn(); await render(); }, msg).finally(() => b.disabled = false);
+});
+
+$('#detail').addEventListener('submit', e => {
+  e.preventDefault();
+  const f = new FormData(e.target);
+  if (e.target.id === 'newRelease') {
+    return run(async () => {
+      const r = await api('POST', `/apps/${app.slug}/releases`, { platform: f.get('platform'), version: f.get('version').trim() });
+      await selectApp(app.slug); release = releases.find(x => x.id === r.id); await render();
+    }, 'Release created');
+  }
+  if (e.target.id === 'newPatch') {
+    const file = f.get('file'), text = f.get('json').trim(), archs = f.getAll('arch');
+    if (!(file && file.size) && !text) return toast('Add patch content or a file', true);
+    if (text && !(file && file.size)) { try { JSON.parse(text); } catch { return toast('Patch content is not valid JSON', true); } }
+    if (!archs.length) return toast('Pick at least one arch', true);
+    const blob = file && file.size ? file : new Blob([text], { type: 'application/json' });
+    const btn = $('button.primary', e.target); btn.disabled = true;
+    run(async () => {
+      const p = await api('POST', `/releases/${release.id}/patches`, { artifact_format: 'mock-v1', note: f.get('note') });
+      for (const arch of archs) {
+        const fd = new FormData(); fd.append('arch', arch); fd.append('file', blob, file && file.size ? file.name : 'patch.json');
+        await api('POST', `/patches/${p.id}/artifacts`, fd);
+      }
+      if (f.get('channel')) await api('POST', `/patches/${p.id}/publish`, { channel: f.get('channel'), rollout_percent: +f.get('percent') });
+      e.target.reset(); await render();
+    }, 'Patch created').finally(() => btn.disabled = false);
+  }
+});
+
+// ---- connect -------------------------------------------------------------------------------
+
+async function connect() {
+  key = $('#key').value.trim();
+  await run(async () => {
+    await loadApps();
+    store.set('ota-key', key);
+    if (apps.length) await selectApp(app?.slug || apps[0].slug);
+    else $('#detail').innerHTML = '<div class="panel empty">No apps yet. Create one on the left.</div>';
+  }, 'Connected');
+}
+$('#connect').addEventListener('click', connect);
+$('#key').addEventListener('keydown', e => e.key === 'Enter' && connect());
+$('#key').value = key;
+if (key) connect();
+</script>
+</body>
+</html>
