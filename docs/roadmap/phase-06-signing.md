@@ -1,5 +1,12 @@
 # Phase 6 — Cryptographic trust (2–4 pw) → Milestone C
 
+> **Roadmap status: 🟡 partial.**
+> - ✅ Canonical encoder in Python and Dart with a shared test vector, local PEM signer, public key
+>   export (`GET /v1/admin/signing-key`, `ota key show`), Dart verification against a **set** of
+>   trusted keys, tamper tests (`scripts/verify_demo.sh`).
+> - 🔭 **Azure Key Vault signer (6.4) is not implemented.** There is no key rotation runbook
+>   (6.10) yet.
+
 **Goal:** the phone only accepts patches signed by **your** private key, and that key never leaves Azure Key Vault.
 
 **Why a hash isn't enough:** the hash proves the file matches what the server said. If an attacker controls the server response (or your database), they can send a malicious file with a matching hash. A signature proves the patch came from someone holding your private key.

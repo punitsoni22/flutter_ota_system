@@ -1,4 +1,7 @@
 #!/bin/sh
+# Copyright 2026 The Punit Authors
+# SPDX-License-Identifier: Apache-2.0
+
 # Daily backup: database, patch/release files and the signing key, into ./backups (keeps 14 days).
 # cron: 0 3 * * * cd /opt/flutter_ota_system/deploy && ./backup.sh >> backups/backup.log 2>&1
 set -eu

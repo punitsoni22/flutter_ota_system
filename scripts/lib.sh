@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# Copyright 2026 The Punit Authors
+# SPDX-License-Identifier: Apache-2.0
+
 # Shared helpers for the Punit local scripts. Sourced, not executed.
 set -euo pipefail
 

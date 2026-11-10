@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright 2026 The Punit Authors
+# SPDX-License-Identifier: Apache-2.0
+
 """Simulate many devices to see rollout percentages work.
 
     python scripts/simulate_fleet.py --app demo --release 1.0.0+1 --channel production --devices 1000

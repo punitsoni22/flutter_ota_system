@@ -1,4 +1,7 @@
-# Render Blueprint: free cloud test hosting for the OTA API (see docs/setup-guide.md, Part A).
+# NOT RECOMMENDED, UNSUPPORTED, kept for reference only (see docs/alternatives/render-supabase.md).
+# Punit's official installation method is self-hosted Docker (docs/setup-guide.md, docs/deploy.md).
+#
+# Render Blueprint: free cloud test hosting for the OTA API, used for early internal tests.
 # Database and files live on Supabase (or Cloudflare R2); Render runs only the API container.
 services:
   - type: web

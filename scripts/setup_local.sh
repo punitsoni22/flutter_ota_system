@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# Copyright 2026 The Punit Authors
+# SPDX-License-Identifier: Apache-2.0
+
 # One-time local setup: .env, image build, LOCAL dev signing key, start the stack.
 # Safe to re-run: it never replaces an existing key or .env.
 # shellcheck source=scripts/lib.sh

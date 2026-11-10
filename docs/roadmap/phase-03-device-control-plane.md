@@ -1,5 +1,12 @@
 # Phase 3 — Device control plane (2–3 pw) → Milestone A
 
+> **Roadmap status: 🟡 partial.**
+> - ✅ `POST /v1/devices/register` (returns a device JWT) and `GET /v1/updates/check`
+>   (`backend/app/updates.py`). The OpenAPI contract is served at `/docs` (local only).
+> - ✅ The demo script for this milestone is `scripts/verify_demo.sh`.
+> - 🔭 Not built: token refresh (3.4), a separate heartbeat (3.5; `POST /v1/events/batch` acts as
+>   the heartbeat) and **rate limiting (3.7)**.
+
 **Goal:** a device can register, get a token, send heartbeats, and ask "is there an update for me?".
 
 **New concepts:** JWT access tokens, refresh tokens, hashing secrets, a read-only hot path.
@@ -84,7 +91,7 @@ Then a FastAPI dependency `current_device` using `fastapi.security.HTTPBearer` t
 **Why:** the first call every install makes. It must be **idempotent**: calling it twice with the same `installation_id` returns the same device, not a new one.
 
 **Do:**
-- Request/response schemas exactly as in blueprint page 17–18. The client generates `installation_id` (a UUID) on first launch and stores it.
+- Request/response schemas as in `backend/app/schemas.py` (`DeviceRegister` / `DeviceRegisterOut`). The client generates `installation_id` (a UUID) on first launch and stores it.
 - Look up the application, release and channel. Return 404 or 422 with a clear message if any is unknown.
 - Upsert the device with `INSERT ... ON CONFLICT (application_id, installation_id) DO UPDATE` (SQLAlchemy: `from sqlalchemy.dialects.postgresql import insert`).
 - Create a `device_credentials` row with the refresh token hash and `expires_at`.
@@ -120,7 +127,7 @@ Then a FastAPI dependency `current_device` using `fastapi.security.HTTPBearer` t
 
 **Why:** this endpoint takes up to 10,000 requests/second at peak. It must be **read-only** and do as little work as possible.
 
-**Do:** `app/services/update_check.py`, following the blueprint's order:
+**Do:** `app/services/update_check.py` (built as `backend/app/updates.py`), in this order:
 
 ```
 1. device = current_device (from JWT, no DB)

@@ -1,5 +1,9 @@
 # Phase 8 — Admin console and RBAC (2–4 pw)
 
+> **Roadmap status: 🔭 planned.** Today there is **one shared admin API key** (`OTA_ADMIN_API_KEY`)
+> and one static admin page at `/admin`. **Not built:** Entra ID / SSO, users, **roles (RBAC)**,
+> idempotency keys, an **audit log** and the Flutter Web console (8.6, cut from scope).
+
 **Goal:** people log in with Microsoft accounts. What they can do depends on their role. Every action is recorded.
 
 **New concepts:** Microsoft Entra ID (formerly Azure AD), app roles, OAuth tokens, RBAC (role-based access control), idempotency keys.
@@ -12,7 +16,7 @@ Branch: `git switch -c phase-8-admin`.
 
 ## 8.1 Roles and permissions
 
-From the blueprint:
+Planned roles:
 
 | Role | Read | Create draft | Publish | Rollback / revoke | Signing admin |
 |---|---|---|---|---|---|

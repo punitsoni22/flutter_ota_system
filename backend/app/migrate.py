@@ -1,3 +1,6 @@
+# Copyright 2026 The Punit Authors
+# SPDX-License-Identifier: Apache-2.0
+
 """Brings the database schema up to date with Alembic (backend/migrations)."""
 
 from pathlib import Path

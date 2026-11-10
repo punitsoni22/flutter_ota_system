@@ -1,3 +1,6 @@
+# Copyright 2026 The Punit Authors
+# SPDX-License-Identifier: Apache-2.0
+
 import logging
 from contextlib import asynccontextmanager
 from pathlib import Path

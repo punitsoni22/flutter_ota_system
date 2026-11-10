@@ -5,7 +5,7 @@
 
 ## Context
 
-The server (Python), the signing CLI (Python) and the client (Dart) must all produce exactly the same bytes to sign and verify. Signing "the JSON" does not work, because each language serialises JSON differently. The blueprint's `a || b || c` concatenation is ambiguous: `"ab" || "c"` and `"a" || "bc"` give the same bytes. The private key must stay in Azure Key Vault.
+The server (Python), the signing CLI (Python) and the client (Dart) must all produce exactly the same bytes to sign and verify. Signing "the JSON" does not work, because each language serialises JSON differently. Plain `a || b || c` concatenation is ambiguous: `"ab" || "c"` and `"a" || "bc"` give the same bytes. The private key should live in a key vault or HSM. That is planned (Azure Key Vault, Phase 10); today it is a local PEM file or an environment variable (see [security.md](../security.md)).
 
 ## Decision
 

@@ -1,3 +1,6 @@
+# Copyright 2026 The Punit Authors
+# SPDX-License-Identifier: Apache-2.0
+
 """The hot path: "is there a patch for this device?"
 
 Order matters: compatibility first (release, platform, arch, format), rollout bucket last.

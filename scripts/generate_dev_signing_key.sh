@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# Copyright 2026 The Punit Authors
+# SPDX-License-Identifier: Apache-2.0
+
 # Creates the LOCAL DEVELOPMENT ES256 signing key inside the Docker volume "punit_keys".
 #
 # The private key never touches your working tree, so it cannot be committed by accident.

@@ -1,5 +1,14 @@
 # Phase 11 — Scale and security hardening (4–6 pw) → Milestone G
 
+> **Roadmap status: 🔭 mostly planned.**
+> - **The 1M-installs scale target is a design goal. No load test has been run, and Punit makes no
+>   capacity claim.**
+> - 🟡 Partly there: a secret scan (gitleaks) and a licence gate in CI (11.7); a backup script for
+>   the single-server setup (`deploy/backup.sh`, 11.8); a threat overview in
+>   [security.md](../security.md) (11.6).
+> - 🔭 Not built: load tests (11.1, 11.3), the **Redis** decision (11.2), chaos tests (11.4, 11.5)
+>   and the cost model (11.9).
+
 **Goal:** prove, with numbers, that the system survives 1M devices, crashes at any moment, and your own mistakes.
 
 **New concepts:** load testing, chaos testing, threat modelling, disaster recovery drills.
@@ -10,7 +19,7 @@ Branch: `git switch -c phase-11-hardening`.
 
 ## 11.1 Load test the update check
 
-**Why:** the blueprint's danger case is 1M devices checking within minutes, which is up to 16,667 requests/second. Targets: **5,000 sustained / 10,000 burst RPS** on `/v1/updates/check`.
+**Why:** the design goal's danger case (**not tested yet**) is 1M devices checking within minutes, which is up to 16,667 requests/second. Targets: **5,000 sustained / 10,000 burst RPS** on `/v1/updates/check`.
 
 **Do:**
 1. Install k6 (see the setup guide).
@@ -137,7 +146,7 @@ Kill points can be injected with a test-only hook (`onStep(step)` that throws).
 
 ## 11.9 Cost model
 
-**Do:** a spreadsheet using the blueprint's formula: Front Door egress GB × price + requests + Blob + Postgres + Container Apps + Event Hubs + App Insights + Key Vault (+ Redis). Fill it with real numbers from the Azure pricing calculator for your region. Patch size is the biggest cost driver, so show the cost of a 1 MB vs 5 MB patch to 1M users.
+**Do:** a spreadsheet using this formula: Front Door egress GB × price + requests + Blob + Postgres + Container Apps + Event Hubs + App Insights + Key Vault (+ Redis). Fill it with real numbers from the Azure pricing calculator for your region. Patch size is the biggest cost driver, so show the cost of a 1 MB vs 5 MB patch to 1M users.
 
 ---
 

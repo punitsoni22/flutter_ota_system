@@ -1,4 +1,10 @@
-# Hosting the OTA server
+# Hosting the OTA server (single server, Docker)
+
+> [!IMPORTANT]
+> **Status: draft, not yet verified end to end.** Docker is Punit's official installation method,
+> but this production-style setup (`deploy/docker-compose.prod.yml` + Caddy) has **not** been
+> tested from a clean server for v0.1.0-alpha. A tested Docker quickstart for servers is planned.
+> Read [security.md](security.md) first, and test on a throwaway server before real use.
 
 One VPS with Docker runs everything: Postgres, the API, an nginx file server for patches, and Caddy
 for HTTPS (automatic Let's Encrypt certificates). Files: `deploy/`.
@@ -9,7 +15,7 @@ Lightsail, …). Ubuntu 24.04.
 ## 1. Prepare
 
 ```bash
-# DNS: an A record ota.yourcompany.com -> the VPS IP. Firewall: open 22, 80, 443 only.
+# DNS: an A record ota.example.com -> the VPS IP. Firewall: open 22, 80, 443 only.
 curl -fsSL https://get.docker.com | sh
 git clone <this repo> /opt/flutter_ota_system && cd /opt/flutter_ota_system/deploy
 cp .env.example .env
@@ -33,17 +39,17 @@ Apps only trust this key: losing it means new store builds for every app.
 
 ```bash
 docker compose -f docker-compose.prod.yml up -d
-curl https://ota.yourcompany.com/health/ready      # {"status":"ok"}
+curl https://ota.example.com/health/ready      # {"status":"ok"}
 ```
 
 The server refuses to start with unsafe settings (default secrets, http CDN, auto-created key).
 Database migrations run on every start, so upgrades are `git pull` and `up -d --build`.
 
-Admin page: `https://ota.yourcompany.com/admin` (key: `OTA_ADMIN_API_KEY`).
+Admin page: `https://ota.example.com/admin` (key: `OTA_ADMIN_API_KEY`).
 CLI on your laptop or CI:
 
 ```bash
-export OTA_API_URL=https://ota.yourcompany.com OTA_API_KEY=<OTA_ADMIN_API_KEY>
+export OTA_API_URL=https://ota.example.com OTA_API_KEY=<OTA_ADMIN_API_KEY>
 ```
 
 ## 4. Backups
@@ -71,7 +77,9 @@ untar `files-….tgz` into the `api` container's `/data`.
 
 ## Before real users
 
-- Use one admin key per person/CI and rotate it if someone leaves (Entra ID/roles: later phase).
+- There is only **one** admin key today. Keep it in a password manager, give it only to people who
+  must publish, and change it if someone leaves. Per-person keys, users and roles are **planned,
+  not implemented** ([roadmap Phase 8](roadmap/phase-08-admin-rbac.md)).
 - In the apps: `OTA_SERVER_URL=https://…`, the production `OTA_PUBLIC_KEY`, and no
   `usesCleartextTraffic`.
 - Monitor `/health/ready` (UptimeRobot or similar) and watch boot failures on the admin page.

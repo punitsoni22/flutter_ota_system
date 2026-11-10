@@ -1,4 +1,5 @@
-# Copyright 2026 The Punit Authors. Licensed under the Apache License, Version 2.0.
+# Copyright 2026 The Punit Authors
+# SPDX-License-Identifier: Apache-2.0
 # Diffing uses the bsdiff4 package (BSD licence); the bsdiff 4 algorithm is by Colin Percival
 # (BSD-2-Clause). See THIRD_PARTY_NOTICES.md.
 """OTADIF01: bsdiff 4 blocks, zlib-compressed, so the phone decodes them with dart:io alone.

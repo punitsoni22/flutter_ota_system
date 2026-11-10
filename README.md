@@ -1,3 +1,5 @@
+<img src="docs/assets/punit-icon.png" alt="Punit icon" width="96" align="right">
+
 # Punit
 
 **Self-hosted, experimental over-the-air (OTA) patch delivery for Flutter apps.**
@@ -32,9 +34,13 @@ signing key and decide what gets shipped.
 | Android Dart code patches (`aot-bidiff-android-v1`, stock Flutter) | **Experimental.** Internally tested on a small number of devices. See [docs/code-push.md](docs/code-push.md) and its store-policy section |
 | iOS code patches | **Not supported** (Apple forbids running downloaded native code; research notes only) |
 | Storage | Local disk + nginx, or S3-compatible buckets (AWS S3, Cloudflare R2, Supabase Storage) |
-| Azure Blob Storage / Azure Key Vault | **Not implemented** (planned; see roadmap) |
-| Redis | **Not used** |
+| Azure Blob Storage / Azure Key Vault / Azure deployment | **Not implemented** (planned; see [roadmap](docs/roadmap/README.md)) |
+| Redis | **Not used** (an optional cache is planned) |
 | Admin UI | One static page served by the API at `/admin` (single shared admin API key) |
+| Users, roles (RBAC), audit log | **Not implemented** (planned) |
+| Scale | **No load tests run.** 1M active installs is a design goal, not a tested capacity |
+| Local Docker stack (`docker-compose.yml`) | Working; tested by the maintainers on Linux |
+| Single-server Docker deployment (`deploy/`) | **Draft, not yet verified end to end** ([docs/deploy.md](docs/deploy.md)) |
 
 ## What Punit does
 
@@ -96,7 +102,12 @@ What was actually exercised for this release:
 - Free ports `8000`, `8080` and `5432` on 127.0.0.1 (change them in `.env`)
 - For the app: Flutter stable ≥ 3.27 and an Android emulator or device
 
-## Quickstart (about 5–10 minutes)
+## Quickstart: local Docker demo (about 5–10 minutes)
+
+Docker is Punit's official installation method. This quickstart runs everything on your own
+computer. It is tested by the maintainers on Linux only; a clean-machine test and a server
+quickstart are still to come. Step-by-step guide with troubleshooting:
+[docs/setup-guide.md](docs/setup-guide.md).
 
 ```bash
 git clone https://github.com/punitsoni22/flutter_ota_system.git
@@ -199,8 +210,8 @@ All server settings are environment variables prefixed `OTA_` (see
 | `OTA_SIGNING_KEY_PATH` / `OTA_SIGNING_KEY_PEM` / `OTA_SIGNING_KEY_ID` | ES256 private key and its id |
 | `OTA_AUTO_GENERATE_SIGNING_KEY` | Create a key at startup if missing (never in production) |
 
-Local values live in `.env` (from [.env.example](.env.example)). For a single-VPS deployment,
-see [deploy/](deploy/) and [docs/deploy.md](docs/deploy.md).
+Local values live in `.env` (from [.env.example](.env.example)). For a single-server deployment,
+see [deploy/](deploy/) and [docs/deploy.md](docs/deploy.md) (draft, not yet verified end to end).
 
 ## Repository layout
 
@@ -212,7 +223,7 @@ example_app/        Example Flutter app using mock-v1 patches
 docker/             nginx "CDN" config for the local stack
 deploy/             Single-VPS production-style compose (Caddy + HTTPS)
 scripts/            Local setup / demo / verification scripts
-docs/               Architecture, security, ADRs, guides, release material
+docs/               Architecture, security, guides, ADRs, roadmap, release material
 ```
 
 ## Known limitations
@@ -230,6 +241,10 @@ docs/               Architecture, security, ADRs, guides, release material
 - Android code patches depend on Flutter internals and must exactly match the store build. Every
   Flutter upgrade needs a new store release.
 - The maintainers have not published scale or load test results.
+- The Android application ID and Java package use `dev.flutterota.*`. Ownership of the domain
+  `flutterota.dev` has **not** been confirmed, so these identifiers may change before a stable
+  release. Use your own application ID in your apps; only `example_app` and the `ota_client`
+  plugin's Java package use this name.
 
 ## Security
 
@@ -237,6 +252,9 @@ Read [docs/security.md](docs/security.md) before deploying anything. Report vuln
 privately as described in [SECURITY.md](SECURITY.md), **never in public issues**.
 
 ## Roadmap (high level, not a commitment)
+
+The full roadmap, with what is implemented, partial and planned for each area, is in
+[docs/roadmap/](docs/roadmap/README.md). Design decisions are in [docs/adr/](docs/adr/README.md).
 
 - Pluggable signers: Azure Key Vault / cloud KMS / HSM; key rotation with multiple trusted keys
 - Azure Blob Storage adapter and short-lived download URLs

@@ -1,5 +1,12 @@
 # Phase 5 — Flutter client vertical slice (2–3 pw) → Milestone B
 
+> **Roadmap status: ✅ implemented, with a different layout.** Everything in this phase lives in
+> one package, [`packages/ota_client`](../../packages/ota_client/), instead of the separate
+> `ota_protocol`, `ota_runtime_api` and `runtimes/mock` packages described below. It includes the
+> `mock-v1` runtime, download with size + SHA-256 checks, an atomic state file, the boot protocol
+> and the update loop. The example app is [`example_app/`](../../example_app/). Tested on Android
+> emulators and devices, internally only.
+
 **Goal:** the example app checks for an update, downloads the file, verifies its hash, stages it, and uses it after a restart. If anything goes wrong it keeps working on the store version.
 
 **What "patch" means in this phase:** a `mock-v1` patch is just a file, for example a JSON config such as `{"banner":"Hello from patch 1"}`. No code is executed. This proves the whole pipeline safely.
@@ -56,7 +63,7 @@ Do the same for `PatchInfo` (id, number, mandatory, artifact), `CheckResponse` (
 
 > Hand-written is fine for this size. Later you can switch to `json_serializable` or generate from OpenAPI.
 
-**Check:** unit tests that parse the JSON examples from the blueprint (pages 18–20).
+**Check:** unit tests that parse real JSON responses from the API (copy them from `/docs` or from `scripts/verify_demo.sh` output).
 
 ---
 

@@ -1,3 +1,6 @@
+# Copyright 2026 The Punit Authors
+# SPDX-License-Identifier: Apache-2.0
+
 """Punit local demo: seed, publish a test patch, and verify the end-to-end flow.
 
 Runs inside the "tools" Compose service (the API image: Python stdlib + cryptography):

@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# Copyright 2026 The Punit Authors
+# SPDX-License-Identifier: Apache-2.0
+
 # End-to-end verification of the local stack. Exits non-zero if any check fails.
 # shellcheck source=scripts/lib.sh
 source "$(dirname "$0")/lib.sh"

@@ -1,5 +1,12 @@
 # Phase 4 — Artifact storage (1–2 pw)
 
+> **Roadmap status: 🟡 partial.**
+> - ✅ Content-addressed, immutable storage (`backend/app/storage.py`): local disk (served by
+>   nginx) or any **S3-compatible** bucket. Uploads via the CLI.
+> - 🟡 Uploads go straight to the API as multipart (`POST /v1/admin/patches/{id}/artifacts`),
+>   not through the prepare/commit flow in 4.5.
+> - 🔭 **Azure Blob Storage is not implemented.** Neither are SAS / short-lived download URLs.
+
 **Goal:** patch files live in Blob Storage under names that never change, and devices download them without going through the API.
 
 **New concepts:** Azure Blob Storage, Azurite (local emulator), SAS tokens (temporary signed URLs), content addressing.

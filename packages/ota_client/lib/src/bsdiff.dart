@@ -1,4 +1,5 @@
-// Copyright 2026 The Punit Authors. Licensed under the Apache License, Version 2.0.
+// Copyright 2026 The Punit Authors
+// SPDX-License-Identifier: Apache-2.0 AND BSD-2-Clause
 //
 // The patch-apply loop implements the bsdiff 4 / bspatch algorithm by Colin Percival,
 // distributed under the following licence:

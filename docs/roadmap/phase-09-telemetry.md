@@ -1,5 +1,12 @@
 # Phase 9 — Telemetry and observability (3–5 pw) → Milestone E
 
+> **Roadmap status: 🟡 partial.**
+> - ✅ `POST /v1/events/batch` (returns 202), client-side events, per-patch counters in PostgreSQL
+>   shown on `/admin`. `ota patch promote` refuses a patch with boot failures unless `--force`.
+> - 🔭 Not built: Event Hubs (9.4), a separate worker (9.5; counters are written directly),
+>   OpenTelemetry / Application Insights (9.6), dashboards (9.7), automatic rollout pausing (9.8)
+>   and alerts (9.9).
+
 **Goal:** see how every patch behaves in the field, and **automatically pause** a rollout when a patch is bad.
 
 **New concepts:** event streaming (Event Hubs), consumers and checkpoints, OpenTelemetry, dashboards, alert rules.
@@ -12,7 +19,7 @@ Branch: `git switch -c phase-9-telemetry`.
 
 ## 9.1 The event vocabulary
 
-**Do:** add the event type enum to `ota_protocol` (Dart) and the backend (Python), with exactly these names (blueprint p. 30–31):
+**Do:** add the event type enum to `ota_protocol` (Dart) and the backend (Python), with exactly these names:
 
 ```
 update_check_started / _succeeded / _failed
@@ -102,7 +109,7 @@ If the emulator is too fiddly, keep `LogEventSink` locally and test `EventHubsSi
 
 **Why:** a bad patch at 10% of 1M users hits 100,000 people. A machine reacts in minutes. A human might not notice for hours.
 
-**Do:** a job in the worker, every minute, for each running rollout. Thresholds from blueprint p. 31–32:
+**Do:** a job in the worker, every minute, for each running rollout. Planned thresholds:
 
 | Metric | Pause if | Notes |
 |---|---|---|

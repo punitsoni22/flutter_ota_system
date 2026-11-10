@@ -1,5 +1,13 @@
 # Phase 1 — Foundations (2–3 pw)
 
+> **Roadmap status: ✅ mostly implemented.** Built: settings from `OTA_*` environment variables,
+> health endpoints, Alembic migrations, `backend/Dockerfile`, `docker-compose.yml`, backend tests,
+> GitHub Actions CI ([ci.yml](../../.github/workflows/ci.yml)).
+> Not built: request IDs (1.4), a custom error format (1.5), the Makefile (1.13) and the Flutter
+> pub workspace (1.14). The real file layout differs from this guide: see `backend/app/`.
+> Step 1.16 (protect `main`) is a manual GitHub setting
+> ([MANUAL_SECURITY_CHECKLIST.md](../release/MANUAL_SECURITY_CHECKLIST.md) §C).
+
 **Goal:** a project skeleton where the API runs, the database runs, tests run, and GitHub checks every change.
 
 **New concepts:** Python virtual environments, FastAPI, settings from environment variables, liveness vs readiness, Alembic, Docker Compose, pub workspaces, GitHub Actions.
@@ -278,7 +286,7 @@ From now on: `git switch -c phase-2-...` → work → push → PR → merge when
 
 ## 1.17 Architecture overview
 
-**Do:** `docs/architecture/overview.md` with the big-picture diagram from [IMPLEMENTATION_PLAN.md](../../IMPLEMENTATION_PLAN.md) and one paragraph per component in your own words.
+**Do:** an architecture overview (built as [docs/architecture.md](../architecture.md)) with the big-picture diagram from the [roadmap](README.md#target-architecture-planned) and one paragraph per component in your own words.
 
 ---
 

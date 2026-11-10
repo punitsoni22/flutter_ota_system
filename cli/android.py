@@ -1,3 +1,6 @@
+# Copyright 2026 The Punit Authors
+# SPDX-License-Identifier: Apache-2.0
+
 """`ota release android` and `ota patch android`: Dart code patches for Android.
 
 release: build the store APK/AAB, register it, upload its libapp.so (all compiled Dart code) per ABI

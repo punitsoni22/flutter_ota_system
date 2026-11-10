@@ -1,3 +1,6 @@
+# Copyright 2026 The Punit Authors
+# SPDX-License-Identifier: Apache-2.0
+
 """release fingerprint for code patch compatibility checks
 
 Revision ID: 0002

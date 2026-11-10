@@ -1,3 +1,6 @@
+# Copyright 2026 The Punit Authors
+# SPDX-License-Identifier: Apache-2.0
+
 """Create the ES256 patch-signing key once.
 
     python -m app.keygen          on the server: writes the key file (VPS with a disk)

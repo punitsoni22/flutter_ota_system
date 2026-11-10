@@ -1,3 +1,6 @@
+# Copyright 2026 The Punit Authors
+# SPDX-License-Identifier: Apache-2.0
+
 """Canonical patch message from ADR-0002. Must match the Dart encoder byte for byte."""
 
 import struct

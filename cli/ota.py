@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright 2026 The Punit Authors
+# SPDX-License-Identifier: Apache-2.0
+
 """ota — command-line tool for the Flutter OTA admin API.
 
 Settings come from environment variables:

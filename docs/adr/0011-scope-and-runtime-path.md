@@ -3,6 +3,14 @@
 - **Status:** Proposed
 - **Date:** 2026-10-30
 
+> **Status update (2026-11-11):** decision 1 was **superseded in practice**. Android code patches
+> were built on **stock Flutter without an engine fork**: `OtaBoot.java` (in `ota_client`) selects
+> the patched `libapp.so` at process start ([code-push.md](../code-push.md)). The format name
+> `aot-bidiff-android-v1` and the store policy gate (decision 5) are implemented. From the scope
+> list in decision 3, **Azure + CI/CD deployment and 1M-install hardening are still planned and
+> not implemented** ([roadmap](../roadmap/README.md)). A follow-up ADR should record the
+> stock-Flutter approach formally.
+
 ## Context
 
 The goal is Shorebird-style OTA: change **any Dart code** of an installed Flutter app on Android and iOS, without a store release, for about 1M active installs. The goal is not a general DevOps platform.

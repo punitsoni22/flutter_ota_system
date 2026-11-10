@@ -1,3 +1,6 @@
+# Copyright 2026 The Punit Authors
+# SPDX-License-Identifier: Apache-2.0
+
 """Content-addressed file storage. Files are named by their SHA-256 and never overwritten.
 
 Two kinds of file, kept apart:

@@ -1,5 +1,12 @@
 # Phase 0 — Protocol decisions (≈0.5 pw)
 
+> **Roadmap status: 🟡 partial.**
+> - ✅ ADR-0001, ADR-0002 and ADR-0011 are written (status *Proposed*).
+> - 🟡 ADR-0003 to ADR-0007 and ADR-0010 are **decided and implemented in the code**, but not yet
+>   written up. ADR-0008 and ADR-0009 are planned. See the [ADR index](../adr/README.md).
+> - 🔭 `docs/protocol/manifest-v1.md` (step 0.4) does not exist yet. ADR-0002 holds the canonical
+>   encoding and its test vector.
+
 **Goal:** write down the decisions that are expensive to change later, *before* writing code that depends on them.
 
 **What is an ADR?** A one-page Markdown file: *context → decision → consequences*. Six months from now, when you wonder "why is the signature 64 bytes?", the ADR answers. ADRs live in `docs/adr/` and are numbered.
@@ -20,7 +27,7 @@ Three ADRs are already drafted with status **Proposed**:
 |---|---|
 | [0001-runtime-abstraction.md](../adr/0001-runtime-abstraction.md) | The platform never depends on a specific patch execution technology |
 | [0002-signature-scheme.md](../adr/0002-signature-scheme.md) | ECDSA P-256 (ES256) over a length-prefixed canonical encoding |
-| [0011-scope-and-runtime-path.md](../adr/0011-scope-and-runtime-path.md) | Scope: real Dart code push, own Android engine fork first, iOS research later, no web console or dashboards |
+| [0011-scope-and-runtime-path.md](../adr/0011-scope-and-runtime-path.md) | Scope: real Dart code push, Android first (built on stock Flutter, see the ADR's status update), iOS research later, no web console or dashboards |
 
 **Do:** read both. If you agree, change `Status: Proposed` to `Status: Accepted`. If you disagree (for example you prefer RSA-PSS), edit the decision and the consequences.
 
@@ -30,7 +37,7 @@ Three ADRs are already drafted with status **Proposed**:
 
 ## 0.3 Write the remaining ADRs
 
-**Why:** each of these fixes a gap or open question in the blueprint.
+**Why:** each of these closes a gap or open question in the original design.
 
 **Do:** copy the template to each new file and fill it in. The recommended decision is given, so your job is to understand it and write it in your own words.
 
@@ -53,6 +60,6 @@ Three ADRs are already drafted with status **Proposed**:
 
 **Why:** the Dart client and Python server must agree byte-for-byte on what gets signed.
 
-**Do:** create `docs/protocol/manifest-v1.md`. Copy the "Canonical encoding" section and the test vector from ADR-0002 into it, plus the JSON example of the patch manifest from the blueprint (page 22), using `mock-v1` as the format.
+**Do:** create `docs/protocol/manifest-v1.md`. Copy the "Canonical encoding" section and the test vector from ADR-0002 into it, plus a JSON example of the patch manifest (take a real `/v1/updates/check` response from `scripts/verify_demo.sh` or the API docs at `/docs`), using `mock-v1` as the format.
 
 **Check:** someone who has never seen your code could implement the encoder from this file alone.

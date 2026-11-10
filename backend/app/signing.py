@@ -1,3 +1,6 @@
+# Copyright 2026 The Punit Authors
+# SPDX-License-Identifier: Apache-2.0
+
 """ES256 signing (ADR-0002). Signatures are raw r||s (64 bytes), base64-encoded.
 
 The local PEM signer is for development. Phase 10 swaps in a Key Vault signer with the same interface.

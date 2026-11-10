@@ -27,6 +27,9 @@ First public, **experimental** release. Internally tested only; not production-r
   `publish_test_patch.sh`, `verify_demo.sh`, `cleanup_local.sh`, `prepublish_check.sh`.
 - Documentation: README, architecture, security model, SECURITY.md, contributing guide, code of
   conduct, third-party notices; GitHub issue/PR templates; CI workflow.
+- Licensing: Apache-2.0 `LICENSE` and `NOTICE`, SPDX headers in Punit source files, audited
+  `THIRD_PARTY_NOTICES.md` (incl. the Flutter template and bsdiff licence texts); original Punit
+  launcher icons in the example app.
 
 ### Changed (compared with the internal pre-release)
 

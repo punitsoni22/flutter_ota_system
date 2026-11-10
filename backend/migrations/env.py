@@ -1,3 +1,6 @@
+# Copyright 2026 The Punit Authors
+# SPDX-License-Identifier: Apache-2.0
+
 """Alembic environment. The database URL comes from the app settings (OTA_DATABASE_URL)."""
 
 from alembic import context

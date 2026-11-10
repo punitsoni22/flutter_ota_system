@@ -1,7 +1,13 @@
 # Setup — Prepare your machine
 
-You are on Ubuntu. Already installed and checked: **git 2.53**, **Python 3.14**, **Flutter 3.41 / Dart 3.11**.
-Missing: **Docker**. Needed later: **Azure CLI** (Phase 10) and **k6** (Phase 11).
+> **Roadmap status: ✅ guide.** How to prepare a Linux machine to work on Punit. The public
+> repository already exists: to contribute, **fork** it instead of doing S.4 (see
+> [CONTRIBUTING.md](../../CONTRIBUTING.md)). The tools in S.5 are only for **planned** phases
+> (Azure, load tests).
+
+These steps assume Ubuntu. You need **git**, **Python 3** (the backend image and CI use 3.13),
+**Flutter stable ≥ 3.27 with Dart ≥ 3.12**, and **Docker** with Compose v2. Only planned phases need
+the **Azure CLI** (Phase 10) and **k6** (Phase 11).
 
 ---
 
@@ -67,7 +73,7 @@ git remote add origin git@github.com:<your-user>/flutter_ota_system.git
 git push -u origin main
 ```
 
-**Check:** the **Actions** tab on GitHub shows `backend-ci` and `flutter-ci` running green.
+**Check:** the **Actions** tab on GitHub shows the `CI` workflow running green.
 
 ---
 

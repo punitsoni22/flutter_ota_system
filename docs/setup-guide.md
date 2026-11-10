@@ -1,162 +1,113 @@
-# Setup guide: free test hosting, then any Flutter app
+# Setup guide: run your own Punit server, then add OTA to a Flutter app
 
-> Day-to-day app work (set up an app, store releases, patches, rollout): see **[app-guide.md](app-guide.md)**.
+> Day-to-day app work (set up an app, store releases, patches, rollout): see
+> **[app-guide.md](app-guide.md)**.
 
-Two parts:
+Punit is **self-hosted**. You run the server on a machine you control, and **Docker is the
+official installation method**. There is no hosted Punit service.
 
-- **Part A**: put the OTA server on free cloud services (Supabase + Render), so phones anywhere can reach it.
-- **Part B**: add OTA to a Flutter app and test Dart code patches, staging → production, and rollback.
+This guide has three parts:
 
-For real users later, move to proper hosting ([deploy.md](deploy.md), or paid tiers of the same
-services). Parts B and C stay the same; only the server address and the key change.
+- **Part A**: start your own Punit server with Docker and connect the `ota` CLI.
+- **Part B**: add OTA to a Flutter app.
+- **Part C**: test Dart code patches, staging → production, rollback and crash protection.
+
+> [!NOTE]
+> **Status (v0.1.0-alpha).** The **local** Docker stack (Part A, option 1) is what the maintainers
+> test, with `scripts/verify_demo.sh`, on Linux. The single-server production setup
+> ([deploy.md](deploy.md), option 2) has **not yet been verified end to end**. A tested Docker
+> quickstart for servers is planned. Until then, treat option 2 as a draft.
 
 ---
 
-## Part A: free cloud hosting (testing only)
+## Part A: run your own server (Docker)
 
-Three free services, no server to look after:
+### Option 1: on your own computer (testing)
 
-| Piece | Service | Free tier |
-|---|---|---|
-| Database | **Supabase** Postgres | 500 MB, no card |
-| Patch files | **Supabase Storage** (or **Cloudflare R2**) | 1 GB and 5 GB downloads/month (R2: 10 GB, free downloads) |
-| API server | **Render** web service (Docker) | 512 MB RAM, no card; sleeps after 15 min idle |
-
-What runs where:
-
-```
-phones ──► Render (API: checks, signing, admin page) ──► Supabase Postgres
-   │
-   └──── download patch files ──► Supabase Storage public bucket "ota-public"
-         store builds (private) ──► bucket "ota-private" (admin API only)
-```
-
-Free-tier catches, all fine for testing:
-
-- **Render sleeps** after 15 minutes without requests, and the first request then takes ~1 minute.
-  Step 5 keeps it awake with a free pinger.
-- **Supabase pauses** a free project after 7 days without activity. The pinger counts as activity.
-
-You need: a GitHub account with this repo pushed (Render deploys from GitHub), plus free accounts at
-https://supabase.com and https://render.com (sign in with GitHub).
-
-### 1. Supabase: database
-
-1. https://supabase.com/dashboard → **New project**:
-   - name `flutter-ota`;
-   - a strong **database password** (save it);
-   - region near your users (e.g. **Mumbai**).
-2. When it's ready: the **Connect** button (top) → **Session pooler** → copy the URI:
-   ```
-   postgresql://postgres.<ref>:[YOUR-PASSWORD]@aws-0-ap-south-1.pooler.supabase.com:5432/postgres
-   ```
-   Put your password in place of `[YOUR-PASSWORD]`. This is `OTA_DATABASE_URL`.
-
-   Use the **Session pooler**, not "Direct connection": Render can't reach Supabase's direct address.
-
-The server creates its tables itself on first start.
-
-### 2. Supabase: file storage
-
-1. **Storage** → **New bucket** → name `ota-public`, **Public bucket: ON** → Create.
-2. **New bucket** → name `ota-private`, **Public bucket: OFF** → Create.
-3. **Project Settings → Storage → S3 Connection**: copy **Endpoint**
-   (`https://<ref>.supabase.co/storage/v1/s3`) and **Region** (e.g. `eu-west-1`).
-4. Storage keys, without creating anything: the server signs in with the project's own keys
-   (**Project Settings → API Keys**):
-
-   | Setting | Value |
-   |---|---|
-   | `OTA_S3_ACCESS_KEY_ID` | the project ref (`<ref>`) |
-   | `OTA_S3_SECRET_ACCESS_KEY` | the **anon** key |
-   | `OTA_S3_SESSION_TOKEN` | the **service_role** key (secret) |
-
-   (Dashboard **S3 Access Keys** work too: key id + secret, and leave the session token empty.)
-5. Your public file address (`OTA_CDN_BASE_URL`) is:
-   ```
-   https://<ref>.supabase.co/storage/v1/object/public/ota-public
-   ```
-   `<ref>` is the project id in your Supabase URL.
-
-<details>
-<summary>Prefer Cloudflare R2 for files? (more space, free downloads; Cloudflare may ask for a card)</summary>
-
-1. Cloudflare dashboard → **R2** → create buckets `ota-public` and `ota-private`.
-2. `ota-public` → **Settings → Public access → R2.dev subdomain → Allow**. Copy the URL
-   (`https://pub-<id>.r2.dev`): that is `OTA_CDN_BASE_URL`.
-3. R2 → **Manage API tokens → Create API token**:
-   - permission **Object Read & Write**, limited to the two buckets;
-   - copy the **Access Key ID** and **Secret Access Key**.
-4. Endpoint: `https://<account-id>.r2.cloudflarestorage.com`. Region: `auto`.
-
-Use these values in step 4 instead of Supabase's. The database stays on Supabase.
-</details>
-
-### 3. Create the signing key (once, on your Mac)
+You need Git, Docker Engine 24+ or Docker Desktop with Compose v2, and free ports 8000, 8080 and
+5432. Check Docker first:
 
 ```bash
-cd ~/Desktop/flutter_ota_system/backend
-OTA_SIGNING_KEY_ID=cloud-1 ../.venv/bin/python -m app.keygen --pem
+docker compose version      # expected: Docker Compose version v2.x.x
 ```
 
-It prints two things:
-
-- **`OTA_SIGNING_KEY_PEM`**: one long line starting with `-----BEGIN PRIVATE KEY-----`. It is a
-  secret: save it in a password manager.
-- **`OTA_PUBLIC_KEY`** for the apps, e.g. `cloud-1:BIi7De…`.
-
-Apps trust only this key. Losing it means new store builds for every app, so keep it safe.
-
-### 4. Render: API server
-
-1. Make sure this repo, including `render.yaml`, is pushed to GitHub.
-2. https://dashboard.render.com → **New → Blueprint** → connect GitHub → pick the `flutter_ota_system` repo.
-   Render reads `render.yaml` and asks for these values:
-
-   | Key | Value |
-   |---|---|
-   | `OTA_DATABASE_URL` | Session pooler URI from step 1 |
-   | `OTA_SIGNING_KEY_PEM` | the one-line key from step 3 |
-   | `OTA_CDN_BASE_URL` | public file address from step 2 |
-   | `OTA_S3_ENDPOINT_URL` | Endpoint from step 2 |
-   | `OTA_S3_REGION` | Region from step 2 |
-   | `OTA_S3_ACCESS_KEY_ID` | project ref from step 2 |
-   | `OTA_S3_SECRET_ACCESS_KEY` | anon key from step 2 |
-| `OTA_S3_SESSION_TOKEN` | service_role key from step 2 |
-
-3. **Apply**. The first build takes ~5 minutes. Your server address is shown at the top, e.g.
-   `https://<your-service>.onrender.com`.
-4. Check it: open `https://<your-service>.onrender.com/health/ready` → `{"status":"ok"}`.
-   If not, the **Logs** tab names the problem. The server refuses to start with a missing or unsafe
-   setting, and says which one.
-5. Your **admin key**: service → **Environment** → `OTA_ADMIN_API_KEY` (Render generated it).
-
-Later code changes deploy automatically when you push to GitHub.
-
-### 5. Keep it awake (free pinger)
-
-https://uptimerobot.com (free) → **New monitor**:
-
-- type **HTTP(s)**;
-- URL `https://<your-service>.onrender.com/health/ready`;
-- interval **5 minutes**.
-
-This keeps Render from sleeping and Supabase from pausing, and emails you if the server goes down.
-
-### 6. Connect the CLI and the admin page
-
-On your Mac (add these to `~/.zshrc` to keep them):
+Start the stack:
 
 ```bash
-alias ota="$HOME/Desktop/flutter_ota_system/.venv/bin/python $HOME/Desktop/flutter_ota_system/cli/ota.py"
-export OTA_API_URL=https://<your-service>.onrender.com
-export OTA_API_KEY=<OTA_ADMIN_API_KEY from Render>
-ota app list            # [] = connected
+git clone https://github.com/punitsoni22/flutter_ota_system.git
+cd flutter_ota_system
+cp .env.example .env              # fake, local-only values
+./scripts/setup_local.sh          # builds the API, creates a LOCAL signing key, starts everything
 ```
 
-Admin page: `https://<your-service>.onrender.com/admin`, with the same key.
+The script ends with:
 
-From here on, **"server"** means `https://<your-service>.onrender.com`.
+```
+  API:    http://localhost:8000   (OpenAPI docs: /docs)
+  Admin:  http://localhost:8000/admin   (key: OTA_ADMIN_API_KEY in .env)
+  CDN:    http://localhost:8080/health
+```
+
+Check it:
+
+```bash
+curl http://localhost:8000/health/ready     # expected: {"status":"ok"}
+docker compose ps                           # postgres, api, cdn: all "(healthy)"
+```
+
+#### Let phones reach your computer
+
+Your phone or emulator must be able to reach the server. Edit `.env`, then run
+`docker compose up -d` to apply it:
+
+| Where the app runs | `OTA_CDN_BASE_URL` in `.env` | `OTA_SERVER_URL` for the app | Also |
+|---|---|---|---|
+| Android emulator | `http://10.0.2.2:8080/cdn` | `http://10.0.2.2:8000` | — |
+| Phone on the same Wi-Fi | `http://<your-computer-IP>:8080/cdn` | `http://<your-computer-IP>:8000` | `PUNIT_BIND_ADDRESS=0.0.0.0` in `.env` |
+
+Find your computer's IP: `hostname -I | awk '{print $1}'` on Linux, or
+`ipconfig getifaddr en0` on macOS. It looks like `192.168.1.23`.
+
+> [!WARNING]
+> `PUNIT_BIND_ADDRESS=0.0.0.0` opens the API to your whole network, with the fake keys from
+> `.env.example`. Only do this on a network you trust, and only for testing.
+
+Plain `http://` addresses only work if the test app allows cleartext traffic
+(`android:usesCleartextTraffic="true"`, as in `example_app`). Never ship that in a store build.
+
+### Option 2: on your own server (draft, not yet verified)
+
+[deploy.md](deploy.md) describes one Linux server running PostgreSQL, the API, an nginx file
+server and Caddy for HTTPS, all with Docker Compose. Read the status note at the top of that page
+first.
+
+*Other hosting:* earlier internal tests used free cloud services (Render + Supabase). That setup is
+**not recommended and not supported**; it is kept for reference in
+[alternatives/render-supabase.md](alternatives/render-supabase.md).
+
+### Connect the CLI
+
+The `ota` command-line tool talks to your server's admin API. In the repository folder:
+
+```bash
+python3 -m venv .venv
+.venv/bin/pip install -r cli/requirements.txt
+alias ota="$PWD/.venv/bin/python $PWD/cli/ota.py"
+export OTA_API_URL=http://localhost:8000
+export OTA_API_KEY=local-dev-admin-key-not-a-secret   # = OTA_ADMIN_API_KEY in your .env
+ota app list
+```
+
+Expected: a JSON list. It is `[]` on a fresh server, or shows `punit-demo` after
+`./scripts/seed_demo.sh`. A wrong key prints `error 401: Invalid or missing X-API-Key`.
+
+To keep the alias and variables, add the `alias` and `export` lines to `~/.bashrc` (Linux) or
+`~/.zshrc` (macOS). Use the full path to the repository instead of `$PWD`.
+
+Admin page: <http://localhost:8000/admin>, with the same key.
+
+From here on, **"server"** means your server's address, for example `http://10.0.2.2:8000` for an
+emulator.
 
 ---
 
@@ -177,7 +128,7 @@ dependencies:
       path: packages/ota_client
 ```
 
-The git URL works for anyone with access to the repo. On your Mac alone, a path works too:
+The git URL works for anyone. With a local copy of the repository, a path works too:
 `path: ../flutter_ota_system/packages/ota_client`. Then run `flutter pub get`.
 
 ### 2. Start OTA in the app
@@ -354,15 +305,14 @@ Tag every store build when you run `ota release android` (e.g. `git tag v1.0.0+1
 
 | Symptom | Fix |
 |---|---|
-| `zsh: command not found: ota` | Run the `alias ota=...` line (Part A, step 6) |
-| `error 401` from `ota` | `OTA_API_KEY` is not set, or isn't Render's `OTA_ADMIN_API_KEY` |
+| `command not found: ota` | Run the `alias ota=...` line (Part A, *Connect the CLI*) |
+| `error 401` from `ota` | `OTA_API_KEY` is not set, or doesn't match `OTA_ADMIN_API_KEY` in the server's `.env` |
 | `policy_review_required` | `ota app approve-policy <slug> --reason "..."` |
 | `Release ... already exists` | `ota release delete <slug> --version <v>`, or raise the build number |
 | `assets changed` / `needs a store release` | The change isn't Dart-only: make a new store build (Part B, step 5) |
 | `Flutter changed` | Use the Flutter version the release was built with |
-| Phone never gets the patch | Was the app built with `OTA_SERVER_URL` and `OTA_PUBLIC_KEY`? Is the server awake (`/health/ready`)? Is the phone on the patch's channel? Is it a **release** build (debug builds ignore patches)? |
+| Phone never gets the patch | Was the app built with `OTA_SERVER_URL` and `OTA_PUBLIC_KEY`? Does the phone reach the server (open `<server>/health/ready` in the phone's browser)? Is the phone on the patch's channel? Is it a **release** build (debug builds ignore patches)? |
 | Patch shows but disappears after a restart | It crashed or was closed within 5 seconds of opening; check Boot failed on the admin page |
 | Admin page empty | Enter the admin key and click Connect |
-| First request very slow, or a check fails | Render was asleep; set up the pinger (Part A, step 5) |
-| Server won't start (Render logs: `Unsafe production settings`) | Fix the setting it names in Render → Environment |
-| `ota release android` upload fails | Check the S3 keys and bucket names; `ota-private` must exist |
+| Server won't start (`docker compose logs api` shows `Unsafe production settings`) | Fix the setting it names in `.env` (`OTA_ENV=production` refuses fake or unsafe values) |
+| `ota release android` upload fails | `docker compose logs api` shows why. With `OTA_STORAGE_BACKEND=s3`, check the S3 keys and that both buckets exist |

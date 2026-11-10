@@ -3,6 +3,11 @@
 - **Status:** Proposed
 - **Date:** 2026-09-30
 
+> **Status update (2026-11-11):** the decision holds. In the code, `PatchRuntime` lives in
+> `packages/ota_client/lib/src/runtime.dart` (there is no separate `ota_runtime_api` package).
+> The Android runtime is built on stock Flutter, not an engine fork (see the
+> [ADR-0011](0011-scope-and-runtime-path.md) update).
+
 ## Context
 
 Flutter release builds are AOT-compiled, so you cannot simply swap in new Dart code. Shorebird solves this with forks of the Flutter engine and Dart SDK, and part of its Dart fork is not public. Building an equivalent runtime is estimated at 40–100+ person-weeks. The rest of the OTA platform (API, storage, signing, rollout, telemetry, Azure) is about 31–49 person-weeks and is useful on its own.

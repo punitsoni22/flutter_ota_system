@@ -1,5 +1,17 @@
 # Runtime track R — Android engine fork (`aot-bidiff-android-v1`)
 
+> **Roadmap status: 🟡 experimental, and built differently.** Android code patches work on
+> **stock Flutter, without an engine fork**: the `OtaBoot` Java class in `ota_client` points
+> Flutter at a patched `libapp.so` at process start. See [code-push.md](../code-push.md).
+> - ✅ Built: the store-policy gate (R.0, `ota app approve-policy`), reading the store `libapp.so`
+>   (R.3), the bsdiff-based `OTADIF01` format (R.4), the boot hook (R.5, in the plugin instead of
+>   the engine), the Android runtime (R.6, `aot_runtime.dart`) and the CLI
+>   (R.7, `ota release android` / `ota patch android`).
+> - 🔭 Not needed or not done: building and shipping a custom engine (R.1, R.2, R.8) and the
+>   Flutter upgrade runbook (R.9).
+> - Tested internally on a small number of devices only. Store-policy review is your
+>   responsibility.
+
 **Goal:** an installed Android app (built with *your* Flutter engine) runs new Dart code from a verified patch. If anything goes wrong, it falls back to the store-installed code.
 
 **Why this is a separate track:** this is compiler/engine work, not backend work. It runs **in parallel** with Phases 1–11 (see the master plan). Decision record: [ADR-0011](../adr/0011-scope-and-runtime-path.md).

@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# Copyright 2026 The Punit Authors
+# SPDX-License-Identifier: Apache-2.0
+
 # Pre-publication gate. Run on a FRESH CLONE before making the repository public.
 # Exits non-zero if any automated check fails. Manual items are printed at the end.
 #
@@ -88,7 +91,7 @@ fi
 
 cat <<'EOF'
 
-Manual items (cannot be automated here; see docs/release/PREPUBLISH_CHECKLIST.md):
+Manual items (cannot be automated here; see docs/release/PREPUBLISH_CHECKLIST.md and docs/release/MANUAL_SECURITY_CHECKLIST.md):
   [ ] Every secret in .local/release/SECRET_ROTATION_CHECKLIST.md (private, not committed) rotated or confirmed never exposed
   [ ] History decision made and executed (.local/release/history-cleanup.md, private), incl. author emails
   [ ] GitHub private vulnerability reporting enabled; security contact monitored

@@ -190,15 +190,17 @@ The signing key is recreated on the next start, so update `OTA_PUBLIC_KEY` in th
 
 ## What the MVP does not have yet
 
-| Missing | Where it's planned |
-|---|---|
-| Real Dart code patches | Done for Android: [code-push.md](code-push.md) |
-| iOS code patches | [iOS research](plan/runtime-ios-research.md) |
-| DB migrations | Done (Alembic, run on start) |
-| Key Vault signing, Azure Blob + Front Door, CI/CD | Phase 10 |
-| Entra ID login + roles for the CLI (now one API key) | Phase 8 |
-| Rate limiting, Redis cache for the check, load tests for 1M installs | Phase 11 |
-| Event Hubs for telemetry (now counters in Postgres) | Phase 9 |
-| Secure storage for the device token (now in the app's private folder) | Phase 5.8 |
+Status marks are explained in the [roadmap](roadmap/README.md).
+
+| Item | Status | Roadmap |
+|---|---|---|
+| Real Dart code patches | 🟡 Experimental, Android only: [code-push.md](code-push.md) | [Track R](roadmap/runtime-android-engine.md) |
+| iOS code patches | 🔭 Research only | [iOS research](roadmap/runtime-ios-research.md) |
+| DB migrations | ✅ Alembic, run on start | — |
+| Key Vault signing, Azure Blob + Front Door, Azure deployment | 🔭 Planned, not implemented. (GitHub Actions CI exists; it only builds and tests) | [Phase 10](roadmap/phase-10-azure-cicd.md) |
+| Users, roles (RBAC), SSO, audit log (now one shared API key) | 🔭 Planned | [Phase 8](roadmap/phase-08-admin-rbac.md) |
+| Rate limiting, Redis cache for the check, load tests toward the 1M-installs goal | 🔭 Planned. No scale is claimed | [Phase 11](roadmap/phase-11-hardening.md) |
+| Event Hubs for telemetry (now counters in Postgres) | 🔭 Planned | [Phase 9](roadmap/phase-09-telemetry.md) |
+| Secure storage for the device token (now in the app's private folder) | 🔭 Planned | [Phase 5.8](roadmap/phase-05-flutter-client.md#58-api-client--auth) |
 
 **Before any real users:** change `OTA_ADMIN_API_KEY`, `OTA_DEVICE_JWT_SECRET` and `OTA_ROLLOUT_HMAC_SECRET`, set `OTA_AUTO_GENERATE_SIGNING_KEY=false`, use HTTPS, and remove `usesCleartextTraffic` from the app manifest.

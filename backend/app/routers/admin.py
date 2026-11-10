@@ -1,3 +1,6 @@
+# Copyright 2026 The Punit Authors
+# SPDX-License-Identifier: Apache-2.0
+
 """Admin API for the `ota` CLI and CI. Everything here needs X-API-Key."""
 
 import json

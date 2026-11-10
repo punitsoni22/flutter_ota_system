@@ -1,3 +1,6 @@
+# Copyright 2026 The Punit Authors
+# SPDX-License-Identifier: Apache-2.0
+
 """Deterministic rollout buckets (ADR-0004).
 
 The same device always gets the same bucket for the same patch, so when a rollout grows

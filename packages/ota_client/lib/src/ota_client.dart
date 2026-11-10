@@ -1,3 +1,6 @@
+// Copyright 2026 The Punit Authors
+// SPDX-License-Identifier: Apache-2.0
+
 import 'dart:async';
 import 'dart:convert';
 import 'dart:ffi' show Abi;

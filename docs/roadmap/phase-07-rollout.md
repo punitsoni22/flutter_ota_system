@@ -1,5 +1,11 @@
 # Phase 7 — Rollout, rollback, revoke (3–4 pw) → Milestone D
 
+> **Roadmap status: ✅ mostly implemented.** Deterministic HMAC buckets (`backend/app/bucket.py`),
+> publish / rollout / rollback / revoke endpoints, bad-patch lists on every check, and a fleet
+> simulator (`scripts/simulate_fleet.py`).
+> 🔭 Not built: targeting (7.5, optional) and the deployment-head cache (7.8). **There is no Redis
+> and no in-process cache**: every check reads PostgreSQL.
+
 **Goal:** release a patch to 1% of users, watch it, expand to 10% → 25% → 50% → 100%, and stop or undo it instantly if something is wrong.
 
 **New concepts:** deterministic bucketing with HMAC, monotonic expansion, cache invalidation, append-only event ledgers.

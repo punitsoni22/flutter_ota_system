@@ -1,3 +1,6 @@
+# Copyright 2026 The Punit Authors
+# SPDX-License-Identifier: Apache-2.0
+
 """Device API: register, check for updates, report events. Called by the Flutter ota_client."""
 
 from datetime import datetime, timezone
