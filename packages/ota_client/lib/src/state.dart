@@ -20,19 +20,25 @@ class OtaState {
     this.lastGood,
     this.bootAttemptPatchId,
     Set<String>? badPatchIds,
+    Set<String>? retiredReleaseIds,
     this.highestAcceptedNumber = 0,
     this.lastCheckAt,
     this.channel,
     List<Map<String, String>>? pendingEvents,
   })  : badPatchIds = badPatchIds ?? {},
+        retiredReleaseIds = retiredReleaseIds ?? {},
         pendingEvents = pendingEvents ?? [];
 
   /// Random id created on first launch. Not tied to the person or the hardware.
   final String installationId;
   String? releaseVersion;
 
-  /// Server id of our release, remembered on the first check. A change means a replay attempt.
+  /// Server id of our release, remembered on the first check.
   String? releaseId;
+
+  /// Earlier server ids of this same store version (the release was deleted and registered
+  /// again). A response that goes back to one of them is refused as a replay.
+  final Set<String> retiredReleaseIds;
   String? accessToken;
 
   /// The patch the app runs now (null = the store build).
@@ -61,6 +67,7 @@ class OtaState {
   void resetForNewRelease(String version) {
     releaseVersion = version;
     releaseId = null;
+    retiredReleaseIds.clear();
     active = null;
     staged = null;
     lastGood = null;
@@ -85,6 +92,7 @@ class OtaState {
         'last_good': lastGood?.toJson(),
         'boot_attempt_patch_id': bootAttemptPatchId,
         'bad_patch_ids': badPatchIds.toList(),
+        'retired_release_ids': retiredReleaseIds.toList(),
         'highest_accepted_number': highestAcceptedNumber,
         'last_check_at': lastCheckAt?.toIso8601String(),
         'channel': channel,
@@ -104,6 +112,7 @@ class OtaState {
       lastGood: patch('last_good'),
       bootAttemptPatchId: j['boot_attempt_patch_id'] as String?,
       badPatchIds: {...(j['bad_patch_ids'] as List? ?? const []).cast<String>()},
+      retiredReleaseIds: {...(j['retired_release_ids'] as List? ?? const []).cast<String>()},
       highestAcceptedNumber: j['highest_accepted_number'] as int? ?? 0,
       lastCheckAt: j['last_check_at'] == null ? null : DateTime.parse(j['last_check_at'] as String),
       channel: j['channel'] as String?,

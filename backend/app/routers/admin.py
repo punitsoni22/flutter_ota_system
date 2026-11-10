@@ -207,7 +207,31 @@ def create_release(
 ):
     app = _app_by_slug(db, slug)
     fields = body.model_dump()
+    replace = fields.pop("replace")
     fields["fingerprint"] = json.dumps(fields["fingerprint"], sort_keys=True)
+    exists = db.scalar(
+        select(func.count()).select_from(Release).where(
+            Release.application_id == app.id,
+            Release.platform == body.platform,
+            Release.version == body.version,
+        )
+    )
+    if not exists and not replace:
+        # KI-1: installs remember the deleted release's id. A new id makes them drop its patches.
+        in_use = db.scalar(
+            select(func.count()).select_from(Device).where(
+                Device.application_id == app.id,
+                Device.platform == body.platform,
+                Device.release_version == body.version,
+            )
+        )
+        if in_use:
+            raise HTTPException(
+                status.HTTP_409_CONFLICT,
+                f"{in_use} device(s) still report {body.platform} {body.version} from a deleted "
+                "release. Registering it again makes them drop that release's patches. Give the "
+                "new build a new build number, or pass replace=true (CLI: --replace)",
+            )
     release = Release(application_id=app.id, **fields)
     db.add(release)
     try:

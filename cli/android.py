@@ -143,6 +143,7 @@ def release_android(a, call, client, show):
         "engine_revision": info["engineRevision"],
         "runtime_abi": RUNTIME_ABI,
         "fingerprint": fingerprint,
+        "replace": a.replace,
     })
     for abi, data in sorted(libs.items()):
         release = call("POST", f"/v1/admin/releases/{release['id']}/artifacts",

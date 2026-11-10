@@ -99,6 +99,7 @@ def release_create(a):
             "flutter_version": a.flutter_version,
             "engine_revision": a.engine_revision,
             "runtime_abi": a.runtime_abi,
+            "replace": a.replace,
         },
     )
     for arch, path in parse_arch_files(a.base or []):
@@ -227,6 +228,8 @@ def main() -> None:
     c.add_argument("--engine-revision", default="")
     c.add_argument("--runtime-abi", default="ota-runtime-v1")
     c.add_argument("--base", action="append", metavar="ARCH=PATH", help="Base artifact (libapp.so) per arch")
+    c.add_argument("--replace", action="store_true",
+                   help="Register a version again that devices still report from a deleted release")
     c.set_defaults(fn=release_create)
     c = g.add_parser("list")
     c.add_argument("app")
@@ -241,6 +244,8 @@ def main() -> None:
     c.add_argument("--project", default=".", help="Flutter project folder (default: current)")
     c.add_argument("--kind", choices=["aab", "apk"], default="aab", help="aab for Play, apk to install directly")
     c.add_argument("--artifact", help="Register an already built APK/AAB instead of building (pass the same build args)")
+    c.add_argument("--replace", action="store_true",
+                   help="Register a version again that devices still report from a deleted release")
     c.add_argument("--tree-shake-icons", action="store_true",
                    help="Keep Flutter's icon tree-shaking (smaller app, but patches can't use new icons)")
     c.set_defaults(fn=lambda a: android.release_android(a, call, client, show))

@@ -333,3 +333,19 @@ def test_delete_release_only_without_live_patches(client):
     assert client.delete(f"/v1/admin/releases/{rel['id']}", headers=ADMIN).status_code == 204
     assert client.get("/v1/admin/apps/demo/releases", headers=ADMIN).json() == []
     make_release(client, "1.0.0+1")  # the version can be registered again
+
+
+def test_recreating_a_deleted_release_that_devices_use_needs_replace(client):
+    """KI-1: installs remember the release id, so re-registering a used version is explicit."""
+    make_app(client)
+    rel = make_release(client, "1.0.0+1")
+    register(client, "dev-0001", "1.0.0+1")
+    assert client.delete(f"/v1/admin/releases/{rel['id']}", headers=ADMIN).status_code == 204
+    body = {"platform": "android", "version": "1.0.0+1"}
+    r = client.post("/v1/admin/apps/demo/releases", json=body, headers=ADMIN)
+    assert r.status_code == 409 and "still report android 1.0.0+1" in r.json()["detail"]
+    make_release(client, "1.0.0+2")  # a new build number is always fine
+    r = client.post("/v1/admin/apps/demo/releases", json=body | {"replace": True}, headers=ADMIN)
+    assert r.status_code == 201 and r.json()["id"] != rel["id"]
+    r = client.post("/v1/admin/apps/demo/releases", json=body | {"replace": True}, headers=ADMIN)
+    assert r.status_code == 409 and "already exists" in r.json()["detail"]  # replace never overwrites

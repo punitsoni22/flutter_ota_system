@@ -48,6 +48,8 @@ class ReleaseCreate(BaseModel):
     runtime_abi: str = Field(default="ota-runtime-v1", max_length=64)
     # Written by `ota release android`; read back by `ota patch android` (see models.Release).
     fingerprint: dict = Field(default_factory=dict)
+    # Register a version again although devices still report it from a deleted release (KI-1).
+    replace: bool = False
 
     @field_validator("fingerprint")
     @classmethod

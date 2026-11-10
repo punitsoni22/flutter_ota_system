@@ -249,13 +249,16 @@ class OtaClient {
       _state.lastCheckAt = DateTime.now();
       _minInterval = _jittered(response.nextCheckAfterSeconds);
 
+      final hadPatch = _state.active != null;
       final idProblem = _checkIdentity(response);
       if (idProblem != null) {
         await _save();
         return UpdateResult(UpdateStatus.rejected, message: idProblem);
       }
+      // A new release id dropped the running patch: the next start runs the store build.
+      final droppedPatch = hadPatch && _state.active == null;
 
-      final rolledBack = _applyBadPatchLists(response);
+      final rolledBack = _applyBadPatchLists(response) || droppedPatch;
       final offered = response.patch;
       if (!response.updateAvailable || offered == null) {
         await _save();
@@ -282,10 +285,22 @@ class OtaClient {
     if (pinned != null && r.applicationId != pinned) return 'application id mismatch';
     final releaseId = r.releaseId;
     if (releaseId == null) return null;
-    if (_state.releaseId == null) {
+    final known = _state.releaseId;
+    if (known == null) {
       _state.releaseId = releaseId;
-    } else if (_state.releaseId != releaseId) {
-      return 'release id changed';
+    } else if (known != releaseId) {
+      // Going back to an earlier id of this version would let old signed patches be replayed.
+      if (_state.retiredReleaseIds.contains(releaseId)) return 'release id changed';
+      // The release was deleted and registered again (KI-1). Its patches belonged to the old id,
+      // so drop them like after a store update; the next start runs the store build until a
+      // patch of the new release arrives. Signatures bind every patch to its release id.
+      _state.retiredReleaseIds.add(known);
+      _state.releaseId = releaseId;
+      _state.staged = null;
+      _state.active = null;
+      _state.lastGood = null;
+      _state.bootAttemptPatchId = null;
+      _state.highestAcceptedNumber = 0;
     }
     return null;
   }

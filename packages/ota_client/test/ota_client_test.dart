@@ -44,6 +44,7 @@ class FakeServer {
   int checks = 0;
   String? lastFailedIds;
   String? lastChannel;
+  String releaseId = 'rel-0001';
 
   static Map<String, dynamic> _patchJson() => {
         'id': '11111111-1111-1111-1111-111111111111',
@@ -76,7 +77,7 @@ class FakeServer {
             jsonEncode({
               'update_available': available,
               'application_id': 'app-0001',
-              'release_id': 'rel-0001',
+              'release_id': releaseId,
               'patch': available ? p : null,
               'rollback_to_patch_number': rolledBack.contains(current) ? (rollbackTo ?? 0) : null,
               'rolled_back_patch_numbers': rolledBack,
@@ -345,6 +346,39 @@ void main() {
       expect(server.checks, 1);
       await app.checkForUpdate(force: true);
       expect(server.checks, 2);
+    });
+
+    test('release deleted and registered again (new release id): old patches dropped, no way back', () async {
+      var app = await start();
+      await app.checkForUpdate();
+      app = await start();
+      await app.markBootSuccessful();
+      expect(app.activePatchNumber, 1);
+
+      // Same store version, new server id. The old patch belonged to the old id.
+      server.releaseId = 'rel-0002';
+      server.patch = null;
+      final dropped = await app.checkForUpdate(force: true);
+      expect(dropped.status, UpdateStatus.rollbackRestartRequired);
+      app = await start();
+      expect(app.activePatchNumber, 0, reason: 'store build until a patch of the new release arrives');
+      expect(activeText(), isNull);
+
+      // A patch signed for the old release does not verify under the new id.
+      server.patch = FakeServer._patchJson();
+      final replay = await app.checkForUpdate(force: true);
+      expect(replay.status, UpdateStatus.rejected);
+      expect(replay.message, 'signature invalid');
+
+      // Switching back to the retired id is refused.
+      server.releaseId = 'rel-0001';
+      final back = await app.checkForUpdate(force: true);
+      expect(back.status, UpdateStatus.rejected);
+      expect(back.message, 'release id changed');
+
+      // The retired id survives a restart.
+      app = await start();
+      expect((await app.checkForUpdate(force: true)).message, 'release id changed');
     });
   });
 
