@@ -3,7 +3,7 @@
 > **Roadmap status: 🔭 planned, not started.** **Nothing in this phase is implemented.** Punit has
 > no Azure deployment, no Bicep, no managed identities, no Front Door and no deployment workflow.
 > GitHub Actions CI exists ([ci.yml](../../.github/workflows/ci.yml)) but only builds and tests.
-> Today's self-hosting path is Docker ([deploy.md](../deploy.md)).
+> Today's self-hosting path is Docker ([operations.md](../operations.md)).
 
 **Goal:** everything that ran in Docker Compose now runs in Azure, created from code, and deployed by GitHub Actions without any stored passwords.
 

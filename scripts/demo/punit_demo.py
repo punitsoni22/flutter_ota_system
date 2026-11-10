@@ -14,7 +14,7 @@ download from object storage, SHA-256 and ES256 signature checks, rollback, revo
 
 What it does NOT prove: executing new Dart code. The demo patch uses the "mock-v1" format, an
 inert signed JSON file that example_app reads at start. Android AOT code patches are a separate,
-experimental path (docs/code-push.md) that needs a real device build.
+experimental path (docs/releases-and-patches.md) that needs a real device build.
 
 The signature check below re-implements the canonical message from ADR-0002 independently of
 backend/app/canonical.py, so a protocol drift between server and this script fails loudly.

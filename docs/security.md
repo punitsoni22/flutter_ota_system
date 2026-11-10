@@ -1,144 +1,228 @@
-# Punit security model
+# Security
 
-> **Alpha disclaimer.** Punit v0.1.0-alpha has not undergone an independent security audit. This
-> document describes the intended model and its known gaps. It does not certify that the
-> implementation is free of flaws. Validate it yourself before using Punit for anything users
-> depend on. Report vulnerabilities as described in [SECURITY.md](../SECURITY.md).
+> **Alpha disclaimer.** Punit v0.1.0-alpha has **not** undergone an independent security audit.
+> This page describes the security model as implemented, and its known gaps. It does not certify
+> that the implementation is free of flaws. Validate it yourself before users depend on it. Report
+> vulnerabilities privately as described in [SECURITY.md](../SECURITY.md).
 
 ## What is being protected
 
-Punit delivers files that installed apps load: configuration for `mock-v1`, or **compiled Dart
-code** for Android code patches. An attacker who can make a device accept a patch can change what
-the app does for every user in the targeted rollout. That is the main risk.
+Punit delivers files that installed apps load: configuration (`mock-v1`) or **compiled Dart code**
+(Android code patches). Anyone who can make a device accept a patch can change what the app does
+for every user in that rollout. That is the main risk, and most controls below exist to stop it.
 
-## Threat model (summary)
+## Controls at a glance
 
-| Threat | Mitigation in v0.1.0-alpha | Residual risk / gap |
+| Control | Status | Where |
 |---|---|---|
-| Network attacker modifies a patch in transit or on the CDN | SHA-256 check + ES256 signature over all metadata, verified on device with a key compiled into the app | None for integrity, as long as the key is safe. Still use HTTPS for confidentiality and metadata integrity |
-| Attacker replaces the update-check response | Signature covers app, release, patch number, platform, arch, format, all hashes and size | Unsigned fields (e.g. rollback lists) can be spoofed without TLS: use HTTPS |
-| Replay of an old, valid but buggy patch | Client keeps the highest accepted number and refuses lower ones. Server never offers older patches unless the current one is bad | Downgrade to an older patch happens only via an authenticated rollback decision over TLS |
-| Patch for another app / release / arch | Those ids are inside the signed message | — |
-| Stolen **signing key** | None automatic | **Critical.** The attacker can sign patches. See "Compromised signing key" |
-| Stolen **admin API key** | Constant-time comparison; production startup refuses default/short keys | **Critical.** The attacker can publish patches the server signs. No RBAC, MFA or audit log yet |
-| Stolen device token | Token is scoped to one device/app; it only reads update metadata and posts counters | Tokens last 30 days and can't be revoked individually |
-| Fake devices / scraping | Registration requires a known app slug | Registration is open with no rate limiting. Patch files are public by hash. **Never put secrets in patches** |
-| Broken patch bricks the app | Boot protection: an unconfirmed start falls back to the last good code. Server rollback/revoke | Crashes before the native boot hook or after confirmation are not covered |
-| Malicious insider with admin access | Not addressed | No approvals, no two-person rule, no audit log |
-| Store-policy violation | `aot_policy_approved` gate for public-store apps | Legal/policy review is the operator's job ([code-push.md](code-push.md)) |
+| ES256 signature over all patch metadata, verified on the device | ✅ Implemented | `signing.py`, `canonical.py`, `signature.dart` |
+| SHA-256 and exact-size checks on download | ✅ Implemented | `ota_client.dart` |
+| Base + result hash checks for code patches; re-check before loading | ✅ Implemented | `aot_runtime.dart`, `OtaBoot.java` |
+| Anti-replay (no downgrade without a server rollback) | ✅ Implemented | client `state.dart`, server `updates.py` |
+| Compatibility binding (app, release, platform, arch, format in the signature) | ✅ Implemented | `canonical.py` |
+| Device tokens (HS256 JWT, per device) | ✅ Implemented | `auth.py` |
+| Admin authentication | 🟡 One shared API key | `auth.py` |
+| Private storage for store builds | ✅ Implemented | `storage.py`, nginx/Caddy config |
+| Production startup safety checks | ✅ Implemented | `config.py` |
+| Store-policy gate for public-store code patches | ✅ Implemented | `routers/admin.py` |
+| Secret scanning in CI (gitleaks) | ✅ Implemented | `.github/workflows/ci.yml` |
+| **RBAC**, users, SSO, MFA | 🔭 Planned | [roadmap Phase 8](roadmap/phase-08-admin-rbac.md) |
+| **Audit log** | 🔭 Planned | Phase 8 |
+| **Azure Key Vault / KMS / HSM signer** | 🔭 Planned | [roadmap Phase 6.4](roadmap/phase-06-signing.md#64-key-vault-signer) |
+| **Short-lived signed download URLs** | 🔭 Planned | ADR-0008 (not written) |
+| Rate limiting on device endpoints | 🔭 Planned | [roadmap Phase 3.7](roadmap/phase-03-device-control-plane.md#37-rate-limiting-basic) |
+| Individual device-token revocation | ❌ Not available | — |
+| TLS | Your responsibility (the single-server compose uses Caddy) | `deploy/` |
 
-## Signing trust model
+## Device authentication
 
-- One ES256 (P-256) private key signs every patch artifact when it is uploaded. The server signs
-  only canonical metadata that it computes itself, including the SHA-256 of the bytes it stored.
-- Apps ship with an allow-list `{key_id: public_key}` (`OTA_PUBLIC_KEY` at build time). A
-  patch with an unknown `key_id` is rejected before download.
-- Rotating the key therefore requires **new store builds** that trust the new key. Plan for it:
-  ship builds that trust both the current key and a pre-generated backup key. Multi-key trust is
-  supported by `ota_client` (a map of keys), but there is no server-side rotation tooling yet.
+- A device registers with `POST /v1/devices/register` and gets an **HS256 JWT** signed with
+  `OTA_DEVICE_JWT_SECRET`. Claims: device id, application id, installation id, `typ: device`,
+  issue and expiry time (30 days by default, `OTA_DEVICE_TOKEN_TTL_SECONDS`).
+- The token is required for `/v1/updates/check` and `/v1/events/batch`, and scopes them to its
+  own application.
+- **Registration is open**: anyone who knows the app slug can register any installation id. The
+  token limits what a caller can see; it does not prove the caller is a genuine install.
+- Tokens cannot be revoked one by one. Rotating `OTA_DEVICE_JWT_SECRET` invalidates all of them;
+  `ota_client` re-registers automatically.
+- On the device the token is stored in the client's state file in the app's private folder, not
+  in a hardware-backed keystore.
 
-## Integrity checks on the device
+## Admin authentication and RBAC
 
-In order: size limit during download, exact size, SHA-256 of payload, known `key_id`, ES256
-signature over the canonical message, anti-replay. Code patches also check that the base hash
-matches the installed store code and that the rebuilt result hash matches. The payload hash is
-re-checked from disk before each use.
+- All of `/v1/admin` requires the header `X-API-Key`, compared in constant time with
+  `OTA_ADMIN_API_KEY`. The CLI, CI and the `/admin` page all use this one key.
+- **There is no RBAC**: no users, roles, per-person keys, SSO or MFA. Whoever has the key can
+  publish code to every device.
+- Until roles exist: keep the key in a password manager, share it with as few people as possible,
+  rotate it when someone leaves, and restrict `/v1/admin` and `/admin` at the network level
+  (VPN, IP allow-list, or a reverse proxy with SSO).
+- The `/admin` page holds no secrets; it sends the key you type to the API.
 
-`scripts/verify_demo.sh` re-implements the canonical message independently. It proves that
-signatures verify and that a corrupted file, flipped signature bits, a changed patch number, a
-substituted hash or a different key are all rejected.
+## What is signed
 
-## Private-key handling
+When a patch file is uploaded, the server computes its SHA-256 itself and signs a **canonical
+message** ([ADR-0002](adr/0002-signature-scheme.md)):
 
-**Local development:** `./scripts/generate_dev_signing_key.sh` creates the key inside the Docker
-volume `punit_keys`. It never touches the working tree, and `cleanup_local.sh` deletes it.
-`OTA_AUTO_GENERATE_SIGNING_KEY=false` stops the API from creating keys silently. The dev key id
-is `local-dev-1`. **Never ship an app that trusts a dev key.**
+```
+"OTA-PATCH-V1\n" + length-prefixed(
+    protocol_version, application_id, release_id, patch_number, platform, arch,
+    runtime_abi, artifact_format, base_artifact_sha256, payload_sha256, result_sha256, size_bytes)
+```
 
-**Production (current options, in order of preference):**
+Each field is UTF-8 with a 4-byte big-endian length prefix, so fields cannot be shifted into
+each other. The signature is ECDSA P-256 / SHA-256 (ES256), encoded as raw `r‖s` (64 bytes),
+base64. The device rebuilds the message from the update-check response **and its own** platform
+and arch, so no field can be swapped without breaking the signature. Python
+([`canonical.py`](../backend/app/canonical.py)) and Dart
+([`canonical.dart`](../packages/ota_client/lib/src/canonical.dart)) share a test vector.
 
-1. Generate the key **once**, offline (`python -m app.keygen --pem`), and store it in a secret
-   manager. Inject it as `OTA_SIGNING_KEY_PEM`, or as a 0600 file readable only by the API
-   user. Keep an encrypted offline backup.
-2. Set `OTA_ENV=production` and `OTA_AUTO_GENERATE_SIGNING_KEY=false`.
-3. Restrict who can read the secret and who can deploy the API.
+**Not signed:** the rollback/revocation lists, `download_url` and `next_check_after_seconds`.
+Without TLS, a network attacker could fake "your patch is revoked" (a denial of service, not code
+execution). Use HTTPS.
 
-**Azure Key Vault (recommended target, not implemented):** use a Key Vault (Premium/Managed HSM)
-EC P-256 key with `sign` permission only, accessed via managed identity. Implement a
-`KeyVaultSigner` with the existing `Signer` interface: `sign(message)` sends the SHA-256 digest
-to Key Vault `ES256` sign and converts the result to raw `r||s`; `public_key()` reads the public
-JWK. The private key never leaves the HSM. This is on the roadmap. Until then the key exists in
-process memory on the API host.
+## Device-side checks
 
-## Artifact URLs
+In order, before a patch can run ([`ota_client.dart`](../packages/ota_client/lib/src/ota_client.dart)):
 
-Patch URLs are public and permanent (content-addressed), so CDNs can cache them. Integrity
-comes from the signature, not from secret URLs. Short-lived signed URLs (S3 pre-signed / Azure
-SAS) are **not implemented**. Add them if your patches must not be downloadable by third
-parties, and never treat patch contents as confidential. Store builds (`releases/`) are private
-and served only through the admin API.
+1. Not a patch that already failed on this device.
+2. **Anti-replay:** the patch number must be higher than the highest number this install ever
+   accepted, unless the server names it as the rollback target.
+3. `arch`, `runtime_abi` and `artifact_format` match this app and runtime.
+4. `key_id` is one of the keys compiled into the app.
+5. **ES256 signature verifies** over the canonical message. This happens **before** the download.
+6. Download stops if more than `size_bytes` arrive; the final size must match exactly.
+7. **SHA-256** of the file equals `payload_sha256`.
+8. Code patches: the store `libapp.so` must match `base_artifact_sha256` (the patch was built for
+   this exact build), and the rebuilt file must match `result_sha256`.
+9. Before use: `mock-v1` payloads are re-hashed on every start; `OtaBoot` re-checks the size and
+   SHA-256 of a patched `libapp.so` before loading it (hashed once per file, then cached).
 
-## Authentication separation
+[`scripts/verify_demo.sh`](../scripts/verify_demo.sh) re-implements the canonical message
+independently and confirms that a corrupted file, flipped signature bits, a changed patch number,
+a substituted hash and a different key are all rejected.
 
-| Caller | Credential | Scope |
-|---|---|---|
-| Device | HS256 JWT from `/v1/devices/register` (`OTA_DEVICE_JWT_SECRET`) | `/v1/updates/check`, `/v1/events/batch`, own app only |
-| Admin / CI / CLI | `X-API-Key` (`OTA_ADMIN_API_KEY`) | Everything under `/v1/admin`, plus `/admin` page actions |
+## Patch compatibility checks
 
-The secrets are independent, and a device token can never call admin endpoints. In production,
-also restrict `/v1/admin` and `/admin` at the network layer (VPN, IP allow-list or a reverse
-proxy with SSO), because a single shared key is weak.
+| Layer | Check |
+|---|---|
+| Server | Patch must belong to the device's release; artifact must exist for its arch; format must be supported |
+| Signature | App, release, patch number, platform, arch, runtime ABI and format are inside the signed message |
+| Device | Base hash must match the installed store code (code patches) |
+| CLI (build time) | Same Flutter version as the release; no native, Java/Kotlin, manifest, resource or asset changes |
 
-## Rollback, revocation, anti-rollback
+## Key management
 
-- **Rollback:** devices on the patch move to the newest other eligible patch or the store build
-  on their next check. The patch can be re-published.
-- **Revoke:** permanent. Every response lists revoked numbers, and clients refuse them even if
-  cached.
-- **Anti-rollback:** the client stores the highest accepted patch number and refuses
-  lower-numbered offers, except when the server marks the current patch bad. A crashed patch
-  does not raise that number.
-- Revocation reaches a device only when it checks in (default every 30 minutes with jitter).
-  Offline devices keep running the last good patch.
+### Local development
+
+`./scripts/generate_dev_signing_key.sh` creates the key inside the Docker volume `punit_keys`
+(key id `local-dev-1`). It never touches the working tree; `cleanup_local.sh` deletes it.
+`OTA_AUTO_GENERATE_SIGNING_KEY=false` stops the API from creating keys silently. **Never ship an
+app that trusts a development key.**
+
+### Production (what exists today)
+
+The private key is a **local PEM file or an environment variable**, held in the API process
+memory. Recommended handling:
+
+1. Generate the key once, offline: `python -m app.keygen --pem` prints a one-line
+   `OTA_SIGNING_KEY_PEM` and the public key. Or run `python -m app.keygen` on the server to write
+   the key file (0600).
+2. Store it in a secret manager; keep an encrypted offline backup. `deploy/backup.sh` also copies
+   the key file, so protect those backups.
+3. Set `OTA_ENV=production` and `OTA_AUTO_GENERATE_SIGNING_KEY=false`.
+4. Limit who can read the secret and who can deploy the API.
+
+### Trusted keys in apps and rotation
+
+Apps embed a **set** `{key_id: public_key}`. Only those key ids are trusted, and a patch with an
+unknown `key_id` is refused before download. Rotating the key therefore needs **new store
+builds**. Prepare for it: ship builds that trust both the current key and a pre-generated backup
+key. There is no server-side rotation tooling yet, and the server signs with one key at a time.
+
+### Azure Key Vault (planned, not implemented)
+
+The planned design: an EC P-256 key in Key Vault (Premium / Managed HSM) with only the `sign`
+permission, used through a managed identity. A `KeyVaultSigner` would implement the existing
+`Signer` interface in [`signing.py`](../backend/app/signing.py): `sign()` sends the SHA-256 digest
+to Key Vault and converts the result to raw `r‖s`; `public_key()` reads the public key. The
+private key would never leave the HSM. **None of this exists yet.**
+
+## Artifact downloads
+
+- Patch URLs are **public and permanent** (`/cdn/patches/<sha256>`), so CDNs can cache them.
+  Integrity comes from the signature, not from a secret URL. **Never put secrets in a patch.**
+- **Short-lived signed URLs (S3 pre-signed, Azure SAS) are not implemented**, so there is no URL
+  expiry.
+- Store builds (`releases/`, the app's full compiled code) are private: only the admin API serves
+  them. nginx and Caddy return 404 for any other `/cdn/` path.
+- Use HTTPS for the API and file server in production; the production startup check requires an
+  `https://` CDN URL.
+
+## Replay protection, rollback and revocation
+
+- **Anti-replay:** see device-side check 2. A patch that crashed does not raise the highest
+  accepted number, so it cannot block older good patches.
+- **Rollback** marks a patch `rolled_back`; devices move to the newest other eligible patch or the
+  store code. It can be published again.
+- **Revoke** is permanent. Every update-check response lists revoked numbers, and clients drop
+  those patches even if they are already downloaded.
+- Both reach a device only when the app **calls `checkForUpdate()`** (the client has no timer)
+  and take effect on the next start. Offline devices keep running their last good code.
 
 ## Audit logging
 
-**Not implemented.** Patch, rollout and key actions are not recorded with who/when. Until it is:
-keep reverse-proxy access logs for `/v1/admin`, restrict admin access, and record releases in
-your change management. An audit log is on the roadmap.
+**Not implemented.** Who created, published, rolled back or revoked a patch, and when, is not
+recorded. Patches keep their creation time only. The policy-approval `reason` is not stored
+([KI-2](known-issues.md#ki-2-the-policy-approval-reason-is-not-stored)). Until an audit log exists: keep reverse-proxy access logs for `/v1/admin`, restrict admin access, and
+track releases in your own change management.
 
-## Compromised signing key procedure
+## Threat model
 
-1. **Contain:** stop the API, or remove admin network access. Revoke every patch you did not
-   publish (`ota patch revoke`). Revoke only works for patches the server knows about.
-2. **Assess:** an attacker with the key can sign patches and serve them from any server the app
-   talks to. Devices accept them only if the attacker also controls the update-check response
-   (your server, DNS, or TLS). Check for those too.
-3. **Rotate:** generate a new key (new `key_id`) and configure the server with it. Ship **new
-   store builds** that trust only the new key (and a new backup key).
-4. **Retire:** once old builds have aged out, stop serving them patches (no release record →
-   no updates).
-5. **Disclose** to affected users/customers as your obligations require.
+| Threat | Mitigation today | Residual risk |
+|---|---|---|
+| Patch modified in transit or on the file server | SHA-256 + ES256 signature, verified on device with compiled-in keys | None for integrity while the key is safe. Use HTTPS for the rest |
+| Fake update-check response | Signature covers every field that defines the patch | Unsigned lists can be spoofed without TLS (denial of service) |
+| Replay of an old, valid but buggy patch | Highest-accepted number on device; server never offers older patches unless the current one is bad | Downgrade only through an authenticated rollback over TLS |
+| Patch for another app / release / arch | Those values are signed | — |
+| **Stolen signing key** | None automatic | **Critical.** See the procedure below |
+| **Stolen admin API key** | Constant-time check; production refuses default or short keys | **Critical.** The attacker can publish patches that the server signs. No RBAC, MFA or audit log |
+| Stolen device token | Scoped to one device and app; read-only metadata + counters | Valid up to 30 days; no per-token revocation |
+| Fake devices, scraping | Registration needs a known slug | Open registration, no rate limiting; patch files public by hash |
+| Broken patch | Boot protection + server rollback/revoke | Crashes after confirmation, or before the native hook, are not covered |
+| Malicious insider | — | No approvals, no two-person rule, no audit log |
+| Store-policy violation | `aot_policy_approved` gate for `public_store` apps | The policy decision is the operator's |
+| Supply chain (dependencies, CI) | gitleaks, licence gate, read-only CI token | GitHub Actions are pinned to tags, not commit SHAs; no dependency vulnerability scan in CI |
 
-Being able to recover faster depends on preparation: builds that already trust a backup key let
-you switch without waiting for a store review.
+## Compromised signing key: procedure
+
+1. **Contain:** stop the API or cut admin network access. Revoke every patch you did not publish
+   (`ota patch revoke`).
+2. **Assess:** with the key, an attacker can sign patches. Devices accept them only if the
+   attacker also controls the update-check response (your server, DNS or TLS). Check those.
+3. **Rotate:** create a new key with a new `key_id`, configure the server, and ship **new store
+   builds** that trust only the new key (and a new backup key).
+4. **Retire:** once old builds are gone, delete their releases so they get no more patches.
+5. **Disclose** as your obligations require.
 
 ## Secret rotation
 
 | Secret | Effect of rotating |
 |---|---|
-| `OTA_ADMIN_API_KEY` | CLI/CI/admin users need the new key. No device impact |
-| `OTA_DEVICE_JWT_SECRET` | All device tokens become invalid. `ota_client` re-registers automatically on HTTP 401 |
-| `OTA_ROLLOUT_HMAC_SECRET` | Rollout cohorts reshuffle. Do it only when no partial rollout is running |
-| Database password, S3 keys | Update the server env and restart |
-| Signing key | Requires new store builds (see above) |
+| `OTA_ADMIN_API_KEY` | CLI, CI and admin users need the new key. No device impact |
+| `OTA_DEVICE_JWT_SECRET` | All device tokens become invalid; clients re-register on HTTP 401 |
+| `OTA_ROLLOUT_HMAC_SECRET` | Every rollout group reshuffles. Do it only when no partial rollout is running |
+| Database password, S3 keys | Update the server environment and restart |
+| Signing key | Needs new store builds (above) |
+
+## Security limitations (summary)
+
+No independent security audit, no RBAC, no audit log, no HSM/KMS, no signed URLs, no rate limiting, open device
+registration, one signing key at a time, device token stored without hardware protection, and no
+iOS support. See [limitations.md](limitations.md).
 
 ## Secrets in this repository
 
 No secrets are committed. `.env`, key files and local state are git-ignored. CI runs gitleaks on
-every pull request. `.env.example` contains only clearly fake values, and the production
+every pull request and push. `.env.example` contains only clearly fake values, and the production
 startup checks reject them.
-
-## Disclosure
-
-See [SECURITY.md](../SECURITY.md). Do not report vulnerabilities in public issues.

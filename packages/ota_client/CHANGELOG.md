@@ -1,3 +1,4 @@
-## 0.0.1
+## 0.1.0
 
-* TODO: Describe initial release.
+* First public alpha, released with Punit v0.1.0-alpha. See the repository
+  [CHANGELOG](../../CHANGELOG.md).

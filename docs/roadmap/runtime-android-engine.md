@@ -2,7 +2,7 @@
 
 > **Roadmap status: 🟡 experimental, and built differently.** Android code patches work on
 > **stock Flutter, without an engine fork**: the `OtaBoot` Java class in `ota_client` points
-> Flutter at a patched `libapp.so` at process start. See [code-push.md](../code-push.md).
+> Flutter at a patched `libapp.so` at process start. See [architecture.md](../architecture.md#patch-engine-and-flutter-integration-android-code-patches).
 > - ✅ Built: the store-policy gate (R.0, `ota app approve-policy`), reading the store `libapp.so`
 >   (R.3), the bsdiff-based `OTADIF01` format (R.4), the boot hook (R.5, in the plugin instead of
 >   the engine), the Android runtime (R.6, `aot_runtime.dart`) and the CLI

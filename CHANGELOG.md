@@ -30,6 +30,9 @@ First public, **experimental** release. Internally tested only; not production-r
 - Licensing: Apache-2.0 `LICENSE` and `NOTICE`, SPDX headers in Punit source files, audited
   `THIRD_PARTY_NOTICES.md` (incl. the Flutter template and bsdiff licence texts); original Punit
   launcher icons in the example app.
+- Documentation set organised by Diátaxis (`docs/index.md`): installation tutorial, Flutter
+  integration, releases and patches, rollouts, operations, troubleshooting, API / CLI /
+  configuration references, concepts, architecture, security and limitations.
 
 ### Changed (compared with the internal pre-release)
 
@@ -40,11 +43,15 @@ First public, **experimental** release. Internally tested only; not production-r
 ### Removed
 
 - Internal-only documentation and the promotional video project (not needed to run Punit).
+- The Render Blueprint (`render.yaml`) and the Render + Supabase hosting guide. Punit is
+  self-hosted with Docker; hosted platforms are not documented or supported.
 
 ### Known limitations
 
-See the README. Most important: no audit log, single admin key, no rate limiting, no Key
-Vault/KMS signer, no Azure Blob adapter, no iOS code patches, and no published load tests.
+See the README and `docs/known-issues.md` (KI-1 to KI-7). Most important: the `promote` checks
+are not enforced by the server (KI-4), re-creating a deleted release breaks existing installs
+(KI-1), no audit log, single admin key, no rate limiting, no Key Vault/KMS signer, no Azure Blob
+adapter, no iOS code patches, and no published load tests.
 
 [Unreleased]: https://github.com/punitsoni22/flutter_ota_system/compare/v0.1.0-alpha...HEAD
 [0.1.0-alpha]: https://github.com/punitsoni22/flutter_ota_system/releases/tag/v0.1.0-alpha

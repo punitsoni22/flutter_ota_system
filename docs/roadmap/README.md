@@ -42,7 +42,7 @@ Nothing in Punit is production-validated yet (see the warning in the [README](..
 
 - Android Dart code patches on **stock Flutter** (`aot-bidiff-android-v1`): `ota release android`
   / `ota patch android`, `OtaBoot.java`. Tested internally on a small number of devices. See
-  [code-push.md](../code-push.md).
+  [releases-and-patches.md](../releases-and-patches.md).
 
 ### Planned 🔭 (not implemented)
 

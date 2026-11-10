@@ -1,39 +1,63 @@
-<!--
-This README describes the package. If you publish this package to pub.dev,
-this README's contents appear on the landing page for your package.
+# ota_client
 
-For information about how to write a good package README, see the guide for
-[writing package pages](https://dart.dev/tools/pub/writing-package-pages).
+The Flutter client of [Punit](../../README.md), an experimental, self-hosted over-the-air (OTA)
+patch system. It checks a Punit server for patches, verifies them (ES256 signature, size,
+SHA-256), stages them, activates them on the next app start, and falls back automatically when a
+new patch fails to start.
 
-For general information about developing packages, see the Dart guide for
-[creating packages](https://dart.dev/guides/libraries/create-packages)
-and the Flutter guide for
-[developing packages and plugins](https://flutter.dev/to/develop-packages).
--->
+> **Experimental (v0.1.0-alpha).** Tested internally only. Android Dart code patches
+> (`AotPatchRuntime`) are experimental; iOS code patches are not supported. Not published on
+> pub.dev.
 
-TODO: Put a short description of the package here that helps potential users
-know whether this package might be useful for them.
+## Use it
 
-## Features
-
-TODO: List what your package can do. Maybe include images, gifs, or videos.
-
-## Getting started
-
-TODO: List prerequisites and provide or point to information on how to
-start using the package.
-
-## Usage
-
-TODO: Include short and useful examples for package users. Add longer examples
-to `/example` folder.
-
-```dart
-const like = 'sample';
+```yaml
+dependencies:
+  ota_client:
+    git:
+      url: https://github.com/punitsoni22/flutter_ota_system.git
+      path: packages/ota_client
 ```
 
-## Additional information
+```dart
+final client = OtaClient(OtaConfig(
+  serverUrl: 'https://ota.example.com',
+  appSlug: 'my-app',
+  releaseVersion: '1.0.0+1',                 // full version, exactly as registered
+  publicKeys: {'prod-1': '<base64 point>'},  // from `ota key show`
+  runtime: AotPatchRuntime(),                // or MockPatchRuntime() for config patches
+));
+await client.boot();
+client.markBootSuccessfulAfterFirstFrame();
+final result = await client.checkForUpdate(); // UpdateResult; never throws
+```
 
-TODO: Tell users more about the package: where to find more information, how to
-contribute to the package, how to file issues, what response they can expect
-from the package authors, and more.
+Adding this package alone does not make compiled Dart code patchable: see the requirements in the
+[Flutter integration guide](../../docs/flutter-integration.md).
+
+## Main types
+
+| Type | Purpose |
+|---|---|
+| `OtaClient`, `OtaConfig` | The client and its settings |
+| `PatchRuntime` | How a patch runs. Implementations: `MockPatchRuntime` (`mock-v1`), `AotPatchRuntime` (`aot-bidiff-android-v1`, Android) |
+| `UpdateResult`, `UpdateStatus` | Result of a check |
+| `PatchRecord` | A patch offered by the server |
+| `SignatureVerifier`, `SignedFields` | ES256 verification of the canonical patch message |
+
+## Requirements
+
+Dart ≥ 3.12, Flutter ≥ 3.27. Android: `minSdk` 21, Java 17. The plugin registers
+`OtaBootProvider` in its Android manifest; no `MainActivity` changes are needed.
+
+## Tests
+
+```bash
+flutter pub get && flutter analyze && flutter test
+```
+
+## Licence
+
+Apache License 2.0. Contains an implementation of the bspatch algorithm by Colin Percival
+(BSD-2-Clause); see `lib/src/bsdiff.dart` and the repository's
+[THIRD_PARTY_NOTICES.md](../../THIRD_PARTY_NOTICES.md).

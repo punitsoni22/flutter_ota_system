@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     # SQLite is for local runs and tests. Docker Compose sets a Postgres URL.
     database_url: str = f"sqlite:///{BACKEND_DIR / 'data' / 'ota.db'}"
 
-    # Admin API (CLI / CI). Replaced by Entra ID in Phase 8.
+    # Admin API (CLI / CI): one shared key. Per-person auth and roles are planned (roadmap Phase 8).
     admin_api_key: str = "dev-admin-key"
 
     # Device tokens.

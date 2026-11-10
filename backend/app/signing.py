@@ -3,7 +3,8 @@
 
 """ES256 signing (ADR-0002). Signatures are raw r||s (64 bytes), base64-encoded.
 
-The local PEM signer is for development. Phase 10 swaps in a Key Vault signer with the same interface.
+LocalSigner (a PEM private key) is the only signer today. A managed key store (e.g. a cloud
+Key Vault) behind the same Signer interface is planned (roadmap Phase 10), not implemented.
 """
 
 import base64

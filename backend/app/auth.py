@@ -18,7 +18,7 @@ def require_admin(
     x_api_key: str | None = Header(default=None),
     settings: Settings = Depends(get_settings),
 ) -> None:
-    """Admin API key for the CLI and CI. Phase 8 replaces this with Entra ID + roles."""
+    """Shared admin API key for the CLI and CI. Per-person auth and roles are planned (roadmap Phase 8)."""
     if not x_api_key or not hmac.compare_digest(x_api_key, settings.admin_api_key):
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid or missing X-API-Key")
 

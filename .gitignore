@@ -5,7 +5,6 @@
 deploy/.env
 deploy/cloud.env
 deploy/backups/
-deploy/render.key
 *.pem
 *.key
 *.p12
@@ -15,7 +14,6 @@ deploy/render.key
 keys/
 .local/
 secrets/
-supabase/.temp/
 
 # ---- Python -------------------------------------------------------------------------------
 .venv/

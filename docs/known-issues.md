@@ -1,0 +1,179 @@
+# Known issues
+
+Bugs and gaps found while documenting and testing **v0.1.0-alpha**. They are tracked here,
+separately from the documentation, until the repository has a public issue tracker; each entry is
+written so it can be copied into an issue. No code fix is included in v0.1.0-alpha: KI-6 was a
+documentation error (corrected) and KI-7 has a dependency pin as a workaround.
+
+| ID | Title | Type | Priority | Blocks production use |
+|---|---|---|---|---|
+| [KI-4](#ki-4-promote-safety-checks-are-enforced-only-by-the-cli) | Promote safety checks are enforced only by the CLI | Bug (safety) | **Critical** | Yes |
+| [KI-1](#ki-1-re-creating-a-deleted-release-breaks-existing-installs) | Re-creating a deleted release breaks existing installs | Bug | **High** | Yes |
+| [KI-2](#ki-2-the-policy-approval-reason-is-not-stored) | The policy-approval reason is not stored | Bug | Medium | Before claiming the policy gate is complete |
+| [KI-5](#ki-5-example-app-and-demo-scripts-use-different-app-slugs) | Example app and demo scripts use different app slugs | Bug (demo) | Low | No |
+| [KI-3](#ki-3-channels-can-be-created-only-through-the-api) | Channels can be created only through the API | Limitation | Low | No |
+| [KI-7](#ki-7-the-cli-breaks-with-bsdiff4-142) | The CLI breaks with `bsdiff4` 1.4.2 | Bug (dependency) | High | Worked around by a version pin |
+| [KI-6](#ki-6-old-docs-described-a-30-minute-background-check) | Old docs described a 30-minute background check | Docs bug | — | Fixed in the docs |
+
+Production use is not supported in v0.1.0-alpha anyway ([limitations.md](limitations.md)); the
+"Blocks production use" column says what must be fixed before that can change.
+
+---
+
+## KI-4: Promote safety checks are enforced only by the CLI
+
+**Priority:** Critical.
+
+**Current behaviour.** `ota patch promote` refuses to move a patch to another channel when it is
+not live on the source channel (default `staging`) or has boot failures, unless `--force` is
+passed ([`cli/ota.py`](../cli/ota.py), `patch_promote`). The server does not check either rule:
+`POST /v1/admin/patches/{id}/publish` and `POST /v1/admin/patches/{id}/rollout` accept any
+channel and percentage from any admin-key holder. So the checks are bypassed by:
+
+- `ota patch publish <id> --channel production` or `ota patch rollout <id> --channel production`;
+- `ota patch android … --channel production` (publishes straight to production);
+- the admin page (its promote button only warns);
+- any direct API call or script.
+
+**Expected behaviour.** Safety and compatibility rules for production are enforced by the
+backend, for every client. The CLI keeps its checks only as early, friendly errors.
+
+**Proposed fix** (backend logic change, needs separate approval):
+
+1. Add a setting for protected channels, e.g. `OTA_PROTECTED_CHANNELS=production`.
+2. In `publish_patch` and `change_rollout`, when the target channel is protected and the new
+   percentage is above 0, refuse with `409 promotion_checks_failed` unless:
+   - the patch is, or was, deployed on a non-protected channel with a percentage above 0; and
+   - its `patch_boot_failed` count is 0.
+3. Allow an explicit override only with `force: true` **and** a `reason` in the request, and
+   record who/when/why once an audit log exists (see [security.md](security.md)).
+4. Make the CLI and admin page send `force`/`reason` instead of deciding locally.
+5. Lowering a percentage, rolling back and revoking stay unrestricted (they are the emergency
+   path).
+
+**Tests to add:** publish to `production` without a staging deployment → 409; with boot failures
+→ 409; after a clean staging deployment → 200; `force` without `reason` → 422; with both → 200;
+rollout to 0% always allowed; `patch android --channel production` refused.
+
+---
+
+## KI-1: Re-creating a deleted release breaks existing installs
+
+**Priority:** High. Must be fixed and tested before production use.
+
+**Current behaviour.** The client stores the server's `release_id` the first time it sees it and
+refuses any later response with another id for the same store version
+([`ota_client.dart`](../packages/ota_client/lib/src/ota_client.dart), `_checkIdentity`). When a
+release is deleted (`ota release delete`) and the same version is registered again, it gets a new
+id. Every existing install of that version then rejects **all** patches with
+`release id changed`, until the app is reinstalled or updated from the store.
+
+**Steps to reproduce:** register `1.0.0+1`, run the app once, `ota release delete <app> --version
+1.0.0+1`, register `1.0.0+1` again, publish a patch, check from the app → `rejected: release id
+changed`.
+
+**Proposed fix** (needs separate approval; touches client and backend logic):
+
+1. **Server:** refuse to re-create a version that devices have already reported, unless the admin
+   confirms it (`--replace`), and print what will happen to existing installs. Prefer giving a
+   rebuilt store build a new build number; the docs already recommend this.
+2. **Client:** when the server reports a different `release_id` for the same version, treat it
+   like a store update: clear the staged/active patch state and the anti-replay counter for that
+   release (`resetForNewRelease`), accept the new id, and record an event. Signatures still bind
+   every patch to its release id, so patches for the old release stay unusable.
+3. Document the final behaviour in [troubleshooting.md](troubleshooting.md).
+
+**Tests to add:** client unit test for the id change (state reset, new patch accepted, old patch
+rejected); backend test for the re-create refusal; end-to-end run of the reproduction above.
+
+---
+
+## KI-2: The policy-approval reason is not stored
+
+**Priority:** Medium. Fix before claiming the policy gate is complete.
+
+**Current behaviour.** `ota app approve-policy <app> --reason "…"` (and
+`POST /v1/admin/apps/{slug}/policy-approval`) requires a reason of 3–1000 characters, but the
+server only flips the `aot_policy_approved` flag. The reason, the time and who approved are not
+saved anywhere, so there is no record of why code patches were allowed for a store app.
+
+**Current limitation (documented):** treat the approval as a switch only; keep your own record of
+the review outside Punit ([cli-reference.md](cli-reference.md), [api-reference.md](api-reference.md),
+[security.md](security.md)).
+
+**Proposed fix** (database schema change, needs separate approval): store each approval or
+revocation (reason, time, approver once admin identities exist) in a new table or new columns via
+an Alembic migration; return the latest one in `AppOut`; show it in `ota app list` and the admin
+page.
+
+**Tests to add:** approve with a reason → reason and time returned; revoke → history kept;
+migration upgrade on an existing database.
+
+---
+
+## KI-5: Example app and demo scripts use different app slugs
+
+**Priority:** Low. Scheduled for Step 4 (installation improvements).
+
+**Current behaviour.** `example_app` defaults to `OTA_APP=demo`
+([`main.dart`](../example_app/lib/main.dart)), while `scripts/seed_demo.sh` and the demo create the
+app `punit-demo`. Following the scripts without `--dart-define=OTA_APP=punit-demo` gives
+`register failed: HTTP 404 {"detail":"Unknown application"}`.
+
+**Proposed fix:** use one slug everywhere (example app default, scripts, docs) and run the whole
+demo workflow ([installation.md](installation.md)) to confirm it.
+
+---
+
+## KI-3: Channels can be created only through the API
+
+**Priority:** Low. Accepted limitation for v0.1.0-alpha.
+
+`production`, `staging` and `dev` exist for every app. Other channels are created with the admin
+API; there is no CLI command or admin-page control, and channels cannot be renamed or deleted:
+
+```bash
+curl -X POST -H "X-API-Key: $OTA_API_KEY" -F name=qa "$OTA_API_URL/v1/admin/apps/<slug>/channels"
+```
+
+Details: [rollouts.md](rollouts.md). **Future improvement:** channel management in the CLI and the
+admin page.
+
+---
+
+## KI-6: Old docs described a 30-minute background check
+
+**Status:** Fixed in the documentation. No code change.
+
+Earlier guides said the app checks "every 30 minutes while open". The client has **no timer**: it
+checks only when the app calls `checkForUpdate()`, and the server's `next_check_after_seconds`
+(default 1800 s, setting `OTA_CHECK_INTERVAL_SECONDS`) only makes earlier calls return
+`checked recently`. A polling timer will not be added just to match the old text. Current
+behaviour: [flutter-integration.md](flutter-integration.md#activation).
+
+---
+
+## KI-7: The CLI breaks with `bsdiff4` 1.4.2
+
+**Priority:** High (it breaks `ota patch android`). **Workaround in place:** version pin.
+
+**Current behaviour.** [`cli/otadiff.py`](../cli/otadiff.py) uses internal helpers of the
+`bsdiff4` package (`bsdiff4.format.unpack_control_block`, `pack_control_block`, `write_patch`).
+Found while testing the packaged CLI on a fresh install:
+
+| `bsdiff4` | OTADIF01 round trip |
+|---|---|
+| 1.2.6, 1.3.2 | Fails: `bsdiff4.format` has no `unpack_control_block` |
+| 1.4.0, 1.4.1 | Passes |
+| 1.4.2 (newest at the time of testing) | Fails: `write_patch() takes 4 positional arguments but 5 were given` |
+
+With the old requirement `bsdiff4>=1.2`, a fresh install picked 1.4.2, so every Android code patch
+would fail at the diff check, and the CI round-trip test would fail too.
+
+**Workaround (applied).** `cli/requirements.txt` and `cli/pyproject.toml` require
+`bsdiff4>=1.4.0,<1.4.2`.
+
+**Proposed fix** (CLI code change, needs separate approval): stop depending on `bsdiff4`
+internals. For example, write the OTADIF01 container from the public `bsdiff4.diff()` output by
+parsing its documented `BSDIFF40` layout, or vendor the small control-block helpers. Then test
+the round trip against several `bsdiff4` versions in CI.

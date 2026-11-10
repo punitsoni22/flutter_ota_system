@@ -1,17 +1,19 @@
 # ota_example
 
-A new Flutter project.
+Example Flutter app for [Punit](../README.md). It uses `ota_client` with `MockPatchRuntime`: a
+patch is a signed JSON file (`mock-v1`) that changes the app's banner and colour. No code is
+downloaded.
 
-## Getting Started
+Run it against the local stack by following [docs/installation.md](../docs/installation.md)
+(step 8):
 
-This project is a starting point for a Flutter application.
+```bash
+flutter run \
+  --dart-define=OTA_SERVER_URL=http://10.0.2.2:8000 \
+  --dart-define=OTA_APP=punit-demo \
+  --dart-define=OTA_CHANNEL=dev \
+  --dart-define=OTA_PUBLIC_KEY=local-dev-1:<base64 point printed by ./scripts/seed_demo.sh>
+```
 
-A few resources to get you started if this is your first Flutter project:
-
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+A patch containing `{"crash": true}` makes the app exit on start, to demonstrate crash
+protection. The app allows cleartext HTTP for local testing only.

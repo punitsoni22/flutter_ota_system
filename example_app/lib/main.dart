@@ -8,7 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:ota_client/ota_client.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
-// Set with --dart-define, see docs/mvp-testing.md.
+// Set with --dart-define, see docs/installation.md and docs/configuration.md.
 const _serverUrl = String.fromEnvironment('OTA_SERVER_URL', defaultValue: 'http://10.0.2.2:8000');
 const _appSlug = String.fromEnvironment('OTA_APP', defaultValue: 'demo');
 const _channel = String.fromEnvironment('OTA_CHANNEL', defaultValue: 'dev');
