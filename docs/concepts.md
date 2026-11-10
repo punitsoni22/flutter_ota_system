@@ -21,6 +21,9 @@ A **release** is one build of your app that you ship through a store or install 
 platform. It is identified by `platform` + `version`, where `version` is the **full** Flutter
 version including the build number, exactly as `pubspec.yaml` defines it: `1.0.0+1`.
 
+The server accepts `android` and `ios` as platforms, but only Android apps have been tested.
+iOS is **not tested** ([testing status](../README.md#platform-support--testing-status)).
+
 `1.0.0+1` and `1.0.0+2` are **two different releases**. A release is the *base* that patches are
 built for, so in this documentation "full release", "store build" and "base release" mean the same
 thing.

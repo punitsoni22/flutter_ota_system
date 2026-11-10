@@ -4,8 +4,12 @@ This tutorial runs a complete Punit server on your own computer with Docker, pub
 patch, and shows it arriving in the example Flutter app. It takes about 15–30 minutes.
 
 > [!NOTE]
-> **What is tested.** The maintainers test this local stack on Linux (Ubuntu) with
-> `scripts/verify_demo.sh`, also in CI. macOS and Windows hosts have not been tested. A
+> **What is tested.** Linux (Ubuntu) is the primary verified environment: the maintainers
+> test this local stack there with `scripts/verify_demo.sh`, also in CI. Android is the only
+> internally tested app platform, on a small number of devices. Other platforms are used at your
+> own risk: iOS needs macOS + Xcode and has not been tested, and installation on macOS or
+> Windows (including Docker Desktop) has not been verified. See
+> [Platform Support & Testing Status](../README.md#platform-support--testing-status). A
 > production-style server setup exists but is **not yet verified end to end**
 > ([operations.md](operations.md#single-server-deployment-draft)). Planned installation
 > improvements: [roadmap/installation-improvements.md](roadmap/installation-improvements.md).
@@ -26,11 +30,11 @@ flowchart LR
 | Software | Version | Check |
 |---|---|---|
 | Git, Bash, curl | any recent | `git --version` |
-| Docker Engine or Docker Desktop | 24 or newer, with **Compose v2** | `docker compose version` |
+| Docker Engine (tested on Linux) or Docker Desktop (not tested) | 24 or newer, with **Compose v2** | `docker compose version` |
 | Free ports | `8000` (API), `8080` (files), `5432` (Postgres) on 127.0.0.1 | change them in `.env` if taken |
 | Python 3 | for the `ota` CLI (the server image and CI use 3.13) | `python3 --version` |
 | Flutter (only for the app part) | stable ≥ 3.27, Dart ≥ 3.12 | `flutter --version` |
-| Android emulator or phone (only for the app part) | — | `adb devices` |
+| Android emulator or phone (only for the app part; Android is the only tested app platform) | — | `adb devices` |
 
 On Ubuntu, Docker can be installed with:
 
@@ -179,7 +183,7 @@ No code is downloaded.
 | Phone on the same Wi-Fi | `http://<your-computer-IP>:8080/cdn` | `http://<your-computer-IP>:8000` | `PUNIT_BIND_ADDRESS=0.0.0.0` |
 
 Find your computer's IP with `hostname -I | awk '{print $1}'` (Linux) or
-`ipconfig getifaddr en0` (macOS).
+`ipconfig getifaddr en0` (macOS; not tested).
 
 > [!WARNING]
 > `PUNIT_BIND_ADDRESS=0.0.0.0` exposes the API and file server, with the fake keys, to your whole

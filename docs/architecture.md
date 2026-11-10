@@ -1,6 +1,8 @@
 # Architecture
 
-> Applies to v0.1.0-alpha. Punit is experimental and has only been tested internally. See the
+> Applies to v0.1.0-alpha. Punit is experimental and has only been tested internally, on a Linux
+> development machine and with Android apps. iOS, macOS and Windows are not tested
+> ([testing status](../README.md#platform-support--testing-status)). See the
 > warning in the [README](../README.md). Words like *release*, *patch* and *channel* are defined in
 > [concepts.md](concepts.md).
 

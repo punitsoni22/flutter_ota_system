@@ -45,11 +45,28 @@ has **not** had an independent security audit, and has **no** published load tes
 | Server rollback, store-version change, corrupted file on disk | ✅ |
 | Runtime channel switching | ✅ |
 | `OTADIF01` diff: Python → Dart round trip | ✅ |
-| Android code patches (`aot-bidiff-android-v1`) end to end | 🟡 Experimental. Native boot logic is unit-tested in Dart with a fake native side; the real Android path was tested manually on a few devices |
+| Android code patches (`aot-bidiff-android-v1`) end to end | 🟡 Experimental. Native boot logic is unit-tested in Dart with a fake native side; the real Android path was tested manually on a small number of devices |
 | `ota release android` / `ota patch android` | 🟡 Experimental |
-| iOS (any patch type) | ❌ Not tested. Code patches unsupported |
+| iOS (any patch type) | ❌ Not tested. Code patches not implemented |
 
 ## Platform limitations
+
+Code that may support a platform is not the same as a tested platform. Only these environments
+were tested internally (same table as the
+[README](../README.md#platform-support--testing-status)):
+
+| Platform | Status |
+|---|---|
+| Linux development environment | Internally tested |
+| Android Flutter application | Internally tested |
+| iOS | Not tested |
+| macOS | Not tested |
+| Windows | Not tested |
+
+Android testing does not establish compatibility with every Android device, OS version, CPU
+architecture (ABI) or Flutter version.
+
+What each app platform can do:
 
 | Platform | Status |
 |---|---|
@@ -130,6 +147,8 @@ Before relying on Punit, someone needs to:
 - run the server under realistic load and measure it;
 - test the single-server deploy, backups, restores and upgrades;
 - test Android code patches across Flutter versions, Android versions, ABIs and devices;
+- build and test the app side on iOS (needs macOS + Xcode);
+- test the development environment and Docker stack on macOS and Windows;
 - review the security model independently;
 - test failure modes (network loss during download, full disk, server outage during rollout).
 

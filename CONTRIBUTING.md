@@ -5,6 +5,13 @@ careful fixes are the most useful contributions right now.
 
 **Security issues:** never in public issues or pull requests. See [SECURITY.md](SECURITY.md).
 
+> [!NOTE]
+> **Testing status.** The maintainers develop and test on **Linux** only, and test the app side
+> on **Android** only (a small number of devices). iOS, macOS and Windows are **not tested**. If
+> you can test one of them, that is a welcome contribution: see
+> [Platform Support & Testing Status](README.md#platform-support--testing-status) and the
+> [platform testing tasks](docs/roadmap/README.md#platform-testing-planned) in the roadmap.
+
 ## Ground rules
 
 - Be kind and follow the [Code of Conduct](CODE_OF_CONDUCT.md).
@@ -124,10 +131,12 @@ search for in [docs/troubleshooting.md](docs/troubleshooting.md).
 - Run `./scripts/verify_demo.sh` for changes that touch the server, storage or the protocol.
 - Android code-patch changes cannot be fully tested in CI. Describe how you tested them on a
   device (device, Android version, Flutter version, ABI).
+- Say which platform you tested on (host OS, and Android/iOS for app changes). Do not describe a
+  platform as supported or tested in the docs unless it was actually tested.
 
 ## Reporting bugs
 
-Use the **Bug report** issue form. Include the Punit commit, Docker/Compose and Flutter versions,
+Use the **Bug report** issue form. Include the Punit commit, your host OS, Docker/Compose and Flutter versions,
 steps to reproduce, and logs (`docker compose logs api`, `verify_demo.sh` output, `adb logcat |
 grep -E "OtaBoot|OTA:"`), **with secrets removed**. Check
 [docs/troubleshooting.md](docs/troubleshooting.md) first.

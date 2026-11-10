@@ -17,6 +17,28 @@
 > - You run Punit **at your own risk**. See [LICENSE](LICENSE) (Apache-2.0, sections 7 and 8: no
 >   warranty, no liability).
 
+## Platform Support & Testing Status
+
+> [!NOTE]
+> **Testing status:** Punit has been tested internally on **Linux** (development machine and
+> Docker backend) and on **Android** (Flutter app and OTA patches) only. Code for other
+> platforms may exist, but **code that may support a platform is not the same as a tested
+> platform**. Anything not marked "Internally tested" below is untested and used at your own risk.
+
+| Platform | Status | Notes |
+|---|---|---|
+| Linux development environment | Internally tested | Ubuntu, Docker Engine + Compose v2. Backend, CLI and `scripts/verify_demo.sh` |
+| Android Flutter application | Internally tested | `mock-v1` config patches and experimental Android Dart code patches, on a small number of devices |
+| iOS | Not tested | Needs macOS + Xcode. iOS code patches are not implemented. `mock-v1` is pure Dart and might work, but is untested |
+| macOS | Not tested | Neither as a development machine nor as a Docker Desktop host |
+| Windows | Not tested | Neither as a development machine nor as a Docker Desktop host |
+
+Android testing does **not** establish compatibility with every Android device, OS version, CPU
+architecture (ABI) or Flutter version. No device compatibility matrix is published.
+
+Flutter: `ota_client` analysis and unit tests ran with Flutter 3.44 stable. The package requires
+Flutter ≥ 3.27 and Dart ≥ 3.12; other Flutter versions are not tested.
+
 ## What problem it solves
 
 A Flutter bug fix normally needs a new store build, a store review and users who update. Punit lets
@@ -87,8 +109,8 @@ Details: [docs/architecture.md](docs/architecture.md) · terms: [docs/concepts.m
 | Channels, percentage rollout, rollback, revoke | Working, internally tested |
 | `mock-v1` config patches | Working; used by the local demo |
 | Android Dart code patches (`aot-bidiff-android-v1`, stock Flutter) | **Experimental.** Internally tested on a small number of devices |
-| iOS code patches | **Not supported** |
-| Local Docker stack | Working; tested by the maintainers on Linux |
+| iOS code patches | **Not implemented.** iOS is not tested at all |
+| Local Docker stack | Working; tested by the maintainers on Linux only (macOS/Windows not tested) |
 | Single-server Docker deployment (`deploy/`) | **Draft, not yet verified end to end** |
 | Storage | Local disk + nginx, or S3-compatible buckets. **No Azure Blob** |
 | Signing key | Local PEM file or env var. **No Key Vault / KMS / HSM** |
@@ -98,17 +120,6 @@ Details: [docs/architecture.md](docs/architecture.md) · terms: [docs/concepts.m
 
 Full breakdown: [docs/limitations.md](docs/limitations.md) · roadmap:
 [docs/roadmap/](docs/roadmap/README.md).
-
-## Supported platforms (verified)
-
-Only what was actually exercised for this release:
-
-- **Server:** Linux (Ubuntu) with Docker Engine + Compose v2. macOS/Windows Docker Desktop hosts
-  are **not tested**.
-- **Flutter:** `ota_client` analysis and unit tests with Flutter 3.44 stable. Requires
-  Flutter ≥ 3.27 and Dart ≥ 3.12.
-- **Devices:** Android emulators and devices, internal testing only. No device compatibility
-  matrix is published. **iOS is not tested.**
 
 ## Installation overview
 
@@ -122,7 +133,8 @@ tested server quickstart is still to come.
 
 ## Quickstart (local, about 10 minutes)
 
-Requires Git, Docker with Compose v2, and free ports 8000, 8080 and 5432.
+Requires Git, Docker with Compose v2, and free ports 8000, 8080 and 5432. Tested on Linux only
+(macOS and Windows are not tested).
 
 ```bash
 git clone https://github.com/punitsoni22/flutter_ota_system.git
@@ -197,6 +209,8 @@ Everything is indexed in [docs/index.md](docs/index.md):
 - Alpha: the API, database schema and patch formats may change without migration paths.
 - Android code patches only change Dart code, need the exact registered store build and the same
   Flutter version, and depend on Flutter internals. No iOS code patches.
+- Only Linux (development) and Android (app) are internally tested. iOS, macOS and Windows are not
+  tested ([details](#platform-support--testing-status)).
 - One shared admin API key; no users, roles, SSO or audit log.
 - Open device registration; no rate limiting. Patch files are public by hash: never put secrets
   in patches.
