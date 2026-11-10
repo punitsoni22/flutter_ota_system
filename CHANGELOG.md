@@ -6,9 +6,18 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- Documentation: one consistent "Platform Support & Testing Status" statement (README, docs,
+  release notes). Only the Linux development environment and the Android Flutter app are
+  internally tested; iOS, macOS and Windows are not tested. Platform testing tasks added to the
+  roadmap.
+
 ## [0.1.0-alpha] - YYYY-MM-DD
 
-First public, **experimental** release. Internally tested only; not production-ready.
+First public, **experimental** release. Internally tested only; not production-ready. Tested on
+a Linux development machine and with Android apps (a small number of devices); iOS, macOS and
+Windows are not tested.
 
 ### Added
 
@@ -51,7 +60,7 @@ First public, **experimental** release. Internally tested only; not production-r
 See the README and `docs/known-issues.md` (KI-1 to KI-7). Most important: the `promote` checks
 are not enforced by the server (KI-4), re-creating a deleted release breaks existing installs
 (KI-1), no audit log, single admin key, no rate limiting, no Key Vault/KMS signer, no Azure Blob
-adapter, no iOS code patches, and no published load tests.
+adapter, no iOS code patches (iOS not tested), and no published load tests.
 
 [Unreleased]: https://github.com/punitsoni22/flutter_ota_system/compare/v0.1.0-alpha...HEAD
 [0.1.0-alpha]: https://github.com/punitsoni22/flutter_ota_system/releases/tag/v0.1.0-alpha

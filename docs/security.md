@@ -219,7 +219,7 @@ track releases in your own change management.
 
 No independent security audit, no RBAC, no audit log, no HSM/KMS, no signed URLs, no rate limiting, open device
 registration, one signing key at a time, device token stored without hardware protection, and no
-iOS support. See [limitations.md](limitations.md).
+iOS support (iOS is not tested). See [limitations.md](limitations.md).
 
 ## Secrets in this repository
 

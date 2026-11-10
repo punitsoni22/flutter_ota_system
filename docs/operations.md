@@ -16,6 +16,9 @@ Running a Punit server: deployment, monitoring, logs, backups and recovery. Read
 > v0.1.0-alpha. Test it on a throwaway server first. Planned work:
 > [roadmap/installation-improvements.md](roadmap/installation-improvements.md).
 
+Linux is the only host OS the maintainers have tested Punit on (with the local stack); other
+host operating systems are not tested.
+
 One Linux server runs everything with Docker Compose ([`deploy/`](../deploy/)):
 
 ```mermaid

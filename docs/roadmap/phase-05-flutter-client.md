@@ -4,8 +4,8 @@
 > one package, [`packages/ota_client`](../../packages/ota_client/), instead of the separate
 > `ota_protocol`, `ota_runtime_api` and `runtimes/mock` packages described below. It includes the
 > `mock-v1` runtime, download with size + SHA-256 checks, an atomic state file, the boot protocol
-> and the update loop. The example app is [`example_app/`](../../example_app/). Tested on Android
-> emulators and devices, internally only.
+> and the update loop. The example app is [`example_app/`](../../example_app/). Tested internally on
+> Android only, on a small number of devices. Not tested on iOS.
 
 **Goal:** the example app checks for an update, downloads the file, verifies its hash, stages it, and uses it after a restart. If anything goes wrong it keeps working on the store version.
 

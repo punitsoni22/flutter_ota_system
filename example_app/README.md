@@ -17,3 +17,7 @@ flutter run \
 
 A patch containing `{"crash": true}` makes the app exit on start, to demonstrate crash
 protection. The app allows cleartext HTTP for local testing only.
+
+**Platforms:** the example app has been tested internally on **Android** only, on a small number
+of devices. The `ios/` folder comes from the Flutter template; the app has **not** been built or
+run on iOS. See the [testing status](../README.md#platform-support--testing-status).

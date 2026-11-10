@@ -8,7 +8,7 @@
 
 | # | Gap today | Proposed improvement |
 |---|---|---|
-| 1 | The local quickstart is tested on Linux only | Test on macOS and Windows (Docker Desktop) and document differences |
+| 1 | The local quickstart is tested on Linux only. macOS and Windows (including Docker Desktop) are **not tested** | Test on macOS and Windows (Docker Desktop) and document differences (🔭 planned) |
 | 2 | Four commands are needed for a demo (`setup_local.sh`, `seed_demo.sh`, `publish_test_patch.sh`, `verify_demo.sh`) | One command that sets up, seeds and verifies, with clear output |
 | 3 | The `ota` CLI needs a manual Python virtual environment, an alias and two environment variables | **Partly done:** `scripts/build_cli.sh` builds a wheel for local install (tested on Linux, Python 3.10 and 3.14). Not on PyPI; public distribution is undecided. The CLI's top-level module names (`ota`, `android`, `otadiff`) should move into one package first |
 | 4 | Phones on a LAN need manual `.env` edits (`OTA_CDN_BASE_URL`, `PUNIT_BIND_ADDRESS`) | A helper that detects the LAN IP and prints the exact app `--dart-define`s |
@@ -19,3 +19,4 @@
 | 9 | Backup and restore are documented but not tested | Add a tested restore drill |
 | 10 | The `example_app` default slug in code is `demo`, while the demo scripts create `punit-demo` | Align the defaults so the app works without `--dart-define=OTA_APP` |
 | 11 | `ota_client` is not published on pub.dev; apps use a git or path dependency | Decide on publishing, versioning and tags |
+| 12 | The app side is tested on Android only, on a small number of devices. iOS is **not tested** (needs macOS + Xcode) | Build and run the example app on iOS; test more Android devices, OS versions and ABIs; test more Flutter versions (🔭 planned, see [Platform testing](README.md#platform-testing-planned)) |

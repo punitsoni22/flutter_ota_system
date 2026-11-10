@@ -146,7 +146,16 @@ internals and have only been tested with the Flutter versions the maintainers us
 | Errors about too many connections on a small managed Postgres | Pool size × workers is too high | Lower `OTA_DB_POOL_SIZE` and/or `WEB_CONCURRENCY` |
 | Migration errors at startup | Schema changed by hand, or a downgrade | Restore from backup; never edit the schema by hand |
 
+## Problems on iOS, macOS or Windows
+
+Punit has been tested internally only on a **Linux** development machine and with **Android**
+apps ([testing status](../README.md#platform-support--testing-status)). iOS, macOS and Windows
+are **not tested**, so problems there may have no entry on this page. Differences you may hit:
+other commands to find your computer's IP, Docker Desktop networking, and file paths. iOS code
+patches are not implemented. If you find a fix, please report it (see
+[CONTRIBUTING.md](../CONTRIBUTING.md)).
+
 ## Still stuck?
 
-Search or open an issue with versions, steps and logs, **with secrets removed**. Security
+Search or open an issue with your host OS, app platform, versions, steps and logs, **with secrets removed**. Security
 problems go through [SECURITY.md](../SECURITY.md), never public issues.

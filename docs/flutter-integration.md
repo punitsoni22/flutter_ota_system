@@ -15,13 +15,16 @@ running server first ([installation.md](installation.md)) and should know the
 > 4. the patch was built with the **same Flutter version**, and changes **only Dart code**.
 >
 > Android code patches are **experimental** (tested internally on a small number of devices).
-> **iOS code patches are not supported.**
+> **iOS code patches are not implemented, and iOS has not been tested at all.** Android is the
+> only app platform tested so far; testing there does not establish compatibility with every
+> Android device, OS version, ABI or Flutter version
+> ([testing status](../README.md#platform-support--testing-status)).
 
 ## Choose a runtime
 
 | Runtime | Format | What a patch can do | Platforms |
 |---|---|---|---|
-| `MockPatchRuntime` | `mock-v1` | Deliver an inert file (e.g. JSON config) that your app reads at start. No code runs | Pure Dart. Tested on Android; **not tested on iOS** |
+| `MockPatchRuntime` | `mock-v1` | Deliver an inert file (e.g. JSON config) that your app reads at start. No code runs | Pure Dart. Internally tested on Android; **not tested on iOS** (might work there, unverified) |
 | `AotPatchRuntime` | `aot-bidiff-android-v1` | Replace the app's compiled Dart code | Android release builds only. 🟡 Experimental |
 
 No custom Flutter engine is needed: `AotPatchRuntime` uses stock Flutter's ability to load
@@ -45,7 +48,8 @@ Then run `flutter pub get`. With a local copy of the repository you can use
 `path: ../flutter_ota_system/packages/ota_client` instead. `ota_client` is not published on
 pub.dev.
 
-Requirements: Dart ≥ 3.12, Flutter ≥ 3.27. The Android part needs `minSdk` 21 or higher and
+Requirements: Dart ≥ 3.12, Flutter ≥ 3.27 (tests ran with Flutter 3.44 stable; other versions
+are not tested). The Android part needs `minSdk` 21 or higher and
 Java 17. It adds no permissions; your app needs `INTERNET`, which almost every app has.
 
 **No native changes are required.** The plugin's Android manifest registers `OtaBootProvider`,
@@ -319,7 +323,8 @@ app until someone records an approval:
 ota app approve-policy shop-app --reason "Dart-only code patches; reviewed by <name>"
 ```
 
-Apple forbids downloading new native code on iOS. Punit has no iOS code-patch support.
+Apple forbids downloading new native code on iOS. Punit has no iOS code-patch support, and iOS
+has not been tested.
 
 ## Checklist
 

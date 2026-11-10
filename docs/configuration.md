@@ -83,7 +83,7 @@ The scripts refuse to run when `.env` contains `OTA_ENV=production`.
 
 | Who downloads | Value |
 |---|---|
-| Scripts, desktop, iOS simulator | `http://localhost:8080/cdn` |
+| Scripts, desktop, iOS simulator (iOS not tested) | `http://localhost:8080/cdn` |
 | Android emulator | `http://10.0.2.2:8080/cdn` |
 | Phone on your Wi-Fi | `http://<computer-LAN-IP>:8080/cdn` (+ `PUNIT_BIND_ADDRESS=0.0.0.0`) |
 | Production | `https://<your-domain>/cdn` |

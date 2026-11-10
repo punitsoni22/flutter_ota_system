@@ -5,9 +5,12 @@ patch system. It checks a Punit server for patches, verifies them (ES256 signatu
 SHA-256), stages them, activates them on the next app start, and falls back automatically when a
 new patch fails to start.
 
-> **Experimental (v0.1.0-alpha).** Tested internally only. Android Dart code patches
-> (`AotPatchRuntime`) are experimental; iOS code patches are not supported. Not published on
-> pub.dev.
+> **Experimental (v0.1.0-alpha).** Tested internally only, on **Android** (a small number of
+> devices). **iOS is not tested**; iOS code patches are not implemented, and the pure-Dart
+> `mock-v1` runtime has not been tried on iOS. Android Dart code patches (`AotPatchRuntime`) are
+> experimental. Android testing does not establish compatibility with every Android device, OS
+> version, ABI or Flutter version. Not published on pub.dev. See the
+> [testing status](../../README.md#platform-support--testing-status).
 
 ## Use it
 
@@ -47,7 +50,7 @@ Adding this package alone does not make compiled Dart code patchable: see the re
 
 ## Requirements
 
-Dart ≥ 3.12, Flutter ≥ 3.27. Android: `minSdk` 21, Java 17. The plugin registers
+Dart ≥ 3.12, Flutter ≥ 3.27 (tests ran with Flutter 3.44 stable). Android: `minSdk` 21, Java 17. The plugin registers
 `OtaBootProvider` in its Android manifest; no `MainActivity` changes are needed.
 
 ## Tests

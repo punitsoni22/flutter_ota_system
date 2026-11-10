@@ -57,6 +57,30 @@ Nothing in Punit is production-validated yet (see the warning in the [README](..
   rollout pausing.
 - iOS code push: research only ([runtime-ios-research.md](runtime-ios-research.md)).
 
+### Platform testing (planned)
+
+Today only a **Linux** development environment and the **Android** Flutter app have been tested
+internally, on a small number of devices
+([README](../../README.md#platform-support--testing-status)). These testing tasks are 🔭
+**planned, not done**:
+
+- 🔭 **Android device and OS-version compatibility:** test on more devices, manufacturers and
+  Android versions, and publish a compatibility matrix.
+- 🔭 **CPU architecture (ABI) compatibility:** test code patches and `mock-v1` on `arm64-v8a`,
+  `armeabi-v7a` and `x86_64` builds.
+- 🔭 **Flutter version compatibility:** test `ota_client` and Android code patches across Flutter
+  stable releases, and publish which versions work.
+- 🔭 **iOS build and runtime testing** on macOS with Xcode: build the example app and check
+  whether the `mock-v1` runtime works. iOS code patches stay out of scope
+  ([runtime-ios-research.md](runtime-ios-research.md)).
+- 🔭 **macOS development environment:** run the local Docker stack (Docker Desktop), the CLI and
+  the Android build/patch flow on macOS.
+- 🔭 **Windows development environment:** the same on Windows (Docker Desktop, and WSL 2 if
+  needed).
+
+Installation-specific items are also listed in
+[installation-improvements.md](installation-improvements.md).
+
 ---
 
 ## Progress by phase
