@@ -71,8 +71,10 @@ lists results (an empty list is fine).
 3. Turn on:
    - **Restrict deletions**;
    - **Block force pushes**;
-   - **Require a pull request before merging** (required approvals: 0 while there is a single
-     maintainer, 1 later);
+   - **Require a pull request before merging**. Set required approvals to 0 while there is a
+     single maintainer: GitHub does not let you approve your own pull request, so 1 would block
+     every merge. Raise it to 1 when there is a second maintainer, and turn on **Dismiss stale
+     pull request approvals when new commits are pushed** at the same time;
    - **Require status checks to pass**, adding these CI checks:
      - `Secret scan (gitleaks, full history)`
      - `Backend (lint, tests, licences)`
@@ -107,11 +109,18 @@ bypass role. **Settings → Branches** shows `main` as protected.
 **Verify:** the next CI run passes. On the workflow run page, the `GITHUB_TOKEN` permissions show
 `Contents: read` only.
 
-## 7. Repository page
+## 7. Repository page and labels
 
 - **About** (gear icon on the main page):
-  - **Description:** "Self-hosted Flutter OTA update platform (experimental)".
-  - **Topics:** `flutter`, `ota`, `code-push`, `self-hosted`, `android`.
+  - **Description:** "Self-hosted, experimental over-the-air (OTA) patch delivery system for
+    Flutter applications."
+  - **Topics:** `flutter`, `dart`, `flutter-ota`, `over-the-air-updates`, `code-push`,
+    `self-hosted`, `fastapi`, `docker`, `open-source`.
+  - **Website:** leave empty (there is no hosted service).
+- **Issues → Labels → New label.** GitHub's defaults already include `bug`, `enhancement`,
+  `documentation`, `help wanted` and `good first issue`. Add:
+  - `needs-triage`: the issue forms apply it automatically;
+  - `flutter`, `android`, `backend`, `patch-engine`, `security`, `compatibility`.
 - **Settings → General → Features:** keep **Issues** on. Enable **Discussions** only if you will
   answer them.
 
