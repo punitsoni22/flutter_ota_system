@@ -1,6 +1,6 @@
 # API reference
 
-All endpoints of the Flutter OTA System server v0.1.0-alpha, taken from
+All endpoints of the Flutter OTA System server v0.1.0-alpha.1, taken from
 [`backend/app/routers/`](../backend/app/routers/), [`main.py`](../backend/app/main.py) and the
 schemas in [`schemas.py`](../backend/app/schemas.py).
 

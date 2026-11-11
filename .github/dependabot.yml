@@ -1,0 +1,52 @@
+# Dependabot version updates for the ecosystems that exist in this repository.
+# Security updates are enabled separately in the repository settings
+# (docs/release/github-settings.md). Gradle files (Flutter's Android template) are not listed on
+# purpose: Flutter pins compatible Android Gradle Plugin and Kotlin versions.
+version: 2
+
+updates:
+  # Backend (FastAPI) and the `ota` CLI
+  - package-ecosystem: "pip"
+    directories: ["/backend", "/cli"]
+    schedule: { interval: "weekly", day: "monday" }
+    open-pull-requests-limit: 5
+    commit-message: { prefix: "deps(pip)" }
+    groups:
+      pip-minor-and-patch:
+        update-types: ["minor", "patch"]
+
+  # Dart: the ota_client package and the example app
+  - package-ecosystem: "pub"
+    directories: ["/packages/ota_client", "/example_app"]
+    schedule: { interval: "weekly", day: "monday" }
+    open-pull-requests-limit: 5
+    commit-message: { prefix: "deps(pub)" }
+    groups:
+      pub-minor-and-patch:
+        update-types: ["minor", "patch"]
+
+  # CI workflow actions (pinned to commit SHAs; Dependabot updates the SHA and the version comment)
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule: { interval: "weekly", day: "monday" }
+    commit-message: { prefix: "deps(actions)" }
+    groups:
+      github-actions:
+        patterns: ["*"]
+
+  # API image base (backend/Dockerfile)
+  - package-ecosystem: "docker"
+    directory: "/backend"
+    schedule: { interval: "weekly", day: "monday" }
+    commit-message: { prefix: "deps(docker)" }
+
+  # Pinned service images in the Compose files (postgres, nginx, caddy)
+  - package-ecosystem: "docker-compose"
+    directories: ["/", "/deploy"]
+    schedule: { interval: "weekly", day: "monday" }
+    commit-message: { prefix: "deps(compose)" }
+    ignore:
+      # A new PostgreSQL major version cannot open the old data directory without a manual
+      # dump/restore, so major upgrades are done by hand (docs/operations.md).
+      - dependency-name: "postgres"
+        update-types: ["version-update:semver-major"]

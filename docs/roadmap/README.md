@@ -22,7 +22,7 @@ Nothing in Flutter OTA System is production-validated yet (see the warning in th
 
 ---
 
-## Current state (v0.1.0-alpha)
+## Current state (v0.1.0-alpha.1)
 
 ### Implemented ✅
 

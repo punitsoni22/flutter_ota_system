@@ -1,4 +1,4 @@
-# v0.1.0-alpha go / no-go checklist
+# v0.1.0-alpha.1 go / no-go checklist
 
 Run on a **fresh clone** of exactly what will be published. Automated items are covered by
 `./scripts/prepublish_check.sh`, which exits non-zero on failure. Manual security tasks are listed
@@ -15,7 +15,7 @@ in [MANUAL_SECURITY_CHECKLIST.md](MANUAL_SECURITY_CHECKLIST.md).
 | 7 | Dev signing key generated locally, never in the tree | key lives in Docker volume `flutter-ota-system_keys` | ✔ (no key files tracked) |
 | 8 | Production signing keys absent | no PEM material anywhere in history | ✔ |
 | 9 | Dependency/licence audit completed | [THIRD_PARTY_NOTICES.md](../../THIRD_PARTY_NOTICES.md) (audited 2026-11-11); CI licence gate (no GPL/AGPL) | done |
-| 10 | Shorebird-derived/copied code reviewed | THIRD_PARTY_NOTICES §1 (resolved for v0.1.0-alpha) | done |
+| 10 | Shorebird-derived/copied code reviewed | THIRD_PARTY_NOTICES §1 (resolved for v0.1.0-alpha.1) | done |
 | 11 | Required notices included | `LICENSE`, `NOTICE`, `THIRD_PARTY_NOTICES.md`; SPDX headers in Flutter OTA System source files | ✔ |
 | 12 | Backend tests pass | pytest in `python:3.13-slim` | ✔ |
 | 13 | ota_client analyze/test pass | `flutter analyze && flutter test` | ✔ (if Flutter installed) |
@@ -36,9 +36,9 @@ in [MANUAL_SECURITY_CHECKLIST.md](MANUAL_SECURITY_CHECKLIST.md).
 | 28 | README marks project experimental | grep check + human read | ✔ + manual |
 | 29 | SECURITY.md has a working private route | [MANUAL_SECURITY_CHECKLIST.md](MANUAL_SECURITY_CHECKLIST.md) §C | manual (placeholder check ✔) |
 | 30 | Clean-clone quickstart via docs only | someone else, another machine, README only | manual |
-| 31 | Release notes ready | [v0.1.0-alpha.md](v0.1.0-alpha.md), tag marked **pre-release** | manual |
+| 31 | Release notes ready | [v0.1.0-alpha.1.md](v0.1.0-alpha.1.md), tag marked **pre-release** | manual |
 | 32 | Example app runs on an emulator against the local stack | README "Run the example app" | manual |
-| 33 | GitHub security settings (2FA, secret scanning, push protection, Dependabot, Actions permissions) | [MANUAL_SECURITY_CHECKLIST.md](MANUAL_SECURITY_CHECKLIST.md) §C | manual |
+| 33 | GitHub security settings (2FA, private vulnerability reporting, secret scanning, push protection, Dependabot, CodeQL, branch ruleset, Actions permissions) | [github-settings.md](github-settings.md), [MANUAL_SECURITY_CHECKLIST.md](MANUAL_SECURITY_CHECKLIST.md) §C | manual |
 | 34 | No pre-built Docker images published (or §7 of THIRD_PARTY_NOTICES done first) | [THIRD_PARTY_NOTICES.md §7](../../THIRD_PARTY_NOTICES.md#7-future-actions-before-publishing-pre-built-docker-images) | manual |
 | 35 | Package identifiers verified: ownership of `flutterota.dev` (used by `dev.flutterota.*` application ID / Java package) confirmed, or a rename planned before a stable release | README "Known limitations" | manual (open) |
 

@@ -10,7 +10,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "flutter-ota-system-cli"
-version = "0.1.0a0"   # = 0.1.0-alpha
+version = "0.1.0a1"   # = 0.1.0-alpha.1
 description = "Command-line tool for the Flutter OTA System self-hosted Flutter OTA server (experimental)"
 readme = "README.md"
 license = "Apache-2.0"

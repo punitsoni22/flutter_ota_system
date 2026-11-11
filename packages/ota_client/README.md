@@ -5,7 +5,7 @@ patch system. It checks a Flutter OTA System server for patches, verifies them (
 SHA-256), stages them, activates them on the next app start, and falls back automatically when a
 new patch fails to start.
 
-> **Experimental (v0.1.0-alpha).** Tested internally only, on **Android** (a small number of
+> **Experimental (v0.1.0-alpha.1).** Tested internally only, on **Android** (a small number of
 > devices). **iOS is not tested**; iOS code patches are not implemented, and the pure-Dart
 > `mock-v1` runtime has not been tried on iOS. Android Dart code patches (`AotPatchRuntime`) are
 > experimental. Android testing does not establish compatibility with every Android device, OS

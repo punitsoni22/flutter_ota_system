@@ -96,7 +96,7 @@ Manual items (cannot be automated here; see docs/release/PREPUBLISH_CHECKLIST.md
   [ ] History decision made and executed (.local/release/history-cleanup.md, private), incl. author emails
   [ ] GitHub private vulnerability reporting enabled; security contact monitored
   [ ] Quickstart completed on another machine using README only
-  [ ] Release notes (docs/release/v0.1.0-alpha.md) reviewed; tag created as a PRE-release
+  [ ] Release notes (docs/release/v0.1.0-alpha.1.md) reviewed; tag created as a PRE-release
 EOF
 
 echo
