@@ -32,12 +32,21 @@ class AppOut(ORM):
     name: str
     distribution: str
     aot_policy_approved: bool
+    # Latest policy approval or withdrawal (KI-2); null if never set.
+    policy_reason: str | None = None
+    policy_updated_at: datetime | None = None
     created_at: datetime
 
 
 class PolicyApproval(BaseModel):
     approved: bool
     reason: str = Field(min_length=3, max_length=1000)
+
+
+class PolicyApprovalOut(ORM):
+    approved: bool
+    reason: str
+    created_at: datetime
 
 
 class ReleaseCreate(BaseModel):

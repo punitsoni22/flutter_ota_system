@@ -173,8 +173,11 @@ private key would never leave the HSM. **None of this exists yet.**
 ## Audit logging
 
 **Not implemented.** Who created, published, rolled back or revoked a patch, and when, is not
-recorded. Patches keep their creation time only. The policy-approval `reason` is not stored
-([KI-2](known-issues.md#ki-2-the-policy-approval-reason-is-not-stored)). Until an audit log exists: keep reverse-proxy access logs for `/v1/admin`, restrict admin access, and
+recorded. Patches keep their creation time only. Exceptions: policy approvals are stored with
+their reason and time (`ota app policy-history`, [KI-2](known-issues.md#ki-2-the-policy-approval-reason-is-not-stored)), and
+promotion-check overrides are written to the server log with their reason. Neither records *who*
+did it, because there is only one shared admin key. Until an audit log exists: keep
+reverse-proxy access logs for `/v1/admin`, restrict admin access, and
 track releases in your own change management.
 
 ## Threat model

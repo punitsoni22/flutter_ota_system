@@ -184,7 +184,8 @@ Every endpoint below needs `X-API-Key`. All return `401 Invalid or missing X-API
 ### Objects
 
 **`AppOut`**: `id`, `slug`, `name`, `distribution` (`enterprise` \| `public_store`),
-`aot_policy_approved` (bool), `created_at`.
+`aot_policy_approved` (bool), `policy_reason` and `policy_updated_at` (the latest approval or
+withdrawal; `null` if never set), `created_at`.
 
 **`ReleaseOut`**: `id`, `application_id`, `platform`, `version`, `flutter_version`,
 `engine_revision`, `runtime_abi`, `fingerprint` (object), `created_at`, `artifacts`
@@ -232,7 +233,8 @@ Example `PatchOut` (local demo):
 |---|---|---|---|
 | `POST /v1/admin/apps` | JSON `{slug, name, distribution?}`. `slug` pattern as above; `name` 1–200; `distribution` default `enterprise` | `201 AppOut`. Also creates channels `dev`, `staging`, `production` | `409 Application '<slug>' already exists`, `422` |
 | `GET /v1/admin/apps` | — | `200 [AppOut]` | — |
-| `POST /v1/admin/apps/{slug}/policy-approval` | JSON `{approved: bool, reason: string (3–1000)}`. `reason` is validated but **not stored** | `200 AppOut` | `404 Application '<slug>' not found`, `422` |
+| `POST /v1/admin/apps/{slug}/policy-approval` | JSON `{approved: bool, reason: string (3–1000)}`. Each call is stored with its reason and time ([KI-2](known-issues.md#ki-2-the-policy-approval-reason-is-not-stored), fixed) | `200 AppOut` | `404 Application '<slug>' not found`, `422` |
+| `GET /v1/admin/apps/{slug}/policy-approvals` | — | `200 [{approved, reason, created_at}]`, newest first | `404` |
 | `GET /v1/admin/apps/{slug}/channels` | — | `200 ["dev","staging","production"]` | `404` |
 | `POST /v1/admin/apps/{slug}/channels` | **form** field `name`, `^[a-z0-9-]{1,64}$` | `201` list of channel names | `404`, `409 Channel already exists`, `422` |
 | `GET /v1/admin/apps/{slug}/devices/summary` | — | `200 [{platform, release_version, channel, patch_number, devices}]`, grouped from each device's last check | `404` |

@@ -28,7 +28,8 @@ commands).
 |---|---|
 | `ota app create <slug> "<name>" [--distribution enterprise\|public_store]` | Create an application with channels `dev`, `staging`, `production`. Default distribution `enterprise` |
 | `ota app list` | List applications |
-| `ota app approve-policy <slug> --reason "<text>" [--revoke]` | Record (or with `--revoke`, withdraw) the policy approval needed to publish Android code patches to a `public_store` app. The reason is required but is **not stored** by the server today ([KI-2](known-issues.md#ki-2-the-policy-approval-reason-is-not-stored)) |
+| `ota app approve-policy <slug> --reason "<text>" [--revoke]` | Record (or with `--revoke`, withdraw) the policy approval needed to publish Android code patches to a `public_store` app. The reason and time are stored ([KI-2](known-issues.md#ki-2-the-policy-approval-reason-is-not-stored), fixed) |
+| `ota app policy-history <slug>` | Every approval and withdrawal with its reason and time, newest first |
 
 ## `ota release`
 

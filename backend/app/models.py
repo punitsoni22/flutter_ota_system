@@ -61,6 +61,33 @@ class Application(Base):
     created_at: Mapped[datetime] = mapped_column(default=utc_now)
 
     channels: Mapped[list["Channel"]] = relationship(back_populates="application")
+    policy_approvals: Mapped[list["PolicyApprovalRecord"]] = relationship(
+        order_by="PolicyApprovalRecord.created_at.desc()", lazy="selectin"
+    )
+
+    # Latest approval/withdrawal, for AppOut (KI-2).
+    @property
+    def policy_reason(self) -> str | None:
+        return self.policy_approvals[0].reason if self.policy_approvals else None
+
+    @property
+    def policy_updated_at(self) -> datetime | None:
+        return self.policy_approvals[0].created_at if self.policy_approvals else None
+
+
+class PolicyApprovalRecord(Base):
+    """Every approval or withdrawal of AOT code patches for an app, with its reason (KI-2).
+
+    There are no per-person admin identities yet, so who approved is not recorded.
+    """
+
+    __tablename__ = "policy_approvals"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    application_id: Mapped[str] = mapped_column(ForeignKey("applications.id"), index=True)
+    approved: Mapped[bool] = mapped_column(Boolean)
+    reason: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(default=utc_now)
 
 
 class Channel(Base):

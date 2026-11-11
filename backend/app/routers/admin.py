@@ -28,6 +28,7 @@ from app.models import (
     PatchArtifact,
     PatchDeployment,
     PatchEventCount,
+    PolicyApprovalRecord,
     Release,
     ReleaseArtifact,
 )
@@ -40,6 +41,7 @@ from app.schemas import (
     PatchCreate,
     PatchOut,
     PolicyApproval,
+    PolicyApprovalOut,
     ReleaseArtifactOut,
     ReleaseCreate,
     ReleaseOut,
@@ -158,11 +160,22 @@ def list_apps(db: Session = Depends(get_db)):
 
 @router.post("/apps/{slug}/policy-approval", response_model=AppOut)
 def set_policy_approval(slug: str, body: PolicyApproval, db: Session = Depends(get_db)):
-    """ADR-0011: record that AOT code patches are approved for this public store app."""
+    """ADR-0011: record that AOT code patches are approved for this public store app.
+
+    Every approval or withdrawal is kept with its reason and time (KI-2).
+    """
     app = _app_by_slug(db, slug)
     app.aot_policy_approved = body.approved
+    db.add(PolicyApprovalRecord(application_id=app.id, approved=body.approved, reason=body.reason.strip()))
     db.commit()
+    db.refresh(app)
     return app
+
+
+@router.get("/apps/{slug}/policy-approvals", response_model=list[PolicyApprovalOut])
+def list_policy_approvals(slug: str, db: Session = Depends(get_db)):
+    """History of policy approvals and withdrawals for this app, newest first (KI-2)."""
+    return _app_by_slug(db, slug).policy_approvals
 
 
 @router.get("/apps/{slug}/channels", response_model=list[str])

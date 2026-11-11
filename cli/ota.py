@@ -95,6 +95,10 @@ def app_list(a):
     show(call("GET", "/v1/admin/apps"))
 
 
+def app_policy_history(a):
+    show(call("GET", f"/v1/admin/apps/{a.slug}/policy-approvals"))
+
+
 def app_approve_policy(a):
     show(call("POST", f"/v1/admin/apps/{a.slug}/policy-approval", json={"approved": not a.revoke, "reason": a.reason}))
 
@@ -236,6 +240,9 @@ def main() -> None:
     c.add_argument("--reason", required=True)
     c.add_argument("--revoke", action="store_true", help="Withdraw the approval")
     c.set_defaults(fn=app_approve_policy)
+    c = g.add_parser("policy-history", help="Policy approvals and withdrawals with their reasons, newest first")
+    c.add_argument("slug")
+    c.set_defaults(fn=app_policy_history)
 
     g = sub.add_parser("release").add_subparsers(dest="cmd", required=True)
     c = g.add_parser("create")

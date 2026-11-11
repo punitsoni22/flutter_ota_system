@@ -401,3 +401,26 @@ def test_server_enforces_promotion_checks_for_production(client):
         assert p3["status"] == "published"
     finally:
         undo()
+
+
+def test_policy_approval_reason_and_history_are_stored(client):
+    """KI-2: the reason, time and every change are kept, not just the on/off flag."""
+    make_app(client, distribution="public_store")
+    app = client.get("/v1/admin/apps", headers=ADMIN).json()[0]
+    assert app["policy_reason"] is None and app["policy_updated_at"] is None
+
+    url = "/v1/admin/apps/demo/policy-approval"
+    r = client.post(url, json={"approved": True, "reason": "  Dart-only patches, legal ok  "}, headers=ADMIN)
+    assert r.status_code == 200
+    assert r.json()["aot_policy_approved"] is True
+    assert r.json()["policy_reason"] == "Dart-only patches, legal ok"
+    assert r.json()["policy_updated_at"]
+
+    r = client.post(url, json={"approved": False, "reason": "store policy changed"}, headers=ADMIN)
+    assert r.json()["aot_policy_approved"] is False and r.json()["policy_reason"] == "store policy changed"
+    assert client.post(url, json={"approved": True, "reason": "x"}, headers=ADMIN).status_code == 422
+
+    history = client.get("/v1/admin/apps/demo/policy-approvals", headers=ADMIN).json()
+    assert [(h["approved"], h["reason"]) for h in history] == [
+        (False, "store policy changed"), (True, "Dart-only patches, legal ok")]
+    assert client.get("/v1/admin/apps/nope/policy-approvals", headers=ADMIN).status_code == 404
