@@ -1,0 +1,74 @@
+name: Test report
+description: You tried Flutter OTA System on your machine or device. Tell us what worked and what did not.
+title: "[Test report] "
+labels: ["compatibility", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for testing. Reports that say "everything worked" are useful too: they tell us which environments work.
+        The test areas are listed in [docs/community/testing-guide.md](../blob/main/docs/community/testing-guide.md).
+
+        **Remove secrets** (`.env` contents, API keys, signing keys, tokens, internal URLs, personal data) from everything you paste.
+        **Security vulnerability?** Do not file it here. Follow [SECURITY.md](../blob/main/SECURITY.md).
+  - type: input
+    id: version
+    attributes: { label: Flutter OTA System version or commit, placeholder: "v0.1.0-alpha.1 or a1b2c3d" }
+    validations: { required: true }
+  - type: input
+    id: os
+    attributes: { label: Host OS, placeholder: "Ubuntu 24.04 / Fedora 41 / macOS 15 / Windows 11 + WSL2" }
+    validations: { required: true }
+  - type: input
+    id: docker
+    attributes: { label: Docker and Compose versions, description: "`docker version` and `docker compose version` (and Docker Desktop / Colima / WSL 2 if used)" }
+  - type: input
+    id: flutter
+    attributes: { label: Flutter version, description: "`flutter --version` (if you tested the app part)" }
+  - type: input
+    id: device
+    attributes:
+      label: Android device or emulator
+      description: "Model, Android version and ABI (`adb shell getprop ro.product.cpu.abi`)"
+      placeholder: "Pixel 7, Android 14, arm64-v8a / emulator API 35 x86_64"
+  - type: checkboxes
+    id: worked
+    attributes:
+      label: Areas that WORKED
+      options:
+        - label: "1. Fresh Docker installation (setup)"
+        - label: "2. Backend configuration (.env changes, status)"
+        - label: "3. End-to-end demo (RESULT: all checks passed)"
+        - label: "4. Flutter Android integration (example app or own app)"
+        - label: "5. Device registration"
+        - label: "6. Full release creation (ota release android)"
+        - label: "7. Patch generation (ota patch android)"
+        - label: "8. Patch publishing and rollout"
+        - label: "9. Artifact downloading"
+        - label: "10. Signature verification (wrong key refused)"
+        - label: "11. Patch activation after restart"
+        - label: "12. Restart and recovery (crash protection)"
+        - label: "13. Rollback"
+  - type: textarea
+    id: failed
+    attributes:
+      label: Areas that FAILED or that you could not finish
+      description: "Number, what you ran, what happened. Leave empty if nothing failed."
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs (secrets removed)
+      description: "`./flutter-ota-system.sh logs api`, CLI output, `adb logcat`, `flutter run` output"
+      render: text
+  - type: textarea
+    id: suggestions
+    attributes: { label: Suggestions, description: "Anything confusing, missing or slow in the docs or tools" }
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: I removed secrets, tokens, keys and personal data from this report.
+          required: true
+        - label: This is not a security vulnerability.
+          required: true

@@ -112,10 +112,10 @@ bypass role. **Settings → Branches** shows `main` as protected.
 ## 7. Repository page and labels
 
 - **About** (gear icon on the main page):
-  - **Description:** "Self-hosted, experimental over-the-air (OTA) patch delivery system for
-    Flutter applications."
-  - **Topics:** `flutter`, `dart`, `flutter-ota`, `over-the-air-updates`, `code-push`,
-    `self-hosted`, `fastapi`, `docker`, `open-source`.
+  - **Description:** "An experimental, self-hosted, open-source OTA update platform for Flutter
+    applications."
+  - **Topics:** `flutter`, `flutter-ota`, `dart`, `code-push`, `over-the-air-updates`,
+    `self-hosted`, `open-source`, `fastapi`, `docker`, `mobile-devops`.
   - **Website:** leave empty (there is no hosted service).
 - **Issues → Labels → New label.** GitHub's defaults already include `bug`, `enhancement`,
   `documentation`, `help wanted` and `good first issue`. Add:
