@@ -92,7 +92,7 @@ services:
       retries: 20
 
   cdn:
-    image: nginx:1.27.5-alpine
+    image: nginx:1.31.8-alpine
     restart: unless-stopped
     # The api container must create the artifacts volume first (so it is owned by the API user).
     depends_on:
