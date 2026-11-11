@@ -13,7 +13,7 @@ export OTA_API_KEY=<the server's OTA_ADMIN_API_KEY>
 Or build and install it as a local package (not on PyPI): `./scripts/build_cli.sh`, then
 `pip install cli/dist/punit_cli-0.1.0a0-py3-none-any.whl` into a virtual environment
 ([installation.md](installation.md#7-install-the-ota-cli)). The package needs Python 3.10+ and
-pins `bsdiff4` to `>=1.4.0,<1.4.2` ([KI-7](known-issues.md#ki-7-the-cli-breaks-with-bsdiff4-142)).
+works with `bsdiff4` 1.2.6 to 1.4.2 (tested; [KI-7](known-issues.md#ki-7-the-cli-breaks-with-bsdiff4-142), fixed).
 
 Every command prints JSON (or a table for `patch list`). On an API error it prints
 `error <HTTP status>: <detail>` and exits with a non-zero code. `ota <group> <command> --help`

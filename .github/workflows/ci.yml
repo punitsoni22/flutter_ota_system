@@ -54,15 +54,18 @@ jobs:
         with: { python-version: "3.13" }
       - run: pip install -r cli/requirements.txt
       - run: python -m py_compile cli/*.py scripts/*.py scripts/demo/*.py
-      - name: OTADIF01 round trip
+      - name: OTADIF01 round trip (newest and oldest supported bsdiff4)
         working-directory: cli
         run: |
-          python - <<'EOF'
-          import os, otadiff
+          for v in "" "==1.2.6"; do
+            [ -n "$v" ] && pip install -q "bsdiff4$v"
+            python - <<'EOF'
+          import os, bsdiff4, importlib.metadata as m, otadiff
           old = os.urandom(50000); new = old[:20000] + os.urandom(500) + old[20000:]
           assert otadiff.patch(old, otadiff.diff(old, new)) == new
-          print("otadiff round trip ok")
+          print("otadiff round trip ok with bsdiff4", m.version("bsdiff4"))
           EOF
+          done
 
   flutter:
     name: Flutter (ota_client + example_app)

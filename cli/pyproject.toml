@@ -16,7 +16,7 @@ readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE", "NOTICE", "THIRD_PARTY_NOTICES.md"]
 requires-python = ">=3.10"
-dependencies = ["httpx>=0.27", "bsdiff4>=1.4.0,<1.4.2"]   # see docs/known-issues.md KI-7
+dependencies = ["httpx>=0.27", "bsdiff4>=1.2.6"]   # tested 1.2.6 to 1.4.2, see docs/known-issues.md KI-7
 classifiers = [
   "Development Status :: 3 - Alpha",
   "Environment :: Console",
