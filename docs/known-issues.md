@@ -7,7 +7,7 @@ can be copied into an issue. Fixes are listed under **Unreleased** in the
 | ID | Title | Type | Priority | Status |
 |---|---|---|---|---|
 | [KI-4](#ki-4-promote-safety-checks-are-enforced-only-by-the-cli) | Promote safety checks are enforced only by the CLI | Bug (safety) | **Critical** | ✅ Fixed (Unreleased) |
-| [KI-1](#ki-1-re-creating-a-deleted-release-breaks-existing-installs) | Re-creating a deleted release breaks existing installs | Bug | **High** | ✅ Fixed (Unreleased); phone re-test pending |
+| [KI-1](#ki-1-re-creating-a-deleted-release-breaks-existing-installs) | Re-creating a deleted release breaks existing installs | Bug | **High** | ✅ Fixed (Unreleased) |
 | [KI-7](#ki-7-the-cli-breaks-with-bsdiff4-142) | The CLI breaks with `bsdiff4` 1.4.2 | Bug (dependency) | High | ✅ Fixed (Unreleased) |
 | [KI-2](#ki-2-the-policy-approval-reason-is-not-stored) | The policy-approval reason is not stored | Bug | Medium | ✅ Fixed (Unreleased) |
 | [KI-5](#ki-5-example-app-and-demo-scripts-use-different-app-slugs) | Example app and demo scripts use different app slugs | Bug (demo) | Low | ✅ Fixed (Unreleased) |
@@ -71,7 +71,9 @@ rollout to 0% always allowed; `patch android --channel production` refused.
 > ✅ **Fixed (Unreleased).** The client now switches to a re-created release by itself: it drops
 > the old release's patches and resets anti-replay, but never goes back to a retired release id.
 > The server refuses to register a version again that devices still report, unless `replace: true`
-> (CLI `--replace`). Tested: client and backend tests. Still to do: a re-test on a real device.
+> (CLI `--replace`). Tested: client and backend tests, and on an Android phone: a release was
+> deleted and re-registered with `--replace` while the app ran a patch; the app dropped the old
+> patch, returned to the store code, then accepted and ran patch #1 of the re-created release.
 > The text below describes the original bug.
 
 **Priority:** High. Must be fixed and tested before production use.

@@ -109,8 +109,8 @@ What each app platform can do:
 - Telemetry is counts per patch only; no per-device history.
 - No structured logs, metrics endpoint or tracing.
 - Release identity (KI-1) and server-side promotion checks (KI-4) are fixed on `main` (not in a
-  tagged release yet). They are covered by automated tests; the KI-1 fix still needs a re-test on
-  a real device ([known-issues.md](known-issues.md)).
+  tagged release yet). Both are covered by automated tests and were checked on one Android phone
+  ([known-issues.md](known-issues.md)).
 - Channels can be created only through the API; they cannot be renamed or deleted
   ([KI-3](known-issues.md#ki-3-channels-can-be-created-only-through-the-api)).
 
