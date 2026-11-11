@@ -1,26 +1,34 @@
 # Known issues
 
-Bugs and gaps found while documenting and testing **v0.1.0-alpha**. They are tracked here,
-separately from the documentation, until the repository has a public issue tracker; each entry is
-written so it can be copied into an issue. No code fix is included in v0.1.0-alpha: KI-6 was a
-documentation error (corrected) and KI-7 has a dependency pin as a workaround.
+Bugs and gaps found while documenting and testing **v0.1.0-alpha**. Each entry is written so it
+can be copied into an issue. Fixes are listed under **Unreleased** in the
+[CHANGELOG](../CHANGELOG.md): they are on `main`, not in a tagged release yet.
 
-| ID | Title | Type | Priority | Blocks production use |
+| ID | Title | Type | Priority | Status |
 |---|---|---|---|---|
-| [KI-4](#ki-4-promote-safety-checks-are-enforced-only-by-the-cli) | Promote safety checks are enforced only by the CLI | Bug (safety) | **Critical** | Yes |
-| [KI-1](#ki-1-re-creating-a-deleted-release-breaks-existing-installs) | Re-creating a deleted release breaks existing installs | Bug | **High** | Yes |
-| [KI-2](#ki-2-the-policy-approval-reason-is-not-stored) | The policy-approval reason is not stored | Bug | Medium | Before claiming the policy gate is complete |
-| [KI-5](#ki-5-example-app-and-demo-scripts-use-different-app-slugs) | Example app and demo scripts use different app slugs | Bug (demo) | Low | No |
-| [KI-3](#ki-3-channels-can-be-created-only-through-the-api) | Channels can be created only through the API | Limitation | Low | No |
-| [KI-7](#ki-7-the-cli-breaks-with-bsdiff4-142) | The CLI breaks with `bsdiff4` 1.4.2 | Bug (dependency) | High | Worked around by a version pin |
-| [KI-6](#ki-6-old-docs-described-a-30-minute-background-check) | Old docs described a 30-minute background check | Docs bug | — | Fixed in the docs |
+| [KI-4](#ki-4-promote-safety-checks-are-enforced-only-by-the-cli) | Promote safety checks are enforced only by the CLI | Bug (safety) | **Critical** | ✅ Fixed (Unreleased) |
+| [KI-1](#ki-1-re-creating-a-deleted-release-breaks-existing-installs) | Re-creating a deleted release breaks existing installs | Bug | **High** | ✅ Fixed (Unreleased); phone re-test pending |
+| [KI-7](#ki-7-the-cli-breaks-with-bsdiff4-142) | The CLI breaks with `bsdiff4` 1.4.2 | Bug (dependency) | High | ✅ Fixed (Unreleased) |
+| [KI-2](#ki-2-the-policy-approval-reason-is-not-stored) | The policy-approval reason is not stored | Bug | Medium | ✅ Fixed (Unreleased) |
+| [KI-5](#ki-5-example-app-and-demo-scripts-use-different-app-slugs) | Example app and demo scripts use different app slugs | Bug (demo) | Low | 🚧 Being fixed with the Docker setup work |
+| [KI-8](#ki-8-a-failed-ota-patch-android-leaves-an-empty-draft-patch) | A failed `ota patch android` leaves an empty draft patch | Bug | Low | Open |
+| [KI-9](#ki-9-admin-page-shows-the-wrong-default-key) | Admin page shows the wrong default key | Bug (UI text) | Low | ✅ Fixed (Unreleased) |
+| [KI-10](#ki-10-stale-patch-display-after-rollback) | Stale patch display after rollback | Bug (UI) | Low | Open |
+| [KI-3](#ki-3-channels-can-be-created-only-through-the-api) | Channels can be created only through the API | Limitation | Low | Accepted for v0.1.0-alpha |
+| [KI-6](#ki-6-old-docs-described-a-30-minute-background-check) | Old docs described a 30-minute background check | Docs bug | — | ✅ Fixed in the docs |
 
-Production use is not supported in v0.1.0-alpha anyway ([limitations.md](limitations.md)); the
-"Blocks production use" column says what must be fixed before that can change.
+KI-1 and KI-4 were the known blockers for production use. Their fixes still need wider testing,
+and production use is not supported in v0.1.0-alpha anyway ([limitations.md](limitations.md)).
 
 ---
 
 ## KI-4: Promote safety checks are enforced only by the CLI
+
+> ✅ **Fixed (Unreleased).** The server now enforces the checks for protected channels
+> (`OTA_PROTECTED_CHANNELS`, default `production`) on `publish` and `rollout`, for every client.
+> `force: true` with a `reason` overrides them and is logged. The CLI (`--force --reason`) and the
+> admin page (asks for a typed reason) use it. Tested: backend test, admin page in a browser, CLI.
+> See [rollouts.md](rollouts.md). The text below describes the original bug.
 
 **Priority:** Critical.
 
@@ -59,6 +67,12 @@ rollout to 0% always allowed; `patch android --channel production` refused.
 
 ## KI-1: Re-creating a deleted release breaks existing installs
 
+> ✅ **Fixed (Unreleased).** The client now switches to a re-created release by itself: it drops
+> the old release's patches and resets anti-replay, but never goes back to a retired release id.
+> The server refuses to register a version again that devices still report, unless `replace: true`
+> (CLI `--replace`). Tested: client and backend tests. Still to do: a re-test on a real device.
+> The text below describes the original bug.
+
 **Priority:** High. Must be fixed and tested before production use.
 
 **Current behaviour.** The client stores the server's `release_id` the first time it sees it and
@@ -89,6 +103,12 @@ rejected); backend test for the re-create refusal; end-to-end run of the reprodu
 ---
 
 ## KI-2: The policy-approval reason is not stored
+
+> ✅ **Fixed (Unreleased).** Every approval and withdrawal is stored with its reason and time
+> (migration 0003; apps approved earlier get one "reason unknown" record). `AppOut` shows the
+> latest; `GET /v1/admin/apps/{slug}/policy-approvals` and `ota app policy-history` list them.
+> Who approved is still not recorded (one shared admin key). The text below describes the
+> original bug.
 
 **Priority:** Medium. Fix before claiming the policy gate is complete.
 
@@ -155,6 +175,12 @@ behaviour: [flutter-integration.md](flutter-integration.md#activation).
 
 ## KI-7: The CLI breaks with `bsdiff4` 1.4.2
 
+> ✅ **Fixed (Unreleased).** `cli/otadiff.py` now uses only the public `bsdiff4.diff()` and
+> `bsdiff4.patch()` and converts the standard BSDIFF40 format itself. Output is unchanged
+> (byte-identical with 1.4.1). Tested with bsdiff4 1.2.6, 1.3.2, 1.4.0, 1.4.1 and 1.4.2, the Dart
+> reader, and a real `ota patch android` run with 1.4.2. The requirement is now `bsdiff4>=1.2.6`,
+> and CI checks the oldest and newest. The text below describes the original bug.
+
 **Priority:** High (it breaks `ota patch android`). **Workaround in place:** version pin.
 
 **Current behaviour.** [`cli/otadiff.py`](../cli/otadiff.py) uses internal helpers of the
@@ -177,3 +203,45 @@ would fail at the diff check, and the CI round-trip test would fail too.
 internals. For example, write the OTADIF01 container from the public `bsdiff4.diff()` output by
 parsing its documented `BSDIFF40` layout, or vendor the small control-block helpers. Then test
 the round trip against several `bsdiff4` versions in CI.
+
+---
+
+## KI-8: A failed `ota patch android` leaves an empty draft patch
+
+**Priority:** Low. **Status:** Open.
+
+`ota patch android` creates the patch first and then uploads one diff per ABI. If it stops in
+between (for example the KI-7 crash, or a network error), the patch stays as a **draft without
+artifacts**: its number is used up, and publishing it fails with `422 Patch has no artifacts`.
+Seen in testing (draft patch #1 of a test app).
+
+**Workaround:** ignore it, or revoke it (`ota patch revoke <id> --yes`) to keep the list tidy.
+
+**Proposed fix:** compute and check all diffs before creating the patch, and delete or revoke the
+draft when an upload fails (a `DELETE` for draft patches would be needed).
+
+---
+
+## KI-9: Admin page shows the wrong default key
+
+**Priority:** Low. **Status:** ✅ Fixed (Unreleased): the page now points to `OTA_ADMIN_API_KEY` in `.env`.
+
+Before you connect, the admin page said the default key for local Docker is `dev-admin-key`.
+The local stack actually uses `OTA_ADMIN_API_KEY` from `.env` (`local-dev-admin-key-not-a-secret`
+in `.env.example`). **Fix:** change the text in `backend/app/admin.html` to "the
+`OTA_ADMIN_API_KEY` value from your `.env`".
+
+---
+
+## KI-10: Stale patch display after rollback
+
+**Priority:** Low (cosmetic). **Status:** Open.
+
+- Admin page: a rolled-back patch still shows its old rollout (e.g. `staging 100%`,
+  `production 50%`) in the **Rollout** column. The channel summary at the top is correct.
+- Example app: between a rollback (or revoke) and the next restart, "Active patch" shows `none`
+  although the old patch is still running until the restart.
+
+**Proposed fix:** show rolled-back deployments as inactive in the admin page; in the example app,
+label the state "rolled back, restart to apply".
+

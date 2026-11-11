@@ -6,6 +6,25 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- KI-4: the server enforces the promotion checks for protected channels
+  (`OTA_PROTECTED_CHANNELS`, default `production`): a patch must have run on another channel and
+  have no boot failures before its percentage there is raised. Override with `force` + `reason`
+  (logged); CLI `--force --reason`; the admin page asks for a reason.
+- KI-1: re-registering a deleted release no longer breaks installs. The client switches to the
+  new release id once (old patches dropped, retired ids refused); the server needs
+  `replace: true` (CLI `--replace`) if devices still report that version.
+- KI-2: policy approvals are stored with reason and time (migration 0003);
+  `GET /v1/admin/apps/{slug}/policy-approvals`, `ota app policy-history`.
+- KI-7: `cli/otadiff.py` uses only the public `bsdiff4` API; works with bsdiff4 1.2.6 to 1.4.2.
+- KI-9: the admin page no longer suggests a wrong default key.
+
+### Added
+
+- `ota` CLI can be built as a local wheel (`scripts/build_cli.sh`); not published to PyPI.
+- `docs/known-issues.md`: known bugs with priority, status and proposed fixes.
+
 ### Changed
 
 - Documentation: one consistent "Platform Support & Testing Status" statement (README, docs,

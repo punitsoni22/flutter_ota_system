@@ -108,10 +108,9 @@ What each app platform can do:
   channel/release/arch/percentage.
 - Telemetry is counts per patch only; no per-device history.
 - No structured logs, metrics endpoint or tracing.
-- Re-creating a deleted release with the same version breaks existing installs (`release id
-  changed`, [KI-1](known-issues.md#ki-1-re-creating-a-deleted-release-breaks-existing-installs)).
-- The `promote` safety checks run only in the CLI; the server does not enforce them
-  ([KI-4](known-issues.md#ki-4-promote-safety-checks-are-enforced-only-by-the-cli)).
+- Release identity (KI-1) and server-side promotion checks (KI-4) are fixed on `main` (not in a
+  tagged release yet). They are covered by automated tests; the KI-1 fix still needs a re-test on
+  a real device ([known-issues.md](known-issues.md)).
 - Channels can be created only through the API; they cannot be renamed or deleted
   ([KI-3](known-issues.md#ki-3-channels-can-be-created-only-through-the-api)).
 
