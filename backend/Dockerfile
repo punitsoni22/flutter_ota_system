@@ -6,13 +6,13 @@
 # Dependabot can propose updates (.github/dependabot.yml); keep the two FROM lines identical.
 # No secrets, .env files or signing keys are copied in (see backend/.dockerignore): the signing
 # key lives in a volume mounted at /data/keys.
-FROM python:3.13.18-slim-trixie AS deps
+FROM python:3.15.0-slim-trixie AS deps
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1 PIP_NO_CACHE_DIR=1
 RUN python -m venv /opt/venv
 COPY requirements.txt /tmp/requirements.txt
 RUN /opt/venv/bin/pip install -r /tmp/requirements.txt
 
-FROM python:3.13.18-slim-trixie
+FROM python:3.15.0-slim-trixie
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PATH=/opt/venv/bin:$PATH
 WORKDIR /srv
