@@ -19,14 +19,23 @@ All notable changes to this project are documented here. The format follows
   `GET /v1/admin/apps/{slug}/policy-approvals`, `ota app policy-history`.
 - KI-7: `cli/otadiff.py` uses only the public `bsdiff4` API; works with bsdiff4 1.2.6 to 1.4.2.
 - KI-9: the admin page no longer suggests a wrong default key.
+- KI-5: `example_app` defaults to the `punit-demo` slug used by the demo scripts.
 
 ### Added
 
+- `./punit.sh`: one-command local Docker setup and operations (`setup`, `up`, `stop`, `down`,
+  `restart`, `status`, `logs`, `update`, `backup`, `restore`, `psql`, `reset`, `demo`, `verify`,
+  `cli`, `ota`). `setup` creates `.env` with random local secrets and never overwrites an
+  existing one; the dev signing key is created once and kept. Tested on Linux only.
+- Local backup and restore (database, patch files, signing key, `.env`) with checksums.
 - `ota` CLI can be built as a local wheel (`scripts/build_cli.sh`); not published to PyPI.
 - `docs/known-issues.md`: known bugs with priority, status and proposed fixes.
 
 ### Changed
 
+- Docker: pinned image versions, multi-stage API image, Postgres on an internal network with **no
+  host port by default** (opt-in: `docker/compose.postgres-port.yml`), `no-new-privileges`, log
+  rotation, configurable project name and ports. If you used `localhost:5432`, enable the opt-in.
 - Documentation: one consistent "Platform Support & Testing Status" statement (README, docs,
   release notes). Only the Linux development environment and the Android Flutter app are
   internally tested; iOS, macOS and Windows are not tested. Platform testing tasks added to the

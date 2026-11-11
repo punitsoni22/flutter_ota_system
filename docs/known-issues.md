@@ -10,10 +10,11 @@ can be copied into an issue. Fixes are listed under **Unreleased** in the
 | [KI-1](#ki-1-re-creating-a-deleted-release-breaks-existing-installs) | Re-creating a deleted release breaks existing installs | Bug | **High** | ✅ Fixed (Unreleased); phone re-test pending |
 | [KI-7](#ki-7-the-cli-breaks-with-bsdiff4-142) | The CLI breaks with `bsdiff4` 1.4.2 | Bug (dependency) | High | ✅ Fixed (Unreleased) |
 | [KI-2](#ki-2-the-policy-approval-reason-is-not-stored) | The policy-approval reason is not stored | Bug | Medium | ✅ Fixed (Unreleased) |
-| [KI-5](#ki-5-example-app-and-demo-scripts-use-different-app-slugs) | Example app and demo scripts use different app slugs | Bug (demo) | Low | 🚧 Being fixed with the Docker setup work |
+| [KI-5](#ki-5-example-app-and-demo-scripts-use-different-app-slugs) | Example app and demo scripts use different app slugs | Bug (demo) | Low | ✅ Fixed (Unreleased) |
 | [KI-8](#ki-8-a-failed-ota-patch-android-leaves-an-empty-draft-patch) | A failed `ota patch android` leaves an empty draft patch | Bug | Low | Open |
 | [KI-9](#ki-9-admin-page-shows-the-wrong-default-key) | Admin page shows the wrong default key | Bug (UI text) | Low | ✅ Fixed (Unreleased) |
 | [KI-10](#ki-10-stale-patch-display-after-rollback) | Stale patch display after rollback | Bug (UI) | Low | Open |
+| [KI-11](#ki-11-healthready-returns-500-instead-of-503-while-the-database-is-down) | `/health/ready` returns 500 instead of 503 while the database is down | Bug | Low | Open |
 | [KI-3](#ki-3-channels-can-be-created-only-through-the-api) | Channels can be created only through the API | Limitation | Low | Accepted for v0.1.0-alpha |
 | [KI-6](#ki-6-old-docs-described-a-30-minute-background-check) | Old docs described a 30-minute background check | Docs bug | — | ✅ Fixed in the docs |
 
@@ -133,7 +134,8 @@ migration upgrade on an existing database.
 
 ## KI-5: Example app and demo scripts use different app slugs
 
-**Priority:** Low. Scheduled for Step 4 (installation improvements).
+**Priority:** Low. **Status:** ✅ Fixed (Unreleased): `example_app` now defaults `OTA_APP` to
+`punit-demo`; tested on a phone without an `OTA_APP` define (registered, no 404).
 
 **Current behaviour.** `example_app` defaults to `OTA_APP=demo`
 ([`main.dart`](../example_app/lib/main.dart)), while `scripts/seed_demo.sh` and the demo create the
@@ -244,4 +246,16 @@ in `.env.example`). **Fix:** change the text in `backend/app/admin.html` to "the
 
 **Proposed fix:** show rolled-back deployments as inactive in the admin page; in the example app,
 label the state "rolled back, restart to apply".
+
+---
+
+## KI-11: `/health/ready` returns 500 instead of 503 while the database is down
+
+**Priority:** Low. **Status:** Open.
+
+Found while testing recovery: after restarting only the Postgres container, `/health/ready`
+answered `500` a few times, then `200` once the database was back. A readiness check should
+answer `503 Service Unavailable` with a short message, so load balancers and monitors can tell
+"not ready" from a crash. The backend did reconnect by itself. **Fix:** catch the database error in
+the readiness handler and return 503.
 
