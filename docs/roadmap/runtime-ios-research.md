@@ -1,6 +1,6 @@
 # Runtime track R-iOS — iOS code push research
 
-> **Roadmap status: 🔭 research only.** Punit has **no iOS code patch support**. These notes compare
+> **Roadmap status: 🔭 research only.** Flutter OTA System has **no iOS code patch support**. These notes compare
 > options; none has been built or tested.
 
 **Start only after** [Track R (Android)](runtime-android-engine.md) is done. This is research, so the output is reports and a decision, not a product. Decision record: [ADR-0011](../adr/0011-scope-and-runtime-path.md).

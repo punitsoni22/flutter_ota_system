@@ -44,7 +44,7 @@ def upgrade() -> None:
     if approved:
         op.bulk_insert(table, [
             {"id": str(uuid.uuid4()), "application_id": app_id, "approved": True,
-             "reason": "(approved before Punit stored reasons; reason unknown)", "created_at": now}
+             "reason": "(approved before Flutter OTA System stored reasons; reason unknown)", "created_at": now}
             for app_id in approved
         ])
 

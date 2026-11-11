@@ -6,10 +6,10 @@ exact texts printed by the server, the CLI, the client or the scripts.
 **First steps for any problem**
 
 ```bash
-./punit.sh status                              # local stack: containers, health, URLs, key
+./flutter-ota-system.sh status                              # local stack: containers, health, URLs, key
 curl http://localhost:8000/health/ready        # {"status":"ok"}? (use your server URL)
 docker compose ps                              # all services "(healthy)"?
-docker compose logs --tail=100 api             # server errors (local: ./punit.sh logs api)
+docker compose logs --tail=100 api             # server errors (local: ./flutter-ota-system.sh logs api)
 adb logcat | grep -E "OtaBoot|OTA:"            # Android device side
 ```
 
@@ -23,19 +23,19 @@ tell you which step failed ([flutter-integration.md](flutter-integration.md#5-ha
 | `ERROR docker not found. Install Docker Engine (Linux) or Docker Desktop…` | Docker is not installed | Install it ([installation.md](installation.md#1-prerequisites)) |
 | `ERROR Docker is not running, or your user cannot use it` | Daemon stopped, or your user is not in the `docker` group | `sudo systemctl start docker`; `sudo usermod -aG docker $USER`, then log out and in |
 | `ERROR Docker Compose v2 not found` | Old `docker-compose` v1 only | Install the Compose v2 plugin (`docker compose version`) |
-| `ERROR Docker Compose X is too old; Punit needs Compose v2.20 or newer.` | Old Compose plugin | Update Docker / the Compose plugin |
+| `ERROR Docker Compose X is too old; Flutter OTA System needs Compose v2.20 or newer.` | Old Compose plugin | Update Docker / the Compose plugin |
 | `ERROR Required files are missing.` | Incomplete clone or download | Clone the repository again with `git clone` |
-| `ERROR .env not found. Run: ./punit.sh setup …` | No `.env` (a script other than `setup` was run first) | `./punit.sh setup` |
+| `ERROR .env not found. Run: ./flutter-ota-system.sh setup …` | No `.env` (a script other than `setup` was run first) | `./flutter-ota-system.sh setup` |
 | `ERROR OTA_ENV=production in .env` | The local scripts refuse production settings | Use `OTA_ENV=development` locally |
-| `Port 8000 (PUNIT_API_PORT) is already in use on this computer.` | Another program (or another Punit stack) uses the port | Stop it, or choose other ports ([installation.md](installation.md#ports-are-taken-or-a-second-stack)) |
-| `port is already allocated` / `address already in use` | Same, detected by Docker | As above, then `./punit.sh up` |
-| `ERROR The stack did not become healthy.` | A container failed its health check | `./punit.sh logs api` (or `postgres`); see the next rows |
-| `api` stays unhealthy; logs show `Signing key not found: /data/keys/ota_signing_private.pem` | No signing key and `OTA_AUTO_GENERATE_SIGNING_KEY=false` | `./punit.sh up` (creates it if missing; never replaces one) |
-| `api` logs `password authentication failed for user "punit"` | `POSTGRES_PASSWORD` in `.env` differs from the one the database volume was created with (for example `.env` was deleted and re-created) | Put the old `.env` back (a `./punit.sh backup` folder has a copy as `env`), or `./punit.sh reset` to start fresh |
+| `Port 8000 (FLUTTER_OTA_API_PORT) is already in use on this computer.` | Another program (or another Flutter OTA System stack) uses the port | Stop it, or choose other ports ([installation.md](installation.md#ports-are-taken-or-a-second-stack)) |
+| `port is already allocated` / `address already in use` | Same, detected by Docker | As above, then `./flutter-ota-system.sh up` |
+| `ERROR The stack did not become healthy.` | A container failed its health check | `./flutter-ota-system.sh logs api` (or `postgres`); see the next rows |
+| `api` stays unhealthy; logs show `Signing key not found: /data/keys/ota_signing_private.pem` | No signing key and `OTA_AUTO_GENERATE_SIGNING_KEY=false` | `./flutter-ota-system.sh up` (creates it if missing; never replaces one) |
+| `api` logs `password authentication failed for user "flutter_ota"` | `POSTGRES_PASSWORD` in `.env` differs from the one the database volume was created with (for example `.env` was deleted and re-created) | Put the old `.env` back (a `./flutter-ota-system.sh backup` folder has a copy as `env`), or `./flutter-ota-system.sh reset` to start fresh |
 | `WARN Database volume … already exists: keeping the example POSTGRES_PASSWORD.` | `setup` created a new `.env` while old data still exists | As above if the API then cannot log in |
-| `.env` change has no effect | Containers keep old values | `./punit.sh up` (recreates changed services) |
-| `[FAIL]` lines from `verify_demo.sh` | A step of the pipeline failed | Run `./punit.sh demo` (seeds and publishes first); read `./punit.sh logs api` |
-| `ERROR CLI not installed. Run ./punit.sh cli first.` | `./punit.sh ota` without the CLI | `./punit.sh cli` |
+| `.env` change has no effect | Containers keep old values | `./flutter-ota-system.sh up` (recreates changed services) |
+| `[FAIL]` lines from `verify_demo.sh` | A step of the pipeline failed | Run `./flutter-ota-system.sh demo` (seeds and publishes first); read `./flutter-ota-system.sh logs api` |
+| `ERROR CLI not installed. Run ./flutter-ota-system.sh cli first.` | `./flutter-ota-system.sh ota` without the CLI | `./flutter-ota-system.sh cli` |
 | `ERROR python3 venv module missing` | Ubuntu without `python3-venv` | `sudo apt install -y python3-venv` |
 | `ERROR Checksum mismatch in <dir>: the backup is damaged` | A backup file changed after it was written | Use another backup |
 | The app downloads nothing; `failed` with a connection error to `…:8080` | `OTA_CDN_BASE_URL` points at an address the device cannot reach, or `adb reverse` is missing for the file-server port | Fix `OTA_CDN_BASE_URL` ([configuration.md](configuration.md#which-ota_cdn_base_url)) and run `adb reverse tcp:8080 tcp:8080` for a USB phone |
@@ -46,7 +46,7 @@ tell you which step failed ([flutter-integration.md](flutter-integration.md#5-ha
 |---|---|---|---|
 | CLI: `httpx.ConnectError` / connection refused | Wrong `OTA_API_URL`, or the API is down | `curl $OTA_API_URL/health/ready` | Start the stack; fix `OTA_API_URL` |
 | CLI: `error 401: Invalid or missing X-API-Key` | `OTA_API_KEY` missing or different from the server's `OTA_ADMIN_API_KEY` | Compare with `.env` / `deploy/.env` | `export OTA_API_KEY=…` |
-| App: `failed`, `Connection refused` / timeout | The device cannot reach `OTA_SERVER_URL` | Open `<server>/health/ready` in the phone's browser | Emulator: use `10.0.2.2`, not `localhost`. Phone: computer's LAN IP and `PUNIT_BIND_ADDRESS=0.0.0.0`; same Wi-Fi; firewall |
+| App: `failed`, `Connection refused` / timeout | The device cannot reach `OTA_SERVER_URL` | Open `<server>/health/ready` in the phone's browser | Emulator: use `10.0.2.2`, not `localhost`. Phone: computer's LAN IP and `FLUTTER_OTA_BIND_ADDRESS=0.0.0.0`; same Wi-Fi; firewall |
 | App: `failed` with a cleartext / `CLEARTEXT communication not permitted` error | Android blocks plain `http://` | — | Use HTTPS, or (test builds only) `android:usesCleartextTraffic="true"` |
 | Server won't start: `Unsafe production settings:` + list | `OTA_ENV=production` with unsafe values | `docker compose logs api` | Fix each listed setting ([configuration.md](configuration.md#production-safety-checks)) |
 
@@ -155,14 +155,14 @@ internals and have only been tested with the Flutter versions the maintainers us
 | Symptom | Cause | Fix |
 |---|---|---|
 | `/health/ready` fails; API logs show connection errors | Postgres down or wrong `OTA_DATABASE_URL` | `docker compose ps postgres`; `docker compose logs postgres`; fix the URL |
-| `psql: FATAL: role "ota" does not exist` locally | The local stack's user is `punit` (the single-server deploy uses `ota`) | `./punit.sh psql` (or `docker compose exec postgres psql -U punit -d punit`) |
-| `psql: … connection refused` on `localhost:5432` from your computer | Postgres has no host port by default | Use `./punit.sh psql`, or enable the port ([installation.md](installation.md#postgres-from-your-computer-optional)) |
+| `psql: FATAL: role "ota" does not exist` locally | The local stack's user is `flutter_ota` (the single-server deploy uses `ota`) | `./flutter-ota-system.sh psql` (or `docker compose exec postgres psql -U flutter_ota -d flutter_ota`) |
+| `psql: … connection refused` on `localhost:5432` from your computer | Postgres has no host port by default | Use `./flutter-ota-system.sh psql`, or enable the port ([installation.md](installation.md#postgres-from-your-computer-optional)) |
 | Errors about too many connections on a small managed Postgres | Pool size × workers is too high | Lower `OTA_DB_POOL_SIZE` and/or `WEB_CONCURRENCY` |
 | Migration errors at startup | Schema changed by hand, or a downgrade | Restore from backup; never edit the schema by hand |
 
 ## Problems on iOS, macOS or Windows
 
-Punit has been tested internally only on a **Linux** development machine and with **Android**
+Flutter OTA System has been tested internally only on a **Linux** development machine and with **Android**
 apps ([testing status](../README.md#platform-support--testing-status)). iOS, macOS and Windows
 are **not tested**, so problems there may have no entry on this page. Differences you may hit:
 other commands to find your computer's IP, Docker Desktop networking, and file paths. iOS code

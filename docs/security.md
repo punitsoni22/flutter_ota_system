@@ -1,13 +1,13 @@
 # Security
 
-> **Alpha disclaimer.** Punit v0.1.0-alpha has **not** undergone an independent security audit.
+> **Alpha disclaimer.** Flutter OTA System v0.1.0-alpha has **not** undergone an independent security audit.
 > This page describes the security model as implemented, and its known gaps. It does not certify
 > that the implementation is free of flaws. Validate it yourself before users depend on it. Report
 > vulnerabilities privately as described in [SECURITY.md](../SECURITY.md).
 
 ## What is being protected
 
-Punit delivers files that installed apps load: configuration (`mock-v1`) or **compiled Dart code**
+Flutter OTA System delivers files that installed apps load: configuration (`mock-v1`) or **compiled Dart code**
 (Android code patches). Anyone who can make a device accept a patch can change what the app does
 for every user in that rollout. That is the main risk, and most controls below exist to stop it.
 
@@ -115,10 +115,10 @@ a substituted hash and a different key are all rejected.
 
 ### Local development
 
-`./punit.sh setup` (through `./scripts/generate_dev_signing_key.sh`) creates the key once inside
-the Docker volume `punit_keys` (key id `local-dev-1`, file mode 600, owned by the API's non-root
+`./flutter-ota-system.sh setup` (through `./scripts/generate_dev_signing_key.sh`) creates the key once inside
+the Docker volume `flutter-ota-system_keys` (key id `local-dev-1`, file mode 600, owned by the API's non-root
 user). It never touches the working tree or the image, and restarts never replace it;
-`./punit.sh reset` (or `cleanup_local.sh`) deletes it. `./punit.sh backup` copies it, together
+`./flutter-ota-system.sh reset` (or `cleanup_local.sh`) deletes it. `./flutter-ota-system.sh backup` copies it, together
 with `.env`, into `backups/` (git-ignored): keep those folders private.
 `OTA_AUTO_GENERATE_SIGNING_KEY=false` stops the API from creating keys silently. `setup` also
 writes random local values for the admin key and server secrets into a new `.env`; they are still

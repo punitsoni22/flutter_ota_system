@@ -1,6 +1,6 @@
 # API reference
 
-All endpoints of the Punit server v0.1.0-alpha, taken from
+All endpoints of the Flutter OTA System server v0.1.0-alpha, taken from
 [`backend/app/routers/`](../backend/app/routers/), [`main.py`](../backend/app/main.py) and the
 schemas in [`schemas.py`](../backend/app/schemas.py).
 
@@ -21,7 +21,7 @@ are switched off in production.
 | Errors | `{"detail": "<message>"}`. Validation errors (HTTP 422) return `{"detail": [ {type, loc, msg, input}, … ]}` |
 
 ```json
-{"detail":[{"type":"missing","loc":["body","installation_id"],"msg":"Field required","input":{"app":"punit-demo"}}]}
+{"detail":[{"type":"missing","loc":["body","installation_id"],"msg":"Field required","input":{"app":"flutter-ota-system-demo"}}]}
 ```
 
 ### Authentication
@@ -75,7 +75,7 @@ Errors: `404 Unknown application`, `422` validation.
 ```bash
 curl -X POST http://localhost:8000/v1/devices/register \
   -H 'Content-Type: application/json' \
-  -d '{"app":"punit-demo","installation_id":"docs-example-0001","platform":"android","arch":"arm64-v8a","release_version":"1.0.0+1","channel":"dev"}'
+  -d '{"app":"flutter-ota-system-demo","installation_id":"docs-example-0001","platform":"android","arch":"arm64-v8a","release_version":"1.0.0+1","channel":"dev"}'
 ```
 
 ### Check for an update
@@ -208,7 +208,7 @@ Example `PatchOut` (local demo):
   "number": 1,
   "artifact_format": "mock-v1",
   "status": "published",
-  "note": "Punit demo test patch",
+  "note": "Flutter OTA System demo test patch",
   "created_at": "2026-11-10T18:36:27.035124Z",
   "artifacts": [
     {
@@ -240,7 +240,7 @@ Example `PatchOut` (local demo):
 | `GET /v1/admin/apps/{slug}/devices/summary` | — | `200 [{platform, release_version, channel, patch_number, devices}]`, grouped from each device's last check | `404` |
 
 ```bash
-curl -X POST -H "X-API-Key: $OTA_API_KEY" -F name=qa http://localhost:8000/v1/admin/apps/punit-demo/channels
+curl -X POST -H "X-API-Key: $OTA_API_KEY" -F name=qa http://localhost:8000/v1/admin/apps/flutter-ota-system-demo/channels
 # ["dev","staging","production","qa"]
 ```
 

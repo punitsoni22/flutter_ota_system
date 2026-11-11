@@ -1,7 +1,7 @@
 # Phase 11 — Scale and security hardening (4–6 pw) → Milestone G
 
 > **Roadmap status: 🔭 mostly planned.**
-> - **The 1M-installs scale target is a design goal. No load test has been run, and Punit makes no
+> - **The 1M-installs scale target is a design goal. No load test has been run, and Flutter OTA System makes no
 >   capacity claim.**
 > - 🟡 Partly there: a secret scan (gitleaks) and a licence gate in CI (11.7); a backup script for
 >   the single-server setup (`deploy/backup.sh`, 11.8); a threat overview in

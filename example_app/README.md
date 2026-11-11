@@ -1,6 +1,6 @@
 # ota_example
 
-Example Flutter app for [Punit](../README.md). It uses `ota_client` with `MockPatchRuntime`: a
+Example Flutter app for [Flutter OTA System](../README.md). It uses `ota_client` with `MockPatchRuntime`: a
 patch is a signed JSON file (`mock-v1`) that changes the app's banner and colour. No code is
 downloaded.
 
@@ -10,10 +10,10 @@ Run it against the local stack by following [docs/installation.md](../docs/insta
 ```bash
 flutter run \
   --dart-define=OTA_SERVER_URL=http://10.0.2.2:8000 \
-  --dart-define=OTA_PUBLIC_KEY=local-dev-1:<base64 point printed by ./punit.sh status>
+  --dart-define=OTA_PUBLIC_KEY=local-dev-1:<base64 point printed by ./flutter-ota-system.sh status>
 ```
 
-Defaults: `OTA_APP=punit-demo` and `OTA_CHANNEL=dev`, which match `./punit.sh demo`; override
+Defaults: `OTA_APP=flutter-ota-system-demo` and `OTA_CHANNEL=dev`, which match `./flutter-ota-system.sh demo`; override
 them with `--dart-define` if you use other values. For a USB phone, use
 `OTA_SERVER_URL=http://localhost:8000` with `adb reverse` (see the installation guide).
 

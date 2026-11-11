@@ -1,6 +1,6 @@
 # Setup — Prepare your machine
 
-> **Roadmap status: ✅ guide.** How to prepare a Linux machine to work on Punit. The public
+> **Roadmap status: ✅ guide.** How to prepare a Linux machine to work on Flutter OTA System. The public
 > repository already exists: to contribute, **fork** it instead of doing S.4 (see
 > [CONTRIBUTING.md](../../CONTRIBUTING.md)). The tools in S.5 are only for **planned** phases
 > (Azure, load tests).

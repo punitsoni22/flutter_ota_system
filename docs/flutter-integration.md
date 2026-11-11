@@ -1,6 +1,6 @@
 # Flutter integration guide
 
-How to connect a Flutter app to your Punit server with the `ota_client` package. You need a
+How to connect a Flutter app to your Flutter OTA System server with the `ota_client` package. You need a
 running server first ([installation.md](installation.md)) and should know the
 [core concepts](concepts.md).
 
@@ -110,7 +110,7 @@ import 'package:ota_client/ota_client.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 /// Build-time settings (`--dart-define`):
-///   OTA_SERVER_URL  the Punit server. Empty = OTA off.
+///   OTA_SERVER_URL  the Flutter OTA System server. Empty = OTA off.
 ///   OTA_PUBLIC_KEY  "key_id:base64_point" from `ota key show`. Patches are refused without it.
 ///   OTA_CHANNEL     default channel of this build (production).
 class OtaUpdater {
@@ -311,7 +311,7 @@ Then register and ship the build as described in
 ## Store policy
 
 Google Play forbids apps from downloading executable code "such as dex, JAR, .so files", except
-"code that runs in a virtual machine or an interpreter". A Punit code patch replaces Dart AOT
+"code that runs in a virtual machine or an interpreter". A Flutter OTA System code patch replaces Dart AOT
 code that the Dart VM inside Flutter runs; no Java, Kotlin or native code is downloaded. Google
 has not ruled on this publicly. **Whether this is allowed for your app is your decision and your
 responsibility.**
@@ -323,7 +323,7 @@ app until someone records an approval:
 ota app approve-policy shop-app --reason "Dart-only code patches; reviewed by <name>"
 ```
 
-Apple forbids downloading new native code on iOS. Punit has no iOS code-patch support, and iOS
+Apple forbids downloading new native code on iOS. Flutter OTA System has no iOS code-patch support, and iOS
 has not been tested.
 
 ## Checklist

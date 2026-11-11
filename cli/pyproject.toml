@@ -9,9 +9,9 @@ requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "punit-cli"
+name = "flutter-ota-system-cli"
 version = "0.1.0a0"   # = 0.1.0-alpha
-description = "Command-line tool for the Punit self-hosted Flutter OTA server (experimental)"
+description = "Command-line tool for the Flutter OTA System self-hosted Flutter OTA server (experimental)"
 readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE", "NOTICE", "THIRD_PARTY_NOTICES.md"]

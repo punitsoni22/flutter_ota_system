@@ -1,8 +1,8 @@
-# Punit local self-hosted stack (development / evaluation only).
+# Flutter OTA System local self-hosted stack (development / evaluation only).
 #
-#   ./punit.sh setup          creates .env with random local secrets, builds the image, creates the
+#   ./flutter-ota-system.sh setup          creates .env with random local secrets, builds the image, creates the
 #                             LOCAL dev signing key, starts everything and waits for health checks
-#   ./punit.sh help           all commands (start/stop/logs/backup/restore/demo/reset ...)
+#   ./flutter-ota-system.sh help           all commands (start/stop/logs/backup/restore/demo/reset ...)
 #
 # Plain `docker compose ...` commands work too: Compose reads .env from this folder.
 #
@@ -18,19 +18,19 @@
 #
 # Postgres host port (optional): add docker/compose.postgres-port.yml, e.g. in .env:
 #   COMPOSE_FILE=docker-compose.yml:docker/compose.postgres-port.yml
-# You do not need it for `./punit.sh psql` or `docker compose exec postgres psql ...`.
+# You do not need it for `./flutter-ota-system.sh psql` or `docker compose exec postgres psql ...`.
 #
 # Not included on purpose: Redis (the backend does not use it) and an Azure Blob emulator
 # (the backend supports local disk and S3-compatible storage, not Azure Blob). No container gets
 # the Docker socket.
 #
-# The project name defaults to "punit" (volumes punit_pgdata, punit_artifacts, punit_keys).
+# The project name defaults to "flutter-ota-system" (volumes flutter-ota-system_pgdata, flutter-ota-system_artifacts, flutter-ota-system_keys).
 # Set COMPOSE_PROJECT_NAME in .env to run a second, independent stack next to it.
-name: punit
+name: flutter-ota-system
 
 x-api-env: &api-env
   OTA_ENV: ${OTA_ENV:-development}
-  OTA_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-punit}:${POSTGRES_PASSWORD:-local-dev-only-not-a-secret}@postgres:5432/${POSTGRES_DB:-punit}
+  OTA_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-flutter_ota}:${POSTGRES_PASSWORD:-local-dev-only-not-a-secret}@postgres:5432/${POSTGRES_DB:-flutter_ota}
   OTA_STORAGE_BACKEND: local
   OTA_STORAGE_DIR: /data/artifacts
   OTA_SIGNING_KEY_PATH: /data/keys/ota_signing_private.pem
@@ -53,9 +53,9 @@ services:
     image: postgres:17.11-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-punit}
+      POSTGRES_USER: ${POSTGRES_USER:-flutter_ota}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-local-dev-only-not-a-secret}
-      POSTGRES_DB: ${POSTGRES_DB:-punit}
+      POSTGRES_DB: ${POSTGRES_DB:-flutter_ota}
     networks: [db]
     volumes: [pgdata:/var/lib/postgresql/data]
     security_opt: ["no-new-privileges:true"]
@@ -69,16 +69,16 @@ services:
   api:
     build:
       context: ./backend
-    # Override PUNIT_API_IMAGE when you run two stacks side by side from different checkouts.
-    image: ${PUNIT_API_IMAGE:-punit-api:local}
+    # Override FLUTTER_OTA_API_IMAGE when you run two stacks side by side from different checkouts.
+    image: ${FLUTTER_OTA_API_IMAGE:-flutter-ota-system-api:local}
     restart: unless-stopped
     depends_on:
       postgres: { condition: service_healthy }
     environment: *api-env
     networks: [edge, db]
     # 127.0.0.1 by default. The Android emulator reaches it as 10.0.2.2; a USB phone can use
-    # `adb reverse` (docs/installation.md). PUNIT_BIND_ADDRESS=0.0.0.0 exposes it to your network.
-    ports: ["${PUNIT_BIND_ADDRESS:-127.0.0.1}:${PUNIT_API_PORT:-8000}:8000"]
+    # `adb reverse` (docs/installation.md). FLUTTER_OTA_BIND_ADDRESS=0.0.0.0 exposes it to your network.
+    ports: ["${FLUTTER_OTA_BIND_ADDRESS:-127.0.0.1}:${FLUTTER_OTA_API_PORT:-8000}:8000"]
     volumes:
       - artifacts:/data/artifacts
       - keys:/data/keys
@@ -98,7 +98,7 @@ services:
     depends_on:
       api: { condition: service_started }
     networks: [edge]
-    ports: ["${PUNIT_BIND_ADDRESS:-127.0.0.1}:${PUNIT_CDN_PORT:-8080}:80"]
+    ports: ["${FLUTTER_OTA_BIND_ADDRESS:-127.0.0.1}:${FLUTTER_OTA_CDN_PORT:-8080}:80"]
     volumes:
       - artifacts:/data/artifacts:ro
       - ./docker/nginx-cdn.conf:/etc/nginx/conf.d/default.conf:ro
@@ -111,25 +111,25 @@ services:
       retries: 20
 
   tools:
-    image: ${PUNIT_API_IMAGE:-punit-api:local}
+    image: ${FLUTTER_OTA_API_IMAGE:-flutter-ota-system-api:local}
     profiles: ["tools"]
     depends_on:
       api: { condition: service_healthy }
       cdn: { condition: service_healthy }
     networks: [edge]
-    entrypoint: ["python", "/demo/punit_demo.py"]
+    entrypoint: ["python", "/demo/flutter_ota_system_demo.py"]
     environment:
-      PUNIT_API_URL: http://api:8000
+      FLUTTER_OTA_API_URL: http://api:8000
       # Download URLs point at OTA_CDN_BASE_URL (what a device uses). Inside the Compose network
       # the same files are fetched from the cdn service instead.
-      PUNIT_CDN_PUBLIC_URL: ${OTA_CDN_BASE_URL:-http://localhost:8080/cdn}
-      PUNIT_CDN_INTERNAL_URL: http://cdn/cdn
+      FLUTTER_OTA_CDN_PUBLIC_URL: ${OTA_CDN_BASE_URL:-http://localhost:8080/cdn}
+      FLUTTER_OTA_CDN_INTERNAL_URL: http://cdn/cdn
       OTA_ADMIN_API_KEY: ${OTA_ADMIN_API_KEY:-local-dev-admin-key-not-a-secret}
-      PUNIT_DEMO_APP: ${PUNIT_DEMO_APP:-punit-demo}
-      PUNIT_DEMO_CHANNEL: ${PUNIT_DEMO_CHANNEL:-dev}
-      PUNIT_DEMO_RELEASE: ${PUNIT_DEMO_RELEASE:-1.0.0+1}
-      PUNIT_DEMO_PLATFORM: ${PUNIT_DEMO_PLATFORM:-android}
-      PUNIT_DEMO_ARCH: ${PUNIT_DEMO_ARCH:-arm64-v8a}
+      FLUTTER_OTA_DEMO_APP: ${FLUTTER_OTA_DEMO_APP:-flutter-ota-system-demo}
+      FLUTTER_OTA_DEMO_CHANNEL: ${FLUTTER_OTA_DEMO_CHANNEL:-dev}
+      FLUTTER_OTA_DEMO_RELEASE: ${FLUTTER_OTA_DEMO_RELEASE:-1.0.0+1}
+      FLUTTER_OTA_DEMO_PLATFORM: ${FLUTTER_OTA_DEMO_PLATFORM:-android}
+      FLUTTER_OTA_DEMO_ARCH: ${FLUTTER_OTA_DEMO_ARCH:-arm64-v8a}
     volumes:
       - ./scripts/demo:/demo:ro
 

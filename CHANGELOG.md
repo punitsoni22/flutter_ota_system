@@ -6,7 +6,25 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- **Project renamed from "Punit" to Flutter OTA System.** Script `./punit.sh` →
+  `./flutter-ota-system.sh`; settings `PUNIT_*` → `FLUTTER_OTA_*`; Compose project `punit` →
+  `flutter-ota-system` (volumes `flutter-ota-system_*`); API image `flutter-ota-system-api:local`;
+  default database user and name `flutter_ota`; demo application slug `flutter-ota-system-demo`;
+  CLI package `flutter-ota-system-cli` (the command is still `ota`). The copyright holder stays
+  "The Punit Authors". Existing local installs are upgraded automatically and keep their data and
+  signing key ([operations.md](docs/operations.md#local-installs-made-before-the-rename)). The HTTP
+  API, the `OTA_*` server settings, the patch formats and the Android application IDs are
+  unchanged.
+- New project icon (README and example app): an app tile with a missing corner and an amber
+  patch piece arriving over the air. Generated from plain shapes by `docs/assets/make_icon.py`.
+
 ### Fixed
+
+- KI-12: `backup` could write a damaged `files.tgz` (when the API image had to be built first, the
+  build log ended up in the archive) and still report success. Backups are now checked (database
+  dump, gzip, signing key present) and `restore` refuses a damaged backup before changing anything.
 
 - KI-4: the server enforces the promotion checks for protected channels
   (`OTA_PROTECTED_CHANNELS`, default `production`): a patch must have run on another channel and
@@ -19,11 +37,11 @@ All notable changes to this project are documented here. The format follows
   `GET /v1/admin/apps/{slug}/policy-approvals`, `ota app policy-history`.
 - KI-7: `cli/otadiff.py` uses only the public `bsdiff4` API; works with bsdiff4 1.2.6 to 1.4.2.
 - KI-9: the admin page no longer suggests a wrong default key.
-- KI-5: `example_app` defaults to the `punit-demo` slug used by the demo scripts.
+- KI-5: `example_app` defaults to the `flutter-ota-system-demo` slug used by the demo scripts.
 
 ### Added
 
-- `./punit.sh`: one-command local Docker setup and operations (`setup`, `up`, `stop`, `down`,
+- `./flutter-ota-system.sh`: one-command local Docker setup and operations (`setup`, `up`, `stop`, `down`,
   `restart`, `status`, `logs`, `update`, `backup`, `restore`, `psql`, `reset`, `demo`, `verify`,
   `cli`, `ota`). `setup` creates `.env` with random local secrets and never overwrites an
   existing one; the dev signing key is created once and kept. Tested on Linux only.
@@ -64,8 +82,8 @@ Windows are not tested.
   `publish_test_patch.sh`, `verify_demo.sh`, `cleanup_local.sh`, `prepublish_check.sh`.
 - Documentation: README, architecture, security model, SECURITY.md, contributing guide, code of
   conduct, third-party notices; GitHub issue/PR templates; CI workflow.
-- Licensing: Apache-2.0 `LICENSE` and `NOTICE`, SPDX headers in Punit source files, audited
-  `THIRD_PARTY_NOTICES.md` (incl. the Flutter template and bsdiff licence texts); original Punit
+- Licensing: Apache-2.0 `LICENSE` and `NOTICE`, SPDX headers in Flutter OTA System source files, audited
+  `THIRD_PARTY_NOTICES.md` (incl. the Flutter template and bsdiff licence texts); original Flutter OTA System
   launcher icons in the example app.
 - Documentation set organised by Diátaxis (`docs/index.md`): installation tutorial, Flutter
   integration, releases and patches, rollouts, operations, troubleshooting, API / CLI /
@@ -73,14 +91,14 @@ Windows are not tested.
 
 ### Changed (compared with the internal pre-release)
 
-- Local Compose stack renamed to project `punit` (new volume names), DB user `punit`, ports
+- Local Compose stack renamed to project `flutter-ota-system` (new volume names), DB user `flutter_ota`, ports
   bound to 127.0.0.1 by default, `OTA_CDN_BASE_URL` defaults to `http://localhost:8080/cdn`, and
   the dev signing key is no longer auto-generated (`OTA_AUTO_GENERATE_SIGNING_KEY=false`).
 
 ### Removed
 
-- Internal-only documentation and the promotional video project (not needed to run Punit).
-- The Render Blueprint (`render.yaml`) and the Render + Supabase hosting guide. Punit is
+- Internal-only documentation and the promotional video project (not needed to run Flutter OTA System).
+- The Render Blueprint (`render.yaml`) and the Render + Supabase hosting guide. Flutter OTA System is
   self-hosted with Docker; hosted platforms are not documented or supported.
 
 ### Known limitations

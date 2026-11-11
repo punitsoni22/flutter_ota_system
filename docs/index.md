@@ -1,10 +1,10 @@
-# Punit documentation
+# Flutter OTA System documentation
 
-Punit is an experimental, self-hosted over-the-air (OTA) patch system for Flutter apps. Start with
+Flutter OTA System is an experimental, self-hosted over-the-air (OTA) patch system for Flutter apps. Start with
 the [README](../README.md) for an overview. The pages below are grouped by what you want to do.
 
 > [!NOTE]
-> **Testing status.** Punit has been tested internally on a **Linux** development machine and
+> **Testing status.** Flutter OTA System has been tested internally on a **Linux** development machine and
 > Docker backend, and with **Android** Flutter apps only (a small number of devices). iOS, macOS
 > and Windows are **not tested**. Code that may support a platform is not the same as a tested
 > platform. See

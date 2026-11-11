@@ -12,8 +12,8 @@ fail=0
 host_check() {  # name url
   if curl -fsS -o /dev/null --max-time 5 "$2"; then echo "[PASS] $1"; else echo "[FAIL] $1 ($2)"; fail=1; fi
 }
-api="http://localhost:$(env_value PUNIT_API_PORT 8000)"
-cdn="http://localhost:$(env_value PUNIT_CDN_PORT 8080)"
+api="http://localhost:$(env_value FLUTTER_OTA_API_PORT 8000)"
+cdn="http://localhost:$(env_value FLUTTER_OTA_CDN_PORT 8080)"
 host_check "API reachable from host" "$api/health/ready"
 host_check "CDN reachable from host" "$cdn/health"
 if curl -fsS -o /dev/null --max-time 5 "$cdn/cdn/releases/x" 2>/dev/null; then

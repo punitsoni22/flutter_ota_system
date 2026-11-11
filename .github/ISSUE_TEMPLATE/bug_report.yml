@@ -1,5 +1,5 @@
 name: Bug report
-description: Something in Punit does not work as documented. NOT for security vulnerabilities.
+description: Something in Flutter OTA System does not work as documented. NOT for security vulnerabilities.
 labels: ["bug", "needs-triage"]
 body:
   - type: markdown
@@ -10,7 +10,7 @@ body:
         **Remove secrets** (API keys, tokens, private keys, passwords, internal URLs, personal data) from everything you paste.
   - type: input
     id: version
-    attributes: { label: Punit version or commit, placeholder: "v0.1.0-alpha or a1b2c3d" }
+    attributes: { label: Flutter OTA System version or commit, placeholder: "v0.1.0-alpha or a1b2c3d" }
     validations: { required: true }
   - type: dropdown
     id: component

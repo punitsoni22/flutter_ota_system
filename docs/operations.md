@@ -1,22 +1,22 @@
 # Operations
 
-Running a Punit server: deployment, monitoring, logs, backups and recovery. Read
+Running a Flutter OTA System server: deployment, monitoring, logs, backups and recovery. Read
 [security.md](security.md) before exposing anything to the internet.
 
 > [!WARNING]
-> Punit is experimental and has not been validated in production. No load tests have been run, so
+> Flutter OTA System is experimental and has not been validated in production. No load tests have been run, so
 > there is no tested capacity figure. Validate it for your own apps before real users depend on
 > it.
 
 ## Single-server deployment (draft)
 
 > [!IMPORTANT]
-> **Status: draft, not yet verified end to end.** Docker is Punit's official installation
+> **Status: draft, not yet verified end to end.** Docker is Flutter OTA System's official installation
 > method, but this production-style setup has **not** been tested from a clean server for
 > v0.1.0-alpha. Test it on a throwaway server first. Planned work:
 > [roadmap/installation-improvements.md](roadmap/installation-improvements.md).
 
-Linux is the only host OS the maintainers have tested Punit on (with the local stack); other
+Linux is the only host OS the maintainers have tested Flutter OTA System on (with the local stack); other
 host operating systems are not tested.
 
 One Linux server runs everything with Docker Compose ([`deploy/`](../deploy/)):
@@ -96,11 +96,11 @@ ota app list
 Any host that runs the API container with PostgreSQL and either a persistent disk + file server,
 or S3-compatible buckets, can work; configure it with the variables in
 [configuration.md](configuration.md). Only the Docker setups in this repository are documented
-and supported: Punit is meant to be self-hosted.
+and supported: Flutter OTA System is meant to be self-hosted.
 
 ## Monitoring
 
-Punit has no metrics endpoint, dashboards or alerts. What exists:
+Flutter OTA System has no metrics endpoint, dashboards or alerts. What exists:
 
 | What | How |
 |---|---|
@@ -168,12 +168,12 @@ docker compose -f docker-compose.prod.yml restart api
 
 ### Local stack
 
-`./punit.sh` covers the local stack ([installation.md](installation.md#6-day-to-day-commands)).
+`./flutter-ota-system.sh` covers the local stack ([installation.md](installation.md#6-day-to-day-commands)).
 These commands were tested on Linux with a backup → change → restore round trip:
 
 ```bash
-./punit.sh backup                 # -> backups/<project>-<YYYYmmdd-HHMMSS>/
-./punit.sh restore backups/punit-20261111-092352   # asks you to type "restore"
+./flutter-ota-system.sh backup                 # -> backups/<project>-<YYYYmmdd-HHMMSS>/
+./flutter-ota-system.sh restore backups/flutter-ota-system-20261111-092352   # asks you to type "restore"
 ```
 
 A backup folder (mode 700, files mode 600) contains:
@@ -189,7 +189,7 @@ A backup folder (mode 700, files mode 600) contains:
 `api` and `cdn`, recreates the database from `db.dump`, replaces the files and the signing key
 from `files.tgz`, starts everything and waits for health checks. It does **not** change `.env`; if
 your `.env` differs from the backed-up `env`, it tells you (copy `OTA_ROLLOUT_HMAC_SECRET` back if
-you need the same rollout groups). `./punit.sh update` takes a backup automatically before it
+you need the same rollout groups). `./flutter-ota-system.sh update` takes a backup automatically before it
 rebuilds (skip with `--no-backup`).
 
 The backups contain the signing key and secrets: keep `backups/` private (it is git-ignored and
@@ -198,18 +198,18 @@ never part of a Docker build context) and copy it off your computer if the data 
 By hand, the same backup is:
 
 ```bash
-docker compose exec -T postgres pg_dump -U punit -d punit --format=custom > punit-db.dump
-docker compose run --rm --no-deps -T --entrypoint tar api -C /data -czf - artifacts keys > punit-files.tgz
+docker compose exec -T postgres pg_dump -U flutter_ota -d flutter_ota --format=custom > flutter-ota-system-db.dump
+docker compose run --rm --no-deps -T --entrypoint tar api -C /data -czf - artifacts keys > flutter-ota-system-files.tgz
 ```
 
 ### Local stack: restarts and recovery (tested on Linux)
 
 | Situation | What happens |
 |---|---|
-| `./punit.sh stop` / `up`, `down` / `up`, `restart`, computer reboot | Database, patch files and the signing key are kept (named volumes). Containers use `restart: unless-stopped`, so a running stack comes back after a Docker or computer restart |
+| `./flutter-ota-system.sh stop` / `up`, `down` / `up`, `restart`, computer reboot | Database, patch files and the signing key are kept (named volumes). Containers use `restart: unless-stopped`, so a running stack comes back after a Docker or computer restart |
 | Postgres restarts while the API runs | The API reconnects by itself (`pool_pre_ping`). `/health/ready` fails (HTTP 500) for a few seconds while Postgres starts |
 | API restarts | Migrations run again under a PostgreSQL advisory lock; nothing is lost |
-| Signing key | Created once; `setup`, `up`, `update` never replace it. Only `./punit.sh reset` deletes it |
+| Signing key | Created once; `setup`, `up`, `update` never replace it. Only `./flutter-ota-system.sh reset` deletes it |
 
 ## Failure recovery
 
@@ -223,13 +223,13 @@ docker compose run --rm --no-deps -T --entrypoint tar api -C /data -czf - artifa
 | Lost signing key | No new patches can be trusted by existing apps | Restore from backup; otherwise new store builds with a new key |
 | Leaked admin key or signing key | — | [security.md](security.md#compromised-signing-key-procedure) and rotate ([secret rotation](security.md#secret-rotation)) |
 
-## Upgrading Punit
+## Upgrading Flutter OTA System
 
 Local stack:
 
 ```bash
 git pull
-./punit.sh update        # backup, rebuild the API image, recreate the containers, wait for health
+./flutter-ota-system.sh update        # backup, rebuild the API image, recreate the containers, wait for health
 ```
 
 Single server:
@@ -241,8 +241,32 @@ cd deploy && ./backup.sh && docker compose -f docker-compose.prod.yml up -d --bu
 
 Database migrations run automatically on start. Before v1.0 the API, schema and patch formats may
 change between versions; read the [CHANGELOG](../CHANGELOG.md) and back up first. Upgrades across
-released versions have not been tested yet (`./punit.sh update` was tested only as a rebuild of
+released versions have not been tested yet (`./flutter-ota-system.sh update` was tested only as a rebuild of
 the same version).
+
+### Local installs made before the rename
+
+The project was previously called "Punit". A local install from that time has `PUNIT_*` settings
+in `.env` and its data in the Docker volumes `punit_pgdata`, `punit_artifacts` and `punit_keys`.
+The scripts upgrade it automatically the first time you run any `./flutter-ota-system.sh` command:
+
+- the `PUNIT_*` lines in `.env` become `FLUTTER_OTA_*` (a copy is kept as `.env.pre-rename-<time>`);
+- if the old volumes exist, `.env` gets `COMPOSE_PROJECT_NAME=punit`, so the existing database,
+  patch files and **signing key** stay in use. Nothing else changes; you can stop here.
+
+To move the data to the new project name (optional; tested on Linux):
+
+```bash
+COMPOSE_PROJECT_NAME=punit ./flutter-ota-system.sh backup    # back up the old project
+# remove the "COMPOSE_PROJECT_NAME=punit" line (and the comment above it) from .env
+./flutter-ota-system.sh setup                                # new, empty flutter-ota-system project
+./flutter-ota-system.sh restore backups/punit-<time>         # same data, same signing key
+./flutter-ota-system.sh status                               # check: same OTA_PUBLIC_KEY as before
+```
+
+When everything works, delete the old volumes: `docker volume rm punit_pgdata punit_artifacts
+punit_keys`. Your `.env` keeps its database user (`POSTGRES_USER`), so the restored database
+matches it.
 
 ## Production considerations
 
@@ -255,4 +279,4 @@ the same version).
 - [ ] Uptime monitoring on `/health/ready`
 - [ ] A written rollout procedure (staging → 1% → … → 100%) and who may run it
 - [ ] Store-policy decision recorded for each `public_store` app
-- [ ] Your own load test if you expect many devices: Punit publishes no capacity figures
+- [ ] Your own load test if you expect many devices: Flutter OTA System publishes no capacity figures

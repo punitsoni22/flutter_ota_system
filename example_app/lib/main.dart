@@ -10,7 +10,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 
 // Set with --dart-define, see docs/installation.md and docs/configuration.md.
 const _serverUrl = String.fromEnvironment('OTA_SERVER_URL', defaultValue: 'http://10.0.2.2:8000');
-const _appSlug = String.fromEnvironment('OTA_APP', defaultValue: 'punit-demo');
+const _appSlug = String.fromEnvironment('OTA_APP', defaultValue: 'flutter-ota-system-demo');
 const _channel = String.fromEnvironment('OTA_CHANNEL', defaultValue: 'dev');
 // "<key_id>:<base64 point>" from `ota key show`.
 const _publicKey = String.fromEnvironment('OTA_PUBLIC_KEY');

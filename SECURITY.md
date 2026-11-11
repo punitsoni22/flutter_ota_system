@@ -1,7 +1,7 @@
 # Security policy
 
-Punit distributes code and configuration that apps run, so we take vulnerability reports
-seriously. Punit is **alpha software** and has **not been independently audited**. See
+Flutter OTA System distributes code and configuration that apps run, so we take vulnerability reports
+seriously. Flutter OTA System is **alpha software** and has **not been independently audited**. See
 [docs/security.md](docs/security.md) for the threat model and known gaps.
 
 ## Supported versions
@@ -23,7 +23,7 @@ Report it privately through **GitHub private vulnerability reporting**:
    reproduce or a proof of concept, impact, and any suggested fix.
 3. Remove real secrets, tokens and personal data from logs before sending them.
 
-If you cannot use GitHub, email **punitsoni14476@gmail.com** with the subject `[SECURITY] Punit`. Do not
+If you cannot use GitHub, email **punitsoni14476@gmail.com** with the subject `[SECURITY] Flutter OTA System`. Do not
 include working exploits for live third-party systems.
 
 ## What to expect

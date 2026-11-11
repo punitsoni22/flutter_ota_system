@@ -9,7 +9,7 @@ app connected with `ota_client` ([flutter-integration.md](flutter-integration.md
 
 | | Full release (store build) | OTA patch |
 |---|---|---|
-| What it is | A complete APK/AAB you ship through a store or install | A change for **one** release, delivered by Punit |
+| What it is | A complete APK/AAB you ship through a store or install | A change for **one** release, delivered by Flutter OTA System |
 | Can change | Anything: Dart, native code, plugins, assets, permissions, Flutter version | **Android code patches:** Dart code only. **`mock-v1`:** only the data your app reads |
 | Reaches users | Through the store's review and update | On the next app start after a check |
 | Identified by | platform + full version, e.g. `android 1.0.0+1` | release + number: patch 1, 2, 3… |

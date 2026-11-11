@@ -1,6 +1,6 @@
 # Core concepts
 
-This page explains the words Punit uses and the rules behind them. Read it before
+This page explains the words Flutter OTA System uses and the rules behind them. Read it before
 [releases-and-patches.md](releases-and-patches.md) and [rollouts.md](rollouts.md).
 
 ## Application
@@ -152,7 +152,7 @@ percentage × 100.
 
 ## Canary deployment
 
-Punit has no separate canary feature. You get the same effect with what exists:
+Flutter OTA System has no separate canary feature. You get the same effect with what exists:
 
 1. a **channel** such as `staging` that only tester builds use, and/or
 2. a **small percentage** (1–5%) of `production` first.

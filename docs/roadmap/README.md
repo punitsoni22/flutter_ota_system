@@ -1,7 +1,7 @@
-# Punit roadmap
+# Flutter OTA System roadmap
 
-This folder holds Punit's **roadmap**: what exists today, what is partly built, and what is
-planned. It started as the step-by-step plan used to build Punit. The phase guides still teach
+This folder holds Flutter OTA System's **roadmap**: what exists today, what is partly built, and what is
+planned. It started as the step-by-step plan used to build Flutter OTA System. The phase guides still teach
 *how* each piece is meant to work, so they are kept. Read them as design notes, not as a
 description of the current code.
 
@@ -18,7 +18,7 @@ description of the current code.
 | 🟡 **Partial** | Some of it exists, or a simpler version was built. The status box says what is missing |
 | 🔭 **Planned** | Not built. A future goal, not a promise |
 
-Nothing in Punit is production-validated yet (see the warning in the [README](../../README.md)).
+Nothing in Flutter OTA System is production-validated yet (see the warning in the [README](../../README.md)).
 
 ---
 
@@ -121,7 +121,7 @@ before you change anything. Open an issue first for anything large (see
 
 ## Target architecture (planned)
 
-Today Punit runs as **FastAPI + PostgreSQL + local disk/nginx or an S3-compatible bucket**
+Today Flutter OTA System runs as **FastAPI + PostgreSQL + local disk/nginx or an S3-compatible bucket**
 ([architecture.md](../architecture.md)). The diagram below is the **planned** Azure shape. The
 parts marked 🔭 do not exist yet.
 
@@ -213,8 +213,8 @@ reference.*
 | **Patch** | A change delivered OTA to one release. Numbered 1, 2, 3… per release |
 | **Artifact** | An actual file (store build or patch) for one platform and CPU architecture |
 | **ABI / arch** | CPU architecture of an Android phone: `arm64-v8a` (almost all), `armeabi-v7a`, `x86_64` |
-| **`libapp.so`** | The file your Dart code is compiled into on Android. Punit's Android runtime swaps it |
-| **Engine fork** | A modified copy of the Flutter engine. Punit does **not** use one today |
+| **`libapp.so`** | The file your Dart code is compiled into on Android. Flutter OTA System's Android runtime swaps it |
+| **Engine fork** | A modified copy of the Flutter engine. Flutter OTA System does **not** use one today |
 | **Binary diff** | A small file that turns the old `libapp.so` into the new one (bsdiff) |
 | **Channel** | A named audience: `dev`, `staging`, `production` |
 | **Rollout** | Making a patch available to X% of a channel |

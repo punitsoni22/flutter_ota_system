@@ -3,19 +3,19 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # Creates the LOCAL DEVELOPMENT ES256 signing key ONCE inside the Docker volume "<project>_keys"
-# (default punit_keys). Run by ./punit.sh setup/up/update; it never replaces an existing key.
+# (default flutter-ota-system_keys). Run by ./flutter-ota-system.sh setup/up/update; it never replaces an existing key.
 #
 # The private key never touches your working tree, so it cannot be committed by accident. The
 # file is mode 600 in a mode 700 folder, owned by the API's non-root user.
 # It is NOT suitable for production: it is unencrypted, has no HSM/Key Vault protection and is
-# deleted by ./punit.sh reset and ./scripts/cleanup_local.sh. Production keys: docs/security.md.
+# deleted by ./flutter-ota-system.sh reset and ./scripts/cleanup_local.sh. Production keys: docs/security.md.
 # shellcheck source=scripts/lib.sh
 source "$(dirname "$0")/lib.sh"
 
 need_docker
 need_env
 
-if ! docker image inspect "$(env_value PUNIT_API_IMAGE punit-api:local)" >/dev/null 2>&1; then
+if ! docker image inspect "$(env_value FLUTTER_OTA_API_IMAGE flutter-ota-system-api:local)" >/dev/null 2>&1; then
   say "Building the API image"
   compose build api
 fi

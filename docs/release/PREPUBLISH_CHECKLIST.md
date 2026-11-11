@@ -12,11 +12,11 @@ in [MANUAL_SECURITY_CHECKLIST.md](MANUAL_SECURITY_CHECKLIST.md).
 | 4 | No production URLs / internal names remain (tree **and** history, incl. author emails) | `.local/forbidden-patterns.txt` + `.local/release/history-cleanup.md` (private, git-ignored) | ✔ (needs your pattern file) |
 | 5 | `.env.example` contains safe values only | value allow-list check | ✔ |
 | 6 | `.env` is git-ignored and untracked | `git check-ignore`, `git ls-files` | ✔ |
-| 7 | Dev signing key generated locally, never in the tree | key lives in Docker volume `punit_keys` | ✔ (no key files tracked) |
+| 7 | Dev signing key generated locally, never in the tree | key lives in Docker volume `flutter-ota-system_keys` | ✔ (no key files tracked) |
 | 8 | Production signing keys absent | no PEM material anywhere in history | ✔ |
 | 9 | Dependency/licence audit completed | [THIRD_PARTY_NOTICES.md](../../THIRD_PARTY_NOTICES.md) (audited 2026-11-11); CI licence gate (no GPL/AGPL) | done |
 | 10 | Shorebird-derived/copied code reviewed | THIRD_PARTY_NOTICES §1 (resolved for v0.1.0-alpha) | done |
-| 11 | Required notices included | `LICENSE`, `NOTICE`, `THIRD_PARTY_NOTICES.md`; SPDX headers in Punit source files | ✔ |
+| 11 | Required notices included | `LICENSE`, `NOTICE`, `THIRD_PARTY_NOTICES.md`; SPDX headers in Flutter OTA System source files | ✔ |
 | 12 | Backend tests pass | pytest in `python:3.13-slim` | ✔ |
 | 13 | ota_client analyze/test pass | `flutter analyze && flutter test` | ✔ (if Flutter installed) |
 | 14 | patch tooling tests | CI `cli` job (OTADIF01 round trip) | CI |

@@ -42,8 +42,8 @@ if grep -Eq 'YOUR_ORG|YOUR_DOMAIN' SECURITY.md CODE_OF_CONDUCT.md .github/ISSUE_
 else pass "contact placeholders replaced"; fi
 
 say ".env.example values are fake"
-if grep -Ev '^\s*(#|$)' .env.example | grep -Eiv 'not-a-secret|local-dev|^PUNIT_|^POSTGRES_(USER|DB)=|^OTA_(ENV|CDN_BASE_URL|SERVE_ARTIFACTS_LOCALLY|SIGNING_KEY_ID|AUTO_GENERATE_SIGNING_KEY)=' | grep -q .; then
-  bad "unexpected value in .env.example:"; grep -Ev '^\s*(#|$)' .env.example | grep -Eiv 'not-a-secret|local-dev|^PUNIT_|^POSTGRES_(USER|DB)=|^OTA_(ENV|CDN_BASE_URL|SERVE_ARTIFACTS_LOCALLY|SIGNING_KEY_ID|AUTO_GENERATE_SIGNING_KEY)='
+if grep -Ev '^\s*(#|$)' .env.example | grep -Eiv 'not-a-secret|local-dev|^FLUTTER_OTA_|^POSTGRES_(USER|DB)=|^OTA_(ENV|CDN_BASE_URL|SERVE_ARTIFACTS_LOCALLY|SIGNING_KEY_ID|AUTO_GENERATE_SIGNING_KEY)=' | grep -q .; then
+  bad "unexpected value in .env.example:"; grep -Ev '^\s*(#|$)' .env.example | grep -Eiv 'not-a-secret|local-dev|^FLUTTER_OTA_|^POSTGRES_(USER|DB)=|^OTA_(ENV|CDN_BASE_URL|SERVE_ARTIFACTS_LOCALLY|SIGNING_KEY_ID|AUTO_GENERATE_SIGNING_KEY)='
 else pass ".env.example contains only placeholders"; fi
 
 say "Internal identifiers (from .local/forbidden-patterns.txt)"

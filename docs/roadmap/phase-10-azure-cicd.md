@@ -1,6 +1,6 @@
 # Phase 10 — Azure infrastructure and CI/CD (3–5 pw) → Milestone F
 
-> **Roadmap status: 🔭 planned, not started.** **Nothing in this phase is implemented.** Punit has
+> **Roadmap status: 🔭 planned, not started.** **Nothing in this phase is implemented.** Flutter OTA System has
 > no Azure deployment, no Bicep, no managed identities, no Front Door and no deployment workflow.
 > GitHub Actions CI exists ([ci.yml](../../.github/workflows/ci.yml)) but only builds and tests.
 > Today's self-hosting path is Docker ([operations.md](../operations.md)).

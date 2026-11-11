@@ -444,7 +444,7 @@ def upload_patch_artifact(
     return _patch_out(db, _patch(db, patch.id), storage)
 
 
-log = logging.getLogger("punit.admin")
+log = logging.getLogger("flutter_ota_system.admin")
 
 
 def _check_promotion(db: Session, patch: Patch, body: RolloutRequest, settings: Settings) -> None:

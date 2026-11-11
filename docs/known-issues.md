@@ -15,6 +15,7 @@ can be copied into an issue. Fixes are listed under **Unreleased** in the
 | [KI-9](#ki-9-admin-page-shows-the-wrong-default-key) | Admin page shows the wrong default key | Bug (UI text) | Low | ✅ Fixed (Unreleased) |
 | [KI-10](#ki-10-stale-patch-display-after-rollback) | Stale patch display after rollback | Bug (UI) | Low | Open |
 | [KI-11](#ki-11-healthready-returns-500-instead-of-503-while-the-database-is-down) | `/health/ready` returns 500 instead of 503 while the database is down | Bug | Low | Open |
+| [KI-12](#ki-12-backup-could-write-a-damaged-archive) | `backup` could write a damaged archive | Bug (data safety) | High | ✅ Fixed (Unreleased) |
 | [KI-3](#ki-3-channels-can-be-created-only-through-the-api) | Channels can be created only through the API | Limitation | Low | Accepted for v0.1.0-alpha |
 | [KI-6](#ki-6-old-docs-described-a-30-minute-background-check) | Old docs described a 30-minute background check | Docs bug | — | ✅ Fixed in the docs |
 
@@ -121,7 +122,7 @@ server only flips the `aot_policy_approved` flag. The reason, the time and who a
 saved anywhere, so there is no record of why code patches were allowed for a store app.
 
 **Current limitation (documented):** treat the approval as a switch only; keep your own record of
-the review outside Punit ([cli-reference.md](cli-reference.md), [api-reference.md](api-reference.md),
+the review outside Flutter OTA System ([cli-reference.md](cli-reference.md), [api-reference.md](api-reference.md),
 [security.md](security.md)).
 
 **Proposed fix** (database schema change, needs separate approval): store each approval or
@@ -137,11 +138,11 @@ migration upgrade on an existing database.
 ## KI-5: Example app and demo scripts use different app slugs
 
 **Priority:** Low. **Status:** ✅ Fixed (Unreleased): `example_app` now defaults `OTA_APP` to
-`punit-demo`; tested on a phone without an `OTA_APP` define (registered, no 404).
+`flutter-ota-system-demo`; tested on a phone without an `OTA_APP` define (registered, no 404).
 
 **Current behaviour.** `example_app` defaults to `OTA_APP=demo`
 ([`main.dart`](../example_app/lib/main.dart)), while `scripts/seed_demo.sh` and the demo create the
-app `punit-demo`. Following the scripts without `--dart-define=OTA_APP=punit-demo` gives
+app `flutter-ota-system-demo`. Following the scripts without `--dart-define=OTA_APP=flutter-ota-system-demo` gives
 `register failed: HTTP 404 {"detail":"Unknown application"}`.
 
 **Proposed fix:** use one slug everywhere (example app default, scripts, docs) and run the whole
@@ -260,4 +261,22 @@ answered `500` a few times, then `200` once the database was back. A readiness c
 answer `503 Service Unavailable` with a short message, so load balancers and monitors can tell
 "not ready" from a crash. The backend did reconnect by itself. **Fix:** catch the database error in
 the readiness handler and return 503.
+
+---
+
+## KI-12: `backup` could write a damaged archive
+
+**Priority:** High (data safety). **Status:** ✅ Fixed (Unreleased).
+
+Found while testing the rename upgrade. `backup` streams the patch files and signing key out of a
+one-off API container into `files.tgz`. When the API image did not exist yet, Docker Compose built
+it first and printed the build log into that file. The backup still reported success, because
+its checksum was taken of the damaged file, and `restore` deleted the existing files before it
+found the archive was unreadable.
+
+**Fix:** `backup` builds the image first (log to the terminal) and then checks its result: the
+database dump must be a `pg_dump` archive and `files.tgz` a valid gzip tar that contains the signing
+key. `restore` runs the same checks **before** changing anything and refuses a damaged backup.
+Tested: a damaged backup is refused with "Nothing was changed"; a good backup restores the same
+data and the identical signing key.
 

@@ -2,7 +2,7 @@
 # Copyright 2026 The Punit Authors
 # SPDX-License-Identifier: Apache-2.0
 
-# Shared helpers for ./punit.sh and the scripts in scripts/. Sourced, not executed.
+# Shared helpers for ./flutter-ota-system.sh and the scripts in scripts/. Sourced, not executed.
 # Bash 3.2+ (macOS default) compatible on purpose; only Linux is tested.
 set -euo pipefail
 
@@ -23,15 +23,38 @@ need_docker() {
   major="${v%%.*}"; minor="${v#*.}"; minor="${minor%%.*}"
   if [[ "$major" =~ ^[0-9]+$ && "$minor" =~ ^[0-9]+$ ]]; then
     if (( major < 2 || (major == 2 && minor < 20) )); then
-      die "Docker Compose $v is too old; Punit needs Compose v2.20 or newer."
+      die "Docker Compose $v is too old; Flutter OTA System needs Compose v2.20 or newer."
     fi
   fi
 }
 
 need_env() {
-  [[ -f .env ]] || die ".env not found. Run: ./punit.sh setup   (or: cp .env.example .env)"
+  [[ -f .env ]] || die ".env not found. Run: ./flutter-ota-system.sh setup   (or: cp .env.example .env)"
   if grep -Eq '^OTA_ENV=production' .env; then
     die "OTA_ENV=production in .env. These scripts are for LOCAL development only."
+  fi
+  migrate_legacy_env
+}
+
+# One-time upgrade of a local install made before the project was renamed to Flutter OTA System.
+# The old names appear here on purpose: they are what an existing .env and Docker volumes use.
+LEGACY_ENV_PREFIX="PUNIT_"   # old prefix of the FLUTTER_OTA_* settings
+LEGACY_PROJECT="punit"       # old Compose project name (volumes punit_pgdata, punit_keys, ...)
+migrate_legacy_env() {
+  local stamp
+  grep -q "^${LEGACY_ENV_PREFIX}" .env || return 0   # nothing from before the rename
+  stamp="$(date +%Y%m%d-%H%M%S)"
+  cp -p .env ".env.pre-rename-${stamp}"
+  sed -i.tmp "s/^${LEGACY_ENV_PREFIX}/FLUTTER_OTA_/" .env && rm -f .env.tmp
+  warn "Renamed the old ${LEGACY_ENV_PREFIX}* settings in .env to FLUTTER_OTA_* (copy kept: .env.pre-rename-${stamp})."
+  # This .env belongs to an old install: keep using its data by pinning the old project name if
+  # its volumes exist and the new project has none yet. Moving the data: docs/operations.md.
+  if ! grep -q '^COMPOSE_PROJECT_NAME=' .env && command -v docker >/dev/null 2>&1 \
+      && docker volume inspect "${LEGACY_PROJECT}_pgdata" >/dev/null 2>&1 \
+      && ! docker volume inspect "flutter-ota-system_pgdata" >/dev/null 2>&1; then
+    printf '\n# Added after the rename: this install keeps its data in the "%s" volumes.\nCOMPOSE_PROJECT_NAME=%s\n' \
+      "$LEGACY_PROJECT" "$LEGACY_PROJECT" >> .env
+    warn "Existing data found in the '${LEGACY_PROJECT}' Docker volumes: .env now pins COMPOSE_PROJECT_NAME=${LEGACY_PROJECT} so it stays in use."
   fi
 }
 
@@ -47,15 +70,15 @@ env_value() {
 compose() { docker compose "$@"; }
 tools()   { docker compose --profile tools run --rm tools "$@"; }
 
-# The Compose project name in effect (.env COMPOSE_PROJECT_NAME, else "punit" from the file).
+# The Compose project name in effect (.env COMPOSE_PROJECT_NAME, else "flutter-ota-system" from the file).
 project_name() {
   local n
   n="$(compose config 2>/dev/null | sed -n 's/^name: *//p' | head -n1)"
-  printf '%s' "${n:-punit}"
+  printf '%s' "${n:-flutter-ota-system}"
 }
 
-api_url() { printf 'http://localhost:%s' "$(env_value PUNIT_API_PORT 8000)"; }
-cdn_url() { printf 'http://localhost:%s' "$(env_value PUNIT_CDN_PORT 8080)"; }
+api_url() { printf 'http://localhost:%s' "$(env_value FLUTTER_OTA_API_PORT 8000)"; }
+cdn_url() { printf 'http://localhost:%s' "$(env_value FLUTTER_OTA_CDN_PORT 8080)"; }
 
 # 64 hex characters from the OS random generator (no openssl needed).
 rand_hex() { od -An -N32 -tx1 /dev/urandom | tr -d ' \n'; }

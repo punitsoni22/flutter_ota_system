@@ -1,7 +1,7 @@
 # ota_client
 
-The Flutter client of [Punit](../../README.md), an experimental, self-hosted over-the-air (OTA)
-patch system. It checks a Punit server for patches, verifies them (ES256 signature, size,
+The Flutter client of [Flutter OTA System](../../README.md), an experimental, self-hosted over-the-air (OTA)
+patch system. It checks a Flutter OTA System server for patches, verifies them (ES256 signature, size,
 SHA-256), stages them, activates them on the next app start, and falls back automatically when a
 new patch fails to start.
 

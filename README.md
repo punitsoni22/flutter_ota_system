@@ -1,26 +1,26 @@
-<img src="docs/assets/punit-icon.png" alt="Punit icon" width="96" align="right">
+<img src="docs/assets/flutter-ota-system-icon.png" alt="Flutter OTA System icon" width="96" align="right">
 
-# Punit
+# Flutter OTA System
 
 **Self-hosted, experimental over-the-air (OTA) patch delivery for Flutter apps.**
 
 > [!WARNING]
-> **Punit is an experimental, self-hosted open-source project (v0.1.0-alpha).** It has undergone
+> **Flutter OTA System is an experimental, self-hosted open-source project (v0.1.0-alpha).** It has undergone
 > internal testing but has **not** yet been comprehensively validated in production.
 >
 > - It has **not** undergone an independent security audit.
-> - No load tests have been run; Punit makes **no scale or capacity claim**.
-> - Punit distributes code and configuration that your app will run. A mistake in how you operate
->   it, or a bug in Punit, can break apps in the field or let an attacker ship code to your users.
-> - **Do not use Punit for production OTA delivery** until you have independently validated its
+> - No load tests have been run; Flutter OTA System makes **no scale or capacity claim**.
+> - Flutter OTA System distributes code and configuration that your app will run. A mistake in how you operate
+>   it, or a bug in Flutter OTA System, can break apps in the field or let an attacker ship code to your users.
+> - **Do not use Flutter OTA System for production OTA delivery** until you have independently validated its
 >   security, reliability, compatibility, rollback, signing and recovery for your own apps.
-> - You run Punit **at your own risk**. See [LICENSE](LICENSE) (Apache-2.0, sections 7 and 8: no
+> - You run Flutter OTA System **at your own risk**. See [LICENSE](LICENSE) (Apache-2.0, sections 7 and 8: no
 >   warranty, no liability).
 
 ## Platform Support & Testing Status
 
 > [!NOTE]
-> **Testing status:** Punit has been tested internally on **Linux** (development machine and
+> **Testing status:** Flutter OTA System has been tested internally on **Linux** (development machine and
 > Docker backend) and on **Android** (Flutter app and OTA patches) only. Code for other
 > platforms may exist, but **code that may support a platform is not the same as a tested
 > platform**. Anything not marked "Internally tested" below is untested and used at your own risk.
@@ -41,14 +41,14 @@ Flutter ≥ 3.27 and Dart ≥ 3.12; other Flutter versions are not tested.
 
 ## What problem it solves
 
-A Flutter bug fix normally needs a new store build, a store review and users who update. Punit lets
+A Flutter bug fix normally needs a new store build, a store review and users who update. Flutter OTA System lets
 you send certain fixes **directly to installed apps**:
 
 - **Android Dart code patches** (experimental): change Dart code, run one command, and phones run
   the new code after their next restart. Built on stock Flutter, without an engine fork.
 - **Config patches** (`mock-v1`): signed files that your app reads at start.
 
-Punit is **self-hosted only**. There is no hosted Punit service: you run the server, keep the
+Flutter OTA System is **self-hosted only**. There is no hosted Flutter OTA System service: you run the server, keep the
 signing key and decide what gets shipped.
 
 ## Key features
@@ -70,7 +70,7 @@ signing key and decide what gets shipped.
 
 ```mermaid
 flowchart LR
-  dev["Developer<br/>ota CLI"] -- "1. register release<br/>2. upload patch" --> api["Punit server<br/>(FastAPI + PostgreSQL)<br/>signs patches"]
+  dev["Developer<br/>ota CLI"] -- "1. register release<br/>2. upload patch" --> api["Flutter OTA System server<br/>(FastAPI + PostgreSQL)<br/>signs patches"]
   api -- stores --> files[["Patch files<br/>(disk + nginx, or S3-compatible)"]]
   app["Your Flutter app<br/>+ ota_client"] -- "3. any update?" --> api
   app -- "4. download" --> files
@@ -126,7 +126,7 @@ Full breakdown: [docs/limitations.md](docs/limitations.md) · roadmap:
 Docker is the official installation method. Today you can run the full stack **locally** with one
 command; a tested server quickstart is still to come.
 
-1. [Run the local stack](docs/installation.md) (`./punit.sh setup`: PostgreSQL, API, nginx).
+1. [Run the local stack](docs/installation.md) (`./flutter-ota-system.sh setup`: PostgreSQL, API, nginx).
 2. [Connect your Flutter app](docs/flutter-integration.md).
 3. [Ship a release and patches](docs/releases-and-patches.md), then [roll them out](docs/rollouts.md).
 4. For a server: [docs/operations.md](docs/operations.md) (draft, not yet verified).
@@ -139,9 +139,9 @@ and 8080. Tested on Linux only (macOS and Windows are not tested).
 ```bash
 git clone https://github.com/punitsoni22/flutter_ota_system.git
 cd flutter_ota_system
-./punit.sh setup     # creates .env (random LOCAL secrets), builds, creates a LOCAL dev signing key,
+./flutter-ota-system.sh setup     # creates .env (random LOCAL secrets), builds, creates a LOCAL dev signing key,
                      # starts the stack, waits for health checks, prints the URLs
-./punit.sh demo      # app punit-demo + release android 1.0.0+1, a signed mock-v1 test patch on
+./flutter-ota-system.sh demo      # app flutter-ota-system-demo + release android 1.0.0+1, a signed mock-v1 test patch on
                      # 100% of dev, then end-to-end checks (exits non-zero on any failure)
 ```
 
@@ -152,12 +152,12 @@ RESULT: all checks passed (artifact pipeline; mock-v1 does not execute code)
 ```
 
 Then open the admin page at <http://localhost:8000/admin> (key: `OTA_ADMIN_API_KEY` from `.env`)
-and the API docs at <http://localhost:8000/docs>. `./punit.sh setup` is safe to re-run: it never
-overwrites `.env`, the database or the signing key. `./punit.sh help` lists every command (status,
+and the API docs at <http://localhost:8000/docs>. `./flutter-ota-system.sh setup` is safe to re-run: it never
+overwrites `.env`, the database or the signing key. `./flutter-ota-system.sh help` lists every command (status,
 logs, stop, backup, restore, reset, CLI install). To see the patch in the example app and try
 rollback, crash protection and rollouts, continue with [docs/installation.md](docs/installation.md).
 
-Stop with `./punit.sh stop` (keeps everything). `./punit.sh reset` deletes the local database,
+Stop with `./flutter-ota-system.sh stop` (keeps everything). `./flutter-ota-system.sh reset` deletes the local database,
 files and dev key after you confirm.
 
 ## Example usage
@@ -240,5 +240,5 @@ Contributions are welcome: bug reports, tests, documentation and careful fixes. 
 Apache License 2.0. See [LICENSE](LICENSE), [NOTICE](NOTICE) and
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
-Punit is not affiliated with or endorsed by Google, the Flutter project or Shorebird.
+Flutter OTA System is not affiliated with or endorsed by Google, the Flutter project or Shorebird.
 "Flutter" is a trademark of Google LLC.

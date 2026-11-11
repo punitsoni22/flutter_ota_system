@@ -1,6 +1,6 @@
-# Contributing to Punit
+# Contributing to Flutter OTA System
 
-Thanks for your interest. Punit is an experimental alpha. Bug reports, tests, documentation and
+Thanks for your interest. Flutter OTA System is an experimental alpha. Bug reports, tests, documentation and
 careful fixes are the most useful contributions right now.
 
 **Security issues:** never in public issues or pull requests. See [SECURITY.md](SECURITY.md).
@@ -49,8 +49,8 @@ careful fixes are the most useful contributions right now.
 ```bash
 git clone https://github.com/<your-user>/flutter_ota_system.git
 cd flutter_ota_system
-./punit.sh setup      # .env, build, dev signing key, start, health checks (safe to re-run)
-./punit.sh demo       # seed, publish a test patch, end-to-end checks
+./flutter-ota-system.sh setup      # .env, build, dev signing key, start, health checks (safe to re-run)
+./flutter-ota-system.sh demo       # seed, publish a test patch, end-to-end checks
 ```
 
 Repository layout:
@@ -135,7 +135,7 @@ search for in [docs/troubleshooting.md](docs/troubleshooting.md).
 
 ## Reporting bugs
 
-Use the **Bug report** issue form. Include the Punit commit, your host OS, Docker/Compose and Flutter versions,
+Use the **Bug report** issue form. Include the Flutter OTA System commit, your host OS, Docker/Compose and Flutter versions,
 steps to reproduce, and logs (`docker compose logs api`, `verify_demo.sh` output, `adb logcat |
 grep -E "OtaBoot|OTA:"`), **with secrets removed**. Check
 [docs/troubleshooting.md](docs/troubleshooting.md) first.

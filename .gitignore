@@ -14,7 +14,7 @@ deploy/backups/
 keys/
 .local/
 secrets/
-# ./punit.sh backup output (contains the signing key and .env) and setup temp files
+# ./flutter-ota-system.sh backup output (contains the signing key and .env) and setup temp files
 backups/
 .env.tmp.*
 

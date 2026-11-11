@@ -1,6 +1,6 @@
 # Architecture
 
-> Applies to v0.1.0-alpha. Punit is experimental and has only been tested internally, on a Linux
+> Applies to v0.1.0-alpha. Flutter OTA System is experimental and has only been tested internally, on a Linux
 > development machine and with Android apps. iOS, macOS and Windows are not tested
 > ([testing status](../README.md#platform-support--testing-status)). See the
 > warning in the [README](../README.md). Words like *release*, *patch* and *channel* are defined in
@@ -8,7 +8,7 @@
 
 ## The three parts
 
-Punit has three parts. Keeping them apart is the main design idea.
+Flutter OTA System has three parts. Keeping them apart is the main design idea.
 
 | Part | Job | Where it runs | Code |
 |---|---|---|---|
@@ -109,7 +109,7 @@ flowchart LR
 
 > 🟡 **Experimental.** Tested internally on a small number of devices. Android only.
 
-Punit does **not** modify or fork the Flutter engine. It uses an option that stock Flutter
+Flutter OTA System does **not** modify or fork the Flutter engine. It uses an option that stock Flutter
 already has: the engine can load the app's compiled Dart code (`libapp.so`) from a path given by
 `--aot-shared-library-name`.
 
@@ -292,5 +292,5 @@ Details, threat model and gaps: [security.md](security.md).
 | Developer machine / CI | `ota` CLI, Flutter SDK, Python 3 |
 | Each device | Your app + `ota_client` (Dart) + `OtaBoot` (Android, Java) |
 
-Not part of Punit today: Redis, message queues, Azure services, Kubernetes manifests, a metrics
+Not part of Flutter OTA System today: Redis, message queues, Azure services, Kubernetes manifests, a metrics
 stack. See [limitations.md](limitations.md) and the [roadmap](roadmap/README.md).

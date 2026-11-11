@@ -1,4 +1,4 @@
-# Punit API image. Built locally from this repository (no pre-built images are published).
+# Flutter OTA System API image. Built locally from this repository (no pre-built images are published).
 #
 # Stage 1 installs the Python dependencies into a virtualenv; stage 2 copies only that virtualenv
 # and the application code, so pip caches and build leftovers never reach the final image.

@@ -1,6 +1,6 @@
 # Code of Conduct
 
-Punit adopts the **Contributor Covenant, version 2.1**:
+Flutter OTA System adopts the **Contributor Covenant, version 2.1**:
 <https://www.contributor-covenant.org/version/2/1/code_of_conduct/>
 
 In short: be respectful and inclusive, assume good intent, give and accept constructive
@@ -14,7 +14,7 @@ representing the project in public.
 ## Reporting
 
 Report unacceptable behaviour privately to the maintainers at **punitsoni14476@gmail.com** with the subject
-`[CONDUCT] Punit`.
+`[CONDUCT] Flutter OTA System`.
 All reports are reviewed promptly and kept confidential where possible.
 
 ## Enforcement

@@ -2,8 +2,8 @@
 # Copyright 2026 The Punit Authors
 # SPDX-License-Identifier: Apache-2.0
 
-# Punit local stack: one command for setup and day-to-day operation (LOCAL DEVELOPMENT ONLY).
-# Run ./punit.sh help for the commands. Tested on Linux only; see docs/installation.md.
+# Flutter OTA System local stack: one command for setup and day-to-day operation (LOCAL DEVELOPMENT ONLY).
+# Run ./flutter-ota-system.sh help for the commands. Tested on Linux only; see docs/installation.md.
 # shellcheck source=scripts/lib.sh
 source "$(dirname "$0")/scripts/lib.sh"
 
@@ -12,9 +12,9 @@ SERVICES=(postgres api cdn)
 
 usage() {
   cat <<'EOF'
-Punit local stack (development / evaluation only)
+Flutter OTA System local stack (development / evaluation only)
 
-Usage: ./punit.sh <command> [options]
+Usage: ./flutter-ota-system.sh <command> [options]
 
 Setup and lifecycle
   setup              Check requirements, create .env (random local secrets), build the image,
@@ -37,7 +37,7 @@ Data
   reset              DELETE the database, patch files and signing key (asks to confirm)
 
 Demo and tools
-  demo               Seed punit-demo, publish a signed test patch, run the end-to-end checks
+  demo               Seed flutter-ota-system-demo, publish a signed test patch, run the end-to-end checks
   verify             Run the end-to-end checks only (scripts/verify_demo.sh)
   cli                Build the `ota` CLI wheel and install it into .venv-cli/
   ota <args>         Run the installed CLI against THIS stack (sets OTA_API_URL/OTA_API_KEY)
@@ -50,7 +50,7 @@ EOF
 check_files() {
   local f missing=0
   for f in docker-compose.yml .env.example backend/Dockerfile backend/requirements.txt \
-           docker/nginx-cdn.conf scripts/demo/punit_demo.py scripts/generate_dev_signing_key.sh; do
+           docker/nginx-cdn.conf scripts/demo/flutter_ota_system_demo.py scripts/generate_dev_signing_key.sh; do
     [[ -f "$f" ]] || { warn "missing file: $f"; missing=1; }
   done
   [[ "$missing" -eq 0 ]] || die "Required files are missing. Is this a complete clone of the repository?"
@@ -71,12 +71,12 @@ ensure_env() {
   if docker volume inspect "${project}_pgdata" >/dev/null 2>&1; then
     keep_pg=1
     warn "Database volume ${project}_pgdata already exists: keeping the example POSTGRES_PASSWORD."
-    warn "If that database used another password, restore your old .env or run ./punit.sh reset."
+    warn "If that database used another password, restore your old .env or run ./flutter-ota-system.sh reset."
   fi
   # Settings you export before the first setup are written into the new .env, e.g.
-  #   PUNIT_API_PORT=18000 PUNIT_CDN_PORT=18080 ./punit.sh setup
-  if [[ -n "${PUNIT_CDN_PORT:-}" && -z "${OTA_CDN_BASE_URL:-}" ]]; then
-    OTA_CDN_BASE_URL="http://localhost:${PUNIT_CDN_PORT}/cdn"
+  #   FLUTTER_OTA_API_PORT=18000 FLUTTER_OTA_CDN_PORT=18080 ./flutter-ota-system.sh setup
+  if [[ -n "${FLUTTER_OTA_CDN_PORT:-}" && -z "${OTA_CDN_BASE_URL:-}" ]]; then
+    OTA_CDN_BASE_URL="http://localhost:${FLUTTER_OTA_CDN_PORT}/cdn"
   fi
   tmp="$(mktemp "$ROOT/.env.tmp.XXXXXX")"
   chmod 600 "$tmp"
@@ -87,7 +87,7 @@ ensure_env() {
         printf '%s=local-%s\n' "$key" "$(rand_hex)" ;;
       POSTGRES_PASSWORD)
         if [[ "$keep_pg" -eq 1 ]]; then printf '%s\n' "$line"; else printf '%s=local-%s\n' "$key" "$(rand_hex)"; fi ;;
-      COMPOSE_PROJECT_NAME|COMPOSE_FILE|PUNIT_API_IMAGE|PUNIT_API_PORT|PUNIT_CDN_PORT|PUNIT_POSTGRES_PORT|PUNIT_BIND_ADDRESS|OTA_CDN_BASE_URL)
+      COMPOSE_PROJECT_NAME|COMPOSE_FILE|FLUTTER_OTA_API_IMAGE|FLUTTER_OTA_API_PORT|FLUTTER_OTA_CDN_PORT|FLUTTER_OTA_POSTGRES_PORT|FLUTTER_OTA_BIND_ADDRESS|OTA_CDN_BASE_URL)
         var="${!key:-}"
         if [[ -n "$var" ]]; then printf '%s=%s\n' "$key" "$var"; else printf '%s\n' "$line"; fi ;;
       *) printf '%s\n' "$line" ;;
@@ -101,23 +101,23 @@ ensure_env() {
 check_ports() {
   api_running && return 0
   local name port busy=0
-  for name in PUNIT_API_PORT:8000 PUNIT_CDN_PORT:8080; do
+  for name in FLUTTER_OTA_API_PORT:8000 FLUTTER_OTA_CDN_PORT:8080; do
     port="$(env_value "${name%%:*}" "${name#*:}")"
     if port_in_use "$port"; then
       warn "Port $port (${name%%:*}) is already in use on this computer."
       busy=1
     fi
   done
-  [[ "$busy" -eq 0 ]] || die "Free the port(s) or choose others in .env (PUNIT_API_PORT, PUNIT_CDN_PORT, OTA_CDN_BASE_URL), then re-run."
+  [[ "$busy" -eq 0 ]] || die "Free the port(s) or choose others in .env (FLUTTER_OTA_API_PORT, FLUTTER_OTA_CDN_PORT, OTA_CDN_BASE_URL), then re-run."
 }
 
-image_present() { docker image inspect "$(env_value PUNIT_API_IMAGE punit-api:local)" >/dev/null 2>&1; }
+image_present() { docker image inspect "$(env_value FLUTTER_OTA_API_IMAGE flutter-ota-system-api:local)" >/dev/null 2>&1; }
 
 start_stack() {
   say "Starting ${SERVICES[*]} (waiting for health checks, up to 3 minutes)"
   if ! compose up -d --wait --wait-timeout 180 "${SERVICES[@]}"; then
     compose ps
-    die "The stack did not become healthy. See: ./punit.sh logs api   and docs/troubleshooting.md"
+    die "The stack did not become healthy. See: ./flutter-ota-system.sh logs api   and docs/troubleshooting.md"
   fi
 }
 
@@ -166,20 +166,20 @@ cmd_setup() {
   compose config -q || die "docker compose config failed: check .env"
   check_ports
 
-  say "Building the API image $(env_value PUNIT_API_IMAGE punit-api:local) (first time: a few minutes)"
+  say "Building the API image $(env_value FLUTTER_OTA_API_IMAGE flutter-ota-system-api:local) (first time: a few minutes)"
   compose build api
 
   "$ROOT/scripts/generate_dev_signing_key.sh"
   start_stack
   say "Checking from the host"
-  check_health || die "Health checks failed. See ./punit.sh logs api"
+  check_health || die "Health checks failed. See ./flutter-ota-system.sh logs api"
   print_info
   cat <<'EOF'
 
 Next steps
-  ./punit.sh demo      seed punit-demo, publish a signed test patch, verify everything
-  ./punit.sh cli       install the `ota` CLI, then e.g. ./punit.sh ota app list
-  ./punit.sh status    URLs, health and the key for the example app
+  ./flutter-ota-system.sh demo      seed flutter-ota-system-demo, publish a signed test patch, verify everything
+  ./flutter-ota-system.sh cli       install the `ota` CLI, then e.g. ./flutter-ota-system.sh ota app list
+  ./flutter-ota-system.sh status    URLs, health and the key for the example app
   Example app on a phone/emulator: docs/installation.md (step 8)
 EOF
 }
@@ -194,8 +194,8 @@ cmd_up() {
   print_info
 }
 
-cmd_stop()    { need_docker; need_env; compose --profile tools stop; ok "Stopped. Data and key are kept. Start again with ./punit.sh up"; }
-cmd_down()    { need_docker; need_env; compose --profile tools down --remove-orphans; ok "Containers removed. Data and key are kept in volumes. Start again with ./punit.sh up"; }
+cmd_stop()    { need_docker; need_env; compose --profile tools stop; ok "Stopped. Data and key are kept. Start again with ./flutter-ota-system.sh up"; }
+cmd_down()    { need_docker; need_env; compose --profile tools down --remove-orphans; ok "Containers removed. Data and key are kept in volumes. Start again with ./flutter-ota-system.sh up"; }
 
 cmd_restart() {
   need_docker; need_env
@@ -209,7 +209,7 @@ cmd_status() {
   need_docker; need_env
   compose ps -a
   echo
-  if api_running; then check_health || true; print_info; else warn "The API is not running. Start it with ./punit.sh up"; fi
+  if api_running; then check_health || true; print_info; else warn "The API is not running. Start it with ./flutter-ota-system.sh up"; fi
   echo
   docker volume ls --filter "name=^$(project_name)_" --format '  volume {{.Name}}'
 }
@@ -226,7 +226,7 @@ cmd_update() {
   "$ROOT/scripts/generate_dev_signing_key.sh"
   start_stack
   check_health || true
-  ok "Updated. Database migrations ran when the API started (see ./punit.sh logs api)."
+  ok "Updated. Database migrations ran when the API started (see ./flutter-ota-system.sh logs api)."
 }
 
 cmd_backup() {
@@ -234,11 +234,14 @@ cmd_backup() {
   local project stamp dir user db
   project="$(project_name)"; stamp="$(date +%Y%m%d-%H%M%S)"
   dir="${1:-$ROOT/backups/$project-$stamp}"
-  user="$(env_value POSTGRES_USER punit)"; db="$(env_value POSTGRES_DB punit)"
+  user="$(env_value POSTGRES_USER flutter_ota)"; db="$(env_value POSTGRES_DB flutter_ota)"
   [[ -e "$dir" ]] && die "$dir already exists"
   ( umask 077; mkdir -p "$dir" )
   say "Backing up project $project into $dir"
   compose up -d --wait postgres >/dev/null
+  # The archive is written to stdout, so the API image must exist first: a build started by
+  # `compose run` would print its log into the archive.
+  image_present || compose build api >&2
   ( umask 077
     compose exec -T postgres pg_dump -U "$user" -d "$db" --format=custom > "$dir/db.dump"
     # A one-off container (no ports, no dependencies) reads the volumes, running or not.
@@ -247,24 +250,36 @@ cmd_backup() {
     ( cd "$dir" && { sha256sum db.dump files.tgz 2>/dev/null || shasum -a 256 db.dump files.tgz; } > SHA256SUMS )
   )
   [[ -s "$dir/db.dump" && -s "$dir/files.tgz" ]] || die "Backup incomplete in $dir"
+  backup_is_valid "$dir" || die "Backup in $dir is damaged (see the message above); do not rely on it"
   ok "Backup written: $dir ($(du -sh "$dir" | cut -f1))"
   warn "It contains the signing key and .env secrets. Keep it private; copy it off this computer."
+}
+
+# A usable backup: a pg_dump custom-format file and a gzip tar that contains the signing key.
+backup_is_valid() {
+  local dir="$1"
+  [[ "$(head -c 5 "$dir/db.dump")" == "PGDMP" ]] || { warn "$dir/db.dump is not a pg_dump archive"; return 1; }
+  gzip -t "$dir/files.tgz" 2>/dev/null || { warn "$dir/files.tgz is not a valid gzip file"; return 1; }
+  tar -tzf "$dir/files.tgz" | grep -q '^\(\./\)\?keys/.' || { warn "$dir/files.tgz holds no signing key"; return 1; }
 }
 
 cmd_restore() {
   need_docker; need_env
   local dir="${1:-}" user db
-  [[ -n "$dir" ]] || die "Usage: ./punit.sh restore <backup dir>"
+  [[ -n "$dir" ]] || die "Usage: ./flutter-ota-system.sh restore <backup dir>"
   [[ -s "$dir/db.dump" && -s "$dir/files.tgz" ]] || die "$dir has no db.dump/files.tgz"
   if [[ -f "$dir/SHA256SUMS" ]]; then
     ( cd "$dir" && { sha256sum -c --quiet SHA256SUMS 2>/dev/null || shasum -a 256 -c SHA256SUMS >/dev/null; } ) \
       || die "Checksum mismatch in $dir: the backup is damaged"
     ok "Backup checksums verified"
   fi
-  user="$(env_value POSTGRES_USER punit)"; db="$(env_value POSTGRES_DB punit)"
+  backup_is_valid "$dir" || die "Not restoring: $dir is damaged. Nothing was changed."
+  ok "Backup contents verified (database dump, files and signing key)"
+  user="$(env_value POSTGRES_USER flutter_ota)"; db="$(env_value POSTGRES_DB flutter_ota)"
   confirm_word "This REPLACES the database, patch files and signing key of project $(project_name) with $dir." restore \
     || { echo "Aborted."; exit 1; }
 
+  image_present || compose build api >&2
   say "Stopping api and cdn"
   compose up -d --wait postgres >/dev/null
   compose stop api cdn
@@ -281,7 +296,7 @@ cmd_restore() {
   if [[ -f "$dir/env" ]] && ! cmp -s "$dir/env" .env; then
     warn "Your current .env differs from the one in the backup ($dir/env). The database password"
     warn "is unaffected by a restore, but OTA_ROLLOUT_HMAC_SECRET decides rollout groups: copy the"
-    warn "backed-up value into .env if you need the same groups, then ./punit.sh up."
+    warn "backed-up value into .env if you need the same groups, then ./flutter-ota-system.sh up."
   fi
   print_info
 }
@@ -290,7 +305,7 @@ cmd_psql() {
   need_docker; need_env
   local t=()
   [[ -t 0 && -t 1 ]] || t=(-T)
-  compose exec ${t[@]+"${t[@]}"} postgres psql -U "$(env_value POSTGRES_USER punit)" -d "$(env_value POSTGRES_DB punit)" "$@"
+  compose exec ${t[@]+"${t[@]}"} postgres psql -U "$(env_value POSTGRES_USER flutter_ota)" -d "$(env_value POSTGRES_DB flutter_ota)" "$@"
 }
 
 cmd_reset() {
@@ -299,12 +314,12 @@ cmd_reset() {
   confirm_word "This DELETES the database, patch files and the dev signing key of project '$project' (volumes ${project}_pgdata, ${project}_artifacts, ${project}_keys). .env and backups/ are kept. Apps built with the old key will refuse new patches." "$project" \
     || { echo "Aborted. Nothing was deleted."; exit 1; }
   compose --profile tools down -v --remove-orphans
-  ok "Stack and volumes of '$project' removed. Run ./punit.sh setup to start fresh (new signing key)."
+  ok "Stack and volumes of '$project' removed. Run ./flutter-ota-system.sh setup to start fresh (new signing key)."
 }
 
 cmd_demo() {
   need_docker; need_env
-  api_running || die "The stack is not running. Run ./punit.sh setup (or up) first."
+  api_running || die "The stack is not running. Run ./flutter-ota-system.sh setup (or up) first."
   "$ROOT/scripts/seed_demo.sh"
   "$ROOT/scripts/publish_test_patch.sh" "$@"
   "$ROOT/scripts/verify_demo.sh"
@@ -320,7 +335,7 @@ cmd_cli() {
   say "Building the CLI wheel (local only, nothing is uploaded)"
   "$ROOT/scripts/build_cli.sh"
   local wheel
-  wheel="$(find "$ROOT/cli/dist" -name 'punit_cli-*.whl' | head -n1)"
+  wheel="$(find "$ROOT/cli/dist" -name 'flutter_ota_system_cli-*.whl' | head -n1)"
   [[ -n "$wheel" ]] || die "No wheel in cli/dist"
   [[ -d "$CLI_VENV" ]] || python3 -m venv "$CLI_VENV"
   "$CLI_VENV/bin/pip" install --quiet --upgrade pip
@@ -330,7 +345,7 @@ cmd_cli() {
   cat <<EOF
 
 Use it against this stack (URL and admin key are taken from .env):
-  ./punit.sh ota app list
+  ./flutter-ota-system.sh ota app list
 Or directly, e.g. for another server:
   export OTA_API_URL=$(api_url) OTA_API_KEY=<OTA_ADMIN_API_KEY from .env>
   $CLI_VENV/bin/ota app list
@@ -339,7 +354,7 @@ EOF
 
 cmd_ota() {
   need_env
-  [[ -x "$CLI_VENV/bin/ota" ]] || die "CLI not installed. Run ./punit.sh cli first."
+  [[ -x "$CLI_VENV/bin/ota" ]] || die "CLI not installed. Run ./flutter-ota-system.sh cli first."
   OTA_API_URL="$(api_url)" OTA_API_KEY="$(env_value OTA_ADMIN_API_KEY)" "$CLI_VENV/bin/ota" "$@"
 }
 

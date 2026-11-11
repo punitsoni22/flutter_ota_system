@@ -1,5 +1,5 @@
 name: ota_example
-description: "Example Flutter app that uses the Punit ota_client package."
+description: "Example Flutter app that uses the Flutter OTA System ota_client package."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev

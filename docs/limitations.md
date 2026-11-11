@@ -1,6 +1,6 @@
 # Limitations and project status
 
-Punit v0.1.0-alpha is an **experimental, self-hosted** open-source project. It has been tested
+Flutter OTA System v0.1.0-alpha is an **experimental, self-hosted** open-source project. It has been tested
 internally by its maintainers, but it has **not** been comprehensively validated in production,
 has **not** had an independent security audit, and has **no** published load tests.
 
@@ -130,7 +130,7 @@ Details: [security.md](security.md).
 
 ## Performance and scale
 
-**No load tests have been run, and Punit makes no capacity claim.** In particular, reliability at
+**No load tests have been run, and Flutter OTA System makes no capacity claim.** In particular, reliability at
 **1 million active installs has not been established**. That number appears in the roadmap only
 as a design goal.
 
@@ -141,7 +141,7 @@ any cache (every check reads PostgreSQL), rate limiting, and measured numbers.
 
 ## Production testing gaps
 
-Before relying on Punit, someone needs to:
+Before relying on Flutter OTA System, someone needs to:
 
 - run the server under realistic load and measure it;
 - test the single-server deploy, backups, restores and upgrades;

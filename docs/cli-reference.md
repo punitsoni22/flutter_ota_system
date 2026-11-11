@@ -5,8 +5,8 @@ Install it as shown in [installation.md](installation.md#7-install-the-ota-cli).
 stack, the shortest way is:
 
 ```bash
-./punit.sh cli               # builds the wheel locally (scripts/build_cli.sh), installs it into .venv-cli/
-./punit.sh ota app list      # runs `ota` with OTA_API_URL/OTA_API_KEY taken from .env
+./flutter-ota-system.sh cli               # builds the wheel locally (scripts/build_cli.sh), installs it into .venv-cli/
+./flutter-ota-system.sh ota app list      # runs `ota` with OTA_API_URL/OTA_API_KEY taken from .env
 ```
 
 For any other server, call the installed command directly and set the two variables:
@@ -94,40 +94,40 @@ Run inside the API environment, not through `ota`:
 | `python -m app.keygen` | Create the signing key file at `OTA_SIGNING_KEY_PATH` (refuses to overwrite). Prints `OTA_PUBLIC_KEY for the apps: <id>:<point>` |
 | `python -m app.keygen --pem` | Generate a key and print it as a one-line `OTA_SIGNING_KEY_PEM` value, plus the public key. Writes no file |
 
-## Local stack: `./punit.sh`
+## Local stack: `./flutter-ota-system.sh`
 
-[`punit.sh`](../punit.sh) runs and maintains the **local** Docker stack (development and
+[`flutter-ota-system.sh`](../flutter-ota-system.sh) runs and maintains the **local** Docker stack (development and
 evaluation only; tested on Linux). Every command acts on the Compose project in `.env`
-(default `punit`).
+(default `flutter-ota-system`).
 
 | Command | Purpose |
 |---|---|
-| `./punit.sh setup` | Check requirements, create `.env` with random local secrets if missing, build, create the dev signing key once, start, wait for health checks, print URLs. Safe to re-run |
-| `./punit.sh up` / `start` | Start (build the image if missing) and wait until healthy |
-| `./punit.sh stop` | Stop the containers; keep everything |
-| `./punit.sh down` | Remove containers and network; keep the volumes (data and key) |
-| `./punit.sh restart` | Restart all services and wait until healthy |
-| `./punit.sh status` | Containers, health checks, URLs, volumes and the app's `OTA_PUBLIC_KEY` |
-| `./punit.sh logs [service…]` | Follow the logs |
-| `./punit.sh update [--no-backup]` | Back up, rebuild the API image from the checkout, recreate, wait |
-| `./punit.sh backup [dir]` | Database dump, patch files, signing key and a copy of `.env` into `backups/<project>-<time>/` |
-| `./punit.sh restore <dir>` | Replace database, files and key with a backup (type `restore` to confirm) |
-| `./punit.sh psql [args]` | psql in the database container |
-| `./punit.sh reset` | Delete database, files and key (type the project name to confirm) |
-| `./punit.sh demo [--banner T] [--color C]` | Seed `punit-demo`, publish a test patch, run `verify_demo.sh` |
-| `./punit.sh verify` | Run `verify_demo.sh` |
-| `./punit.sh cli` | Build the CLI wheel and install it into `.venv-cli/` |
-| `./punit.sh ota <args>` | Run the installed CLI against this stack |
+| `./flutter-ota-system.sh setup` | Check requirements, create `.env` with random local secrets if missing, build, create the dev signing key once, start, wait for health checks, print URLs. Safe to re-run |
+| `./flutter-ota-system.sh up` / `start` | Start (build the image if missing) and wait until healthy |
+| `./flutter-ota-system.sh stop` | Stop the containers; keep everything |
+| `./flutter-ota-system.sh down` | Remove containers and network; keep the volumes (data and key) |
+| `./flutter-ota-system.sh restart` | Restart all services and wait until healthy |
+| `./flutter-ota-system.sh status` | Containers, health checks, URLs, volumes and the app's `OTA_PUBLIC_KEY` |
+| `./flutter-ota-system.sh logs [service…]` | Follow the logs |
+| `./flutter-ota-system.sh update [--no-backup]` | Back up, rebuild the API image from the checkout, recreate, wait |
+| `./flutter-ota-system.sh backup [dir]` | Database dump, patch files, signing key and a copy of `.env` into `backups/<project>-<time>/` |
+| `./flutter-ota-system.sh restore <dir>` | Replace database, files and key with a backup (type `restore` to confirm) |
+| `./flutter-ota-system.sh psql [args]` | psql in the database container |
+| `./flutter-ota-system.sh reset` | Delete database, files and key (type the project name to confirm) |
+| `./flutter-ota-system.sh demo [--banner T] [--color C]` | Seed `flutter-ota-system-demo`, publish a test patch, run `verify_demo.sh` |
+| `./flutter-ota-system.sh verify` | Run `verify_demo.sh` |
+| `./flutter-ota-system.sh cli` | Build the CLI wheel and install it into `.venv-cli/` |
+| `./flutter-ota-system.sh ota <args>` | Run the installed CLI against this stack |
 
 ## Local scripts
 
-`punit.sh` uses these; they can still be run on their own.
+`flutter-ota-system.sh` uses these; they can still be run on their own.
 
 | Script | Purpose |
 |---|---|
-| `./scripts/setup_local.sh` | Same as `./punit.sh setup` (kept for CI and older instructions) |
-| `./scripts/generate_dev_signing_key.sh` | Create the dev signing key in volume `<project>_keys` (default `punit_keys`); never replaces one |
-| `./scripts/seed_demo.sh` | Create `punit-demo`, its channel and release; print the app's `--dart-define`s |
+| `./scripts/setup_local.sh` | Same as `./flutter-ota-system.sh setup` (kept for CI and older instructions) |
+| `./scripts/generate_dev_signing_key.sh` | Create the dev signing key in volume `<project>_keys` (default `flutter-ota-system_keys`); never replaces one |
+| `./scripts/seed_demo.sh` | Create `flutter-ota-system-demo`, its channel and release; print the app's `--dart-define`s |
 | `./scripts/publish_test_patch.sh` | Publish a signed `mock-v1` test patch to `dev` at 100% |
 | `./scripts/verify_demo.sh` | End-to-end checks; exits non-zero on failure |
 | `./scripts/cleanup_local.sh [--yes \| --keep-data]` | Remove the stack and its volumes (asks y/N; `--yes` for CI). `--keep-data` removes the containers only |

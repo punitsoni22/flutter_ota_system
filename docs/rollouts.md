@@ -92,7 +92,7 @@ Before each step, check:
 | `patch_hash_failed`, `patch_signature_failed` | same | Should be 0. Non-zero → file or key problem ([troubleshooting.md](troubleshooting.md)) |
 | `patch_boot_succeeded` | same | Should grow with the rollout |
 | Devices per patch number | `GET /v1/admin/apps/<slug>/devices/summary` or the admin page **Devices** table | Shows adoption |
-| Your own crash reporting and business metrics | your tools | Punit only sees boot success/failure |
+| Your own crash reporting and business metrics | your tools | Flutter OTA System only sees boot success/failure |
 
 The counters are **totals per patch** across all channels, not per percentage step.
 
@@ -132,7 +132,7 @@ is already downloaded or staged. Revoke a patch that is crashing, or that you di
 
 ## How fast do changes reach devices?
 
-Punit cannot push to devices. A device learns about a new patch, a rollback or a revocation only
+Flutter OTA System cannot push to devices. A device learns about a new patch, a rollback or a revocation only
 when the app calls `checkForUpdate()` (with the helper: once per app start), and the change runs on
 the start after that. Devices that are offline or never opened see nothing. Plan rollouts and
 emergency responses with that delay in mind.
@@ -146,7 +146,7 @@ channel (build default or `setChannel`).
 ## Testing rollout percentages locally
 
 ```bash
-python scripts/simulate_fleet.py --app punit-demo --release 1.0.0+1 --channel production --devices 1000
+python scripts/simulate_fleet.py --app flutter-ota-system-demo --release 1.0.0+1 --channel production --devices 1000
 ```
 
 It registers 1000 fake installations (stable ids, so re-runs reuse them) and counts which patch

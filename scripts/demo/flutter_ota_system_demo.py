@@ -1,7 +1,7 @@
 # Copyright 2026 The Punit Authors
 # SPDX-License-Identifier: Apache-2.0
 
-"""Punit local demo: seed, publish a test patch, and verify the end-to-end flow.
+"""Flutter OTA System local demo: seed, publish a test patch, and verify the end-to-end flow.
 
 Runs inside the "tools" Compose service (the API image: Python stdlib + cryptography):
 
@@ -38,15 +38,15 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives.asymmetric.utils import encode_dss_signature
 
-API = os.environ.get("PUNIT_API_URL", "http://api:8000").rstrip("/")
+API = os.environ.get("FLUTTER_OTA_API_URL", "http://api:8000").rstrip("/")
 ADMIN_KEY = os.environ.get("OTA_ADMIN_API_KEY", "")
-CDN_PUBLIC = os.environ.get("PUNIT_CDN_PUBLIC_URL", "").rstrip("/")
-CDN_INTERNAL = os.environ.get("PUNIT_CDN_INTERNAL_URL", "").rstrip("/")
-APP = os.environ.get("PUNIT_DEMO_APP", "punit-demo")
-CHANNEL = os.environ.get("PUNIT_DEMO_CHANNEL", "dev")
-RELEASE = os.environ.get("PUNIT_DEMO_RELEASE", "1.0.0+1")
-PLATFORM = os.environ.get("PUNIT_DEMO_PLATFORM", "android")
-ARCH = os.environ.get("PUNIT_DEMO_ARCH", "arm64-v8a")
+CDN_PUBLIC = os.environ.get("FLUTTER_OTA_CDN_PUBLIC_URL", "").rstrip("/")
+CDN_INTERNAL = os.environ.get("FLUTTER_OTA_CDN_INTERNAL_URL", "").rstrip("/")
+APP = os.environ.get("FLUTTER_OTA_DEMO_APP", "flutter-ota-system-demo")
+CHANNEL = os.environ.get("FLUTTER_OTA_DEMO_CHANNEL", "dev")
+RELEASE = os.environ.get("FLUTTER_OTA_DEMO_RELEASE", "1.0.0+1")
+PLATFORM = os.environ.get("FLUTTER_OTA_DEMO_PLATFORM", "android")
+ARCH = os.environ.get("FLUTTER_OTA_DEMO_ARCH", "arm64-v8a")
 FORMAT = "mock-v1"
 
 ADMIN = {"X-API-Key": ADMIN_KEY}
@@ -192,7 +192,7 @@ def cmd_seed(_args) -> int:
     with http() as c:
         expect(c.get("/health/ready"), 200)
         r = c.post("/v1/admin/apps", headers=ADMIN,
-                   json={"slug": APP, "name": "Punit Demo", "distribution": "enterprise"})
+                   json={"slug": APP, "name": "Flutter OTA System Demo", "distribution": "enterprise"})
         expect(r, 201, 409)
         print(f"application  {APP}  ({'created' if r.status_code == 201 else 'already exists'})")
 
@@ -223,7 +223,7 @@ def cmd_publish(args) -> int:
         if release is None:
             raise SystemExit("FATAL release not found: run ./scripts/seed_demo.sh first")
         patch = expect(c.post(f"/v1/admin/releases/{release['id']}/patches", headers=ADMIN,
-                              json={"artifact_format": FORMAT, "note": "Punit demo test patch"}), 201).json()
+                              json={"artifact_format": FORMAT, "note": "Flutter OTA System demo test patch"}), 201).json()
         expect(c.post(f"/v1/admin/patches/{patch['id']}/artifacts", headers=ADMIN,
                       data={"arch": ARCH}, files={"file": ("payload.json", payload, "application/json")}), 201)
         patch = expect(c.post(f"/v1/admin/patches/{patch['id']}/publish", headers=ADMIN,
@@ -363,11 +363,11 @@ def main() -> int:
     if not ADMIN_KEY:
         print("OTA_ADMIN_API_KEY is not set", file=sys.stderr)
         return 2
-    p = argparse.ArgumentParser(prog="punit_demo")
+    p = argparse.ArgumentParser(prog="flutter_ota_system_demo")
     sub = p.add_subparsers(dest="cmd", required=True)
     sub.add_parser("seed").set_defaults(fn=cmd_seed)
     pub = sub.add_parser("publish")
-    pub.add_argument("--banner", default="Hello from a Punit test patch")
+    pub.add_argument("--banner", default="Hello from a Flutter OTA System test patch")
     pub.add_argument("--color", default="#2E7D32")
     pub.set_defaults(fn=cmd_publish)
     sub.add_parser("verify").set_defaults(fn=cmd_verify)
