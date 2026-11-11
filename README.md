@@ -25,7 +25,7 @@
 > platforms may exist, but **code that may support a platform is not the same as a tested
 > platform**. Anything not marked "Internally tested" below is untested and used at your own risk.
 
-| Platform | Status | Notes |
+| Platform | Testing status | Notes |
 |---|---|---|
 | Linux development environment | Internally tested | Ubuntu, Docker Engine + Compose v2. Backend, CLI and `scripts/verify_demo.sh` |
 | Android Flutter application | Internally tested | `mock-v1` config patches and experimental Android Dart code patches, on a small number of devices |
