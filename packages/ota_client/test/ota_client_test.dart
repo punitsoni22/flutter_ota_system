@@ -52,7 +52,7 @@ class FakeServer {
         'artifact_format': 'mock-v1',
         'arch': 'arm64-v8a',
         'runtime_abi': 'ota-runtime-v1',
-        'download_url': 'http://cdn.test/cdn/patches/$_payloadSha',
+        'download_url': 'https://cdn.test/cdn/patches/$_payloadSha',
         'base_artifact_sha256': '0' * 64,
         'payload_sha256': _payloadSha,
         'result_sha256': _payloadSha,
@@ -206,7 +206,7 @@ void main() {
     Future<OtaClient> start({String version = '1.0.0+1'}) async {
       runtime = MockPatchRuntime();
       final client = OtaClient(OtaConfig(
-        serverUrl: 'http://api.test',
+        serverUrl: 'https://api.test',
         appSlug: 'demo',
         releaseVersion: version,
         publicKeys: const {'test-1': _point},
@@ -402,7 +402,7 @@ void main() {
     Future<OtaClient> start({bool visible = true}) async {
       native.processStart(visible: visible);
       final client = OtaClient(OtaConfig(
-        serverUrl: 'http://api.test',
+        serverUrl: 'https://api.test',
         appSlug: 'demo',
         releaseVersion: '1.0.0+1',
         publicKeys: const {'test-1': _point},

@@ -88,7 +88,7 @@ The configuration object is `OtaConfig`
 
 | Field | Required | Meaning |
 |---|---|---|
-| `serverUrl` | yes | Your server, e.g. `https://ota.example.com` |
+| `serverUrl` | yes | Your server, e.g. `https://ota.example.com`. Must be `https://`; plain `http://` only for `localhost` (any build, e.g. `adb reverse`) and `10.0.2.2` (emulator, debug builds only). Patch download URLs follow the same rule |
 | `appSlug` | yes | The application slug on the server |
 | `releaseVersion` | yes | The **full** store version, exactly as registered: `'${info.version}+${info.buildNumber}'` |
 | `publicKeys` | yes | `{key_id: base64 point}`. Several keys are allowed (for key rotation) |

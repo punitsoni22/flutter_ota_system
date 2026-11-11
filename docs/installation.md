@@ -245,7 +245,13 @@ KEY=$(./flutter-ota-system.sh status | sed -n 's/.*OTA_PUBLIC_KEY=\(local-dev-1:
 |---|---|---|---|---|
 | Phone on USB, with `adb reverse` (recommended for phones) | `http://localhost:8000` | `http://localhost:8080/cdn` (the default) | `adb reverse` for both ports (below) | Yes: one Android 13 arm64 phone |
 | Android emulator | `http://10.0.2.2:8000` | `http://10.0.2.2:8080/cdn` | — | Not re-tested with `flutter-ota-system.sh` |
-| Phone on the same Wi-Fi | `http://<your-computer-IP>:8000` | `http://<your-computer-IP>:8080/cdn` | `FLUTTER_OTA_BIND_ADDRESS=0.0.0.0` in `.env` | Not re-tested with `flutter-ota-system.sh` |
+| Phone on the same Wi-Fi | An `https://` address for your computer (plain `http://` to a LAN IP is refused, see below) | The matching `https://…/cdn` | `FLUTTER_OTA_BIND_ADDRESS=0.0.0.0` in `.env`, plus your own HTTPS setup | Not tested |
+
+> [!NOTE]
+> **Which `http://` addresses the client accepts.** `ota_client` refuses plain `http://` except
+> for loopback (`localhost`, `127.0.0.1`, `[::1]`; any build, so `adb reverse` works for release
+> builds too) and the emulator address `10.0.2.2` (**debug builds only**). Everything else needs
+> `https://`, for both `OTA_SERVER_URL` and `OTA_CDN_BASE_URL`. Prefer `adb reverse` for phones.
 
 After changing `.env`, apply it with `./flutter-ota-system.sh up`.
 

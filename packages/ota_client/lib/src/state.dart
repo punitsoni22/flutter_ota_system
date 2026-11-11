@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'models.dart';
+import 'patch_id.dart';
 
 /// Everything the client remembers, in one JSON file written atomically (write tmp, then rename).
 ///
@@ -100,8 +101,14 @@ class OtaState {
       };
 
   factory OtaState.fromJson(Map<String, dynamic> j) {
-    PatchRecord? patch(String key) =>
-        j[key] == null ? null : PatchRecord.fromJson(j[key] as Map<String, dynamic>);
+    PatchRecord? patch(String key) {
+      if (j[key] == null) return null;
+      final record = PatchRecord.fromJson(j[key] as Map<String, dynamic>);
+      // Patch ids name directories. A state file with any other id was tampered with: the caller
+      // ([StateStore.load]) then starts fresh and the store build runs (SEC-01).
+      if (!isValidPatchId(record.id)) throw const FormatException('invalid patch id in state');
+      return record;
+    }
     return OtaState(
       installationId: j['installation_id'] as String,
       releaseVersion: j['release_version'] as String?,

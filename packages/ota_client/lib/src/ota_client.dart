@@ -13,9 +13,11 @@ import 'package:path_provider/path_provider.dart';
 
 import 'canonical.dart';
 import 'models.dart';
+import 'patch_id.dart';
 import 'runtime.dart';
 import 'signature.dart';
 import 'state.dart';
+import 'transport.dart';
 
 class OtaConfig {
   const OtaConfig({
@@ -32,7 +34,8 @@ class OtaConfig {
     this.httpClient,
   });
 
-  /// e.g. https://ota.example.com (Android emulator to your PC: http://10.0.2.2:8000)
+  /// e.g. https://ota.example.com. Must be `https://`, except `http://localhost` (any build, for
+  /// `adb reverse`) and `http://10.0.2.2` (Android emulator, debug builds only).
   final String serverUrl;
   final String appSlug;
 
@@ -66,7 +69,7 @@ class OtaConfig {
 class OtaClient {
   OtaClient(this.config)
       : _verifier = SignatureVerifier(config.publicKeys),
-        _http = config.httpClient ?? http.Client();
+        _http = config.httpClient ?? createDefaultHttpClient();
 
   final OtaConfig config;
   final SignatureVerifier _verifier;
@@ -98,7 +101,12 @@ class OtaClient {
   String get _platform => config.platform ?? (Platform.isIOS ? 'ios' : 'android');
   String get _arch => config.arch ?? _abiName(Abi.current());
 
-  Directory _patchDir(String id) => Directory('${_root.path}/patches/$id');
+  /// Every patch path goes through here. Ids are validated when they arrive (server response,
+  /// state file); this is the last line of defence against an id like `../..` (SEC-01).
+  Directory _patchDir(String id) {
+    if (!isValidPatchId(id)) throw ArgumentError.value(id, 'id', 'invalid patch id');
+    return Directory('${_root.path}/patches/$id');
+  }
   Directory get _tmpDir => Directory('${_root.path}/tmp');
 
   // ---- boot ------------------------------------------------------------------------------
@@ -326,6 +334,8 @@ class OtaClient {
   Future<UpdateResult> _downloadVerifyStage(PatchRecord p, UpdateCheckResponse r) async {
     UpdateResult reject(String why) => UpdateResult(UpdateStatus.rejected, patchNumber: p.number, message: why);
 
+    // The id is not signed but names files and directories: check it before anything else.
+    if (!isValidPatchId(p.id)) return reject('invalid patch id');
     if (_state.badPatchIds.contains(p.id)) return reject('patch previously failed on this device');
     // Already downloaded by an earlier check (e.g. the background one at startup): not a replay.
     if (_state.staged?.id == p.id) return UpdateResult(UpdateStatus.stagedRestartRequired, patchNumber: p.number);
@@ -336,6 +346,14 @@ class OtaClient {
     if (p.runtimeAbi != config.runtime.runtimeAbi) return reject('runtime abi mismatch');
     if (!config.runtime.supportedFormats.contains(p.artifactFormat)) return reject('unsupported format');
     if (!_verifier.knowsKey(p.keyId)) return reject('unknown signing key ${p.keyId}');
+    final Uri downloadUri;
+    try {
+      downloadUri = Uri.parse(p.downloadUrl);
+    } on FormatException {
+      return reject('invalid download URL');
+    }
+    final urlProblem = insecureUrlProblem(downloadUri);
+    if (urlProblem != null) return reject(urlProblem);
 
     final fields = SignedFields(
       applicationId: r.applicationId,
@@ -360,7 +378,7 @@ class OtaClient {
     final tmp = File('${_tmpDir.path}/${p.id}.download');
     try {
       try {
-        await _download(p, tmp);
+        await _download(p, downloadUri, tmp);
       } on _IntegrityError catch (e) {
         _state.addEvent('patch_hash_failed', p.id);
         return reject(e.message);
@@ -385,15 +403,31 @@ class OtaClient {
     return UpdateResult(UpdateStatus.stagedRestartRequired, patchNumber: p.number);
   }
 
-  Future<void> _download(PatchRecord p, File target) async {
-    final response = await _http.send(http.Request('GET', Uri.parse(p.downloadUrl)));
+  /// Streams the patch into [target]. Every stage has a time limit (SEC-15), so a stalled server
+  /// can never hang [checkForUpdate]: response headers, each pause between chunks, and the total.
+  Future<void> _download(PatchRecord p, Uri uri, File target) async {
+    final t = otaTimeouts;
+    final total = Stopwatch()..start();
+    final response = await _http.send(http.Request('GET', uri)).timeout(
+          t.downloadResponse,
+          onTimeout: () => throw TimeoutException('download: no response', t.downloadResponse),
+        );
     if (response.statusCode != 200) {
+      unawaited(response.stream.listen(null).cancel());
       throw HttpException('download failed: HTTP ${response.statusCode}');
     }
     final sink = target.openWrite();
     var received = 0;
     try {
-      await for (final chunk in response.stream) {
+      // Leaving the loop (error, timeout, size problem) cancels the download.
+      await for (final chunk in response.stream.timeout(
+        t.downloadIdle,
+        onTimeout: (sink) {
+          sink.addError(TimeoutException('download stalled', t.downloadIdle));
+          sink.close();
+        },
+      )) {
+        if (total.elapsed > t.downloadTotal) throw TimeoutException('download too slow', t.downloadTotal);
         received += chunk.length;
         if (received > p.sizeBytes) throw const _IntegrityError('download size mismatch');
         sink.add(chunk);
@@ -406,8 +440,14 @@ class OtaClient {
 
   // ---- server calls ----------------------------------------------------------------------
 
-  Uri _uri(String path, [Map<String, String>? query]) =>
-      Uri.parse('${config.serverUrl.replaceAll(RegExp(r'/+$'), '')}$path').replace(queryParameters: query);
+  /// Every API call is built here, so an insecure [OtaConfig.serverUrl] never sends a request
+  /// (SEC-02). Callers turn the exception into a `failed` result.
+  Uri _uri(String path, [Map<String, String>? query]) {
+    final uri = Uri.parse('${config.serverUrl.replaceAll(RegExp(r'/+$'), '')}$path').replace(queryParameters: query);
+    final problem = insecureUrlProblem(uri);
+    if (problem != null) throw InsecureUrlException(problem);
+    return uri;
+  }
 
   Future<void> _register() async {
     final r = await _http
@@ -423,7 +463,7 @@ class OtaClient {
             'channel': channel,
           }),
         )
-        .timeout(const Duration(seconds: 15));
+        .timeout(otaTimeouts.request);
     if (r.statusCode != 200) throw HttpException('register failed: HTTP ${r.statusCode} ${r.body}');
     _state.accessToken = (jsonDecode(r.body) as Map<String, dynamic>)['access_token'] as String;
     await _save();
@@ -450,7 +490,7 @@ class OtaClient {
       // So the server offers the newest patch that has NOT crashed here, not one we will refuse.
       if (_state.badPatchIds.isNotEmpty) 'failed_patch_ids': _state.badPatchIds.toList().reversed.take(20).join(','),
     });
-    final r = await _authed((h) => _http.get(uri, headers: h).timeout(const Duration(seconds: 15)));
+    final r = await _authed((h) => _http.get(uri, headers: h).timeout(otaTimeouts.request));
     if (r.statusCode != 200) throw HttpException('check failed: HTTP ${r.statusCode}');
     return UpdateCheckResponse.fromJson(jsonDecode(r.body) as Map<String, dynamic>);
   }
@@ -470,7 +510,7 @@ class OtaClient {
             headers: {...h, 'Content-Type': 'application/json'},
             body: jsonEncode({'events': batch}),
           )
-          .timeout(const Duration(seconds: 15)));
+          .timeout(otaTimeouts.request));
       if (r.statusCode == 202 || r.statusCode == 422) {
         // 422 = malformed batch; drop it rather than retry forever.
         _state.pendingEvents.removeRange(0, batch.length);

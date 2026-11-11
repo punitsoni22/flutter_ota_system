@@ -85,6 +85,10 @@ jobs:
       - name: example_app analyze
         working-directory: example_app
         run: flutter pub get && flutter analyze
+      # The plugin's Android code builds inside a host app; example_app is that host.
+      - name: ota_client Android unit tests (JVM)
+        working-directory: example_app/android
+        run: ./gradlew :ota_client:testDebugUnitTest --console=plain
 
   e2e:
     name: Docker build + local end-to-end smoke test

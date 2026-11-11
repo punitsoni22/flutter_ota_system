@@ -18,3 +18,8 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 }
+
+dependencies {
+    // JVM unit tests only (src/test); nothing is added to the app.
+    testImplementation "junit:junit:4.13.2"
+}
