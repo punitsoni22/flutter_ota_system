@@ -55,7 +55,7 @@ Code that may support a platform is not the same as a tested platform. Only thes
 were tested internally (same table as the
 [README](../README.md#platform-support--testing-status)):
 
-| Platform | Status |
+| Platform | Testing status |
 |---|---|
 | Linux development environment | Internally tested |
 | Android Flutter application | Internally tested |
