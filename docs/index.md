@@ -16,6 +16,7 @@ the [README](../README.md) for an overview. The pages below are grouped by what 
 | Page | You will |
 |---|---|
 | [installation.md](installation.md) | Run the server locally with Docker, publish a test patch and see it in the example app |
+| [community/testing-guide.md](community/testing-guide.md) | Test Flutter OTA System on your machine and devices, and report the results |
 
 ## Do a task (how-to guides)
 
@@ -39,6 +40,7 @@ the [README](../README.md) for an overview. The pages below are grouped by what 
 
 | Page | Contents |
 |---|---|
+| [why-flutter-ota-system.md](why-flutter-ota-system.md) | Why self-host your OTA infrastructure; a sourced comparison with Shorebird |
 | [concepts.md](concepts.md) | Releases, patches, compatibility, channels, rollouts, rollback, revocation |
 | [architecture.md](architecture.md) | Control plane, data plane and on-device runtime; flows and database |
 | [security.md](security.md) | Security model, implemented vs planned controls, threat model |
@@ -55,6 +57,7 @@ the [README](../README.md) for an overview. The pages below are grouped by what 
 | [SECURITY.md](../SECURITY.md) | Reporting vulnerabilities privately |
 | [CODE_OF_CONDUCT.md](../CODE_OF_CONDUCT.md) | Community rules |
 | [release/](release/v0.1.0-alpha.1.md) | Release notes and pre-publish checklists |
+| [community/launch-announcement.md](community/launch-announcement.md) | Launch announcement drafts for community channels |
 
 All documentation describes **v0.1.0-alpha.1**. Where a page and the code disagree, the code is
 correct; please open an issue.

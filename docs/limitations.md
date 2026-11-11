@@ -8,7 +8,7 @@ has **not** had an independent security audit, and has **no** published load tes
 
 | Mark | Meaning |
 |---|---|
-| ✅ Tested | Implemented and covered by automated tests (backend: 21, `ota_client`: 19) and/or `scripts/verify_demo.sh` (32 checks), which also run in CI |
+| ✅ Tested | Implemented and covered by automated tests (backend: 24, `ota_client`: 20) and/or `scripts/verify_demo.sh` (32 checks), which also run in CI |
 | 🟢 Implemented | In the code, used internally, without dedicated automated tests |
 | 🟡 Experimental | Works in internal testing on a small number of devices; expect problems |
 | 🔭 Planned | Not implemented ([roadmap](roadmap/README.md)) |
