@@ -248,10 +248,13 @@ KEY=$(./flutter-ota-system.sh status | sed -n 's/.*OTA_PUBLIC_KEY=\(local-dev-1:
 | Phone on the same Wi-Fi | An `https://` address for your computer (plain `http://` to a LAN IP is refused, see below) | The matching `https://…/cdn` | `FLUTTER_OTA_BIND_ADDRESS=0.0.0.0` in `.env`, plus your own HTTPS setup | Not tested |
 
 > [!NOTE]
-> **Which `http://` addresses the client accepts.** `ota_client` refuses plain `http://` except
-> for loopback (`localhost`, `127.0.0.1`, `[::1]`; any build, so `adb reverse` works for release
-> builds too) and the emulator address `10.0.2.2` (**debug builds only**). Everything else needs
-> `https://`, for both `OTA_SERVER_URL` and `OTA_CDN_BASE_URL`. Prefer `adb reverse` for phones.
+> **Which `http://` addresses the client accepts.** In **debug builds** (`flutter run`,
+> `flutter build apk --debug`), plain `http://` works only for loopback (`localhost`,
+> `127.0.0.1`, `[::1]`, e.g. with `adb reverse`) and the emulator address `10.0.2.2`. **Release
+> and profile builds accept `https://` only**, localhost included, for both `OTA_SERVER_URL` and
+> `OTA_CDN_BASE_URL`. Android code patches (`AotPatchRuntime`) run only in release builds, so
+> testing them needs a server reachable over HTTPS with a certificate the phone trusts; this
+> local `http://` setup is for `mock-v1` patches in debug builds.
 
 After changing `.env`, apply it with `./flutter-ota-system.sh up`.
 

@@ -98,6 +98,36 @@ In order, before a patch can run ([`ota_client.dart`](../packages/ota_client/lib
 9. Before use: `mock-v1` payloads are re-hashed on every start; `OtaBoot` re-checks the size and
    SHA-256 of a patched `libapp.so` before loading it (hashed once per file, then cached).
 
+Also, before any of these:
+
+- **Patch id:** must be a canonical lowercase UUID, because the client uses it as a directory
+  name and it is **not signed** (see below). Any other id is refused before downloading; a state
+  file or native `boot.json` entry with another id is discarded. Dart (`patch_id.dart`) and
+  Android (`OtaPaths.java`) use the same pattern; a test compares them.
+- **URLs:** release and profile builds use `https://` only, for the server, patch downloads and
+  every redirect. Debug builds may also use `http://localhost`/`127.0.0.1`/`[::1]` and
+  `http://10.0.2.2` (emulator). The client follows redirects itself (GET only, at most 5),
+  checks every destination, never follows `https://` → `http://`, and drops the device token
+  when a redirect changes the host.
+- **Timeouts:** connect 15 s; API calls 15 s; patch download: response 30 s, stall 30 s, total
+  10 min.
+
+### Protocol v2 requirement: sign the patch id
+
+In protocol v1 (`OTA-PATCH-V1`, [ADR-0002](adr/0002-signature-scheme.md)) the signed message
+covers the app, release, patch number, platform, arch, runtime ABI, format, hashes and size, but
+**not the patch id** and not the download URL. The client therefore treats both as untrusted
+input (strict UUID check, URL rules above). Protocol v2 must add `patch_id` to the signed
+message. That changes every signature and the ADR test vector, so it needs a new protocol
+version that old clients ignore, and is not part of v1.
+
+### Download hosts
+
+Downloads are **not** restricted to the API's host: patch files are normally served from another
+host (`OTA_CDN_BASE_URL`: nginx/Caddy, a CDN, or an S3-compatible public bucket such as Supabase
+Storage, Cloudflare R2 or AWS S3). Integrity comes from the signature and SHA-256, not from the
+host. An optional allow-list of download hosts in the client is a possible later addition.
+
 [`scripts/verify_demo.sh`](../scripts/verify_demo.sh) re-implements the canonical message
 independently and confirms that a corrupted file, flipped signature bits, a changed patch number,
 a substituted hash and a different key are all rejected.

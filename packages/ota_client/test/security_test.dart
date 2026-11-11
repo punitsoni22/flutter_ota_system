@@ -16,6 +16,8 @@ import 'package:ota_client/ota_client.dart';
 import 'package:ota_client/src/patch_id.dart';
 import 'package:ota_client/src/transport.dart';
 
+const _javaPaths = 'android/src/main/java/dev/flutterota/ota_client/OtaPaths.java';
+
 // Golden values produced by backend/app/signing.py with a fixed test key (same as ota_client_test.dart).
 const _point =
     'BEccPnWMSQQoW7p+UxGO0PUkresHV9Jb0vjnsNdt+nFM3VIPesqKi5F6zDf1HejwybvjrYWDgucC3CWhLQn3qFg=';
@@ -33,6 +35,15 @@ class _Server {
   bool hangOnCheck = false;
   int requests = 0;
   int downloads = 0;
+  String? lastFailedIds;
+
+  /// Every URL requested (scheme://host:port/path), in order, with its Authorization header.
+  final seen = <String>[];
+  final authorization = <String, String?>{};
+
+  /// Return a target to answer a request with a redirect to it.
+  Uri? Function(Uri url)? redirectTo;
+  int redirectStatus = 302;
 
   Map<String, dynamic> get patch => {
         'id': id,
@@ -51,11 +62,19 @@ class _Server {
 
   http.Client get client => MockClient((req) async {
         requests++;
+        final key = '${req.url.scheme}://${req.url.authority}${req.url.path}';
+        seen.add(key);
+        authorization[key] = req.headers['authorization'];
+        final target = redirectTo?.call(req.url);
+        if (target != null) {
+          return http.Response('', redirectStatus, headers: {'location': '$target'});
+        }
         final path = req.url.path;
         if (path == '/v1/devices/register') {
           return http.Response(jsonEncode({'device_id': 'd', 'access_token': 't', 'expires_in': 3600}), 200);
         }
-        if (path == '/v1/updates/check') {
+        if (path.startsWith('/v1/updates/check')) {
+          lastFailedIds = req.url.queryParameters['failed_patch_ids'];
           if (hangOnCheck) await Completer<void>().future; // never answers
           final current = int.parse(req.url.queryParameters['current_patch_number']!);
           return http.Response(
@@ -79,6 +98,26 @@ class _Server {
         }
         return http.Response('not found', 404);
       });
+}
+
+/// A native boot report naming path-like ids (tampered native.json / boot.json).
+class _BadReportRuntime implements NativeBootRuntime {
+  @override
+  Set<String> get supportedFormats => const {'mock-v1'};
+  @override
+  String get runtimeAbi => 'ota-runtime-v1';
+  @override
+  Future<NativeBootReport> readBootReport() async =>
+      const NativeBootReport(enabled: true, loadedPatchId: '../..', failedPatchIds: ['../..', '..', 'x/y']);
+  @override
+  Future<void> setNextBoot({PatchRecord? next, Directory? nextDir, PatchRecord? good, Directory? goodDir}) async {}
+  @override
+  Future<void> stage(PatchRecord patch, File verifiedPayload, Directory patchDir) async {
+    await patchDir.create(recursive: true);
+    await verifiedPayload.rename('${patchDir.path}/libapp.so');
+  }
+  @override
+  Future<void> load(PatchRecord? patch, Directory? patchDir) async {}
 }
 
 /// API calls go to the fake server; downloads from 127.0.0.1 go over real sockets.
@@ -219,10 +258,11 @@ void main() {
       // url: (allowed in debug, allowed in release)
       'https://ota.example.com': (true, true),
       'https://10.0.2.2:8443': (true, true),
-      'http://localhost:8000': (true, true),
-      'http://127.0.0.1:8000': (true, true),
-      'http://127.1.2.3': (true, true),
-      'http://[::1]:8000': (true, true),
+      'http://localhost:8000': (true, false),
+      'http://127.0.0.1:8000': (true, false),
+      'http://127.1.2.3': (true, false),
+      'http://[::1]:8000': (true, false),
+      'http://LOCALHOST:8000': (true, false),
       'http://10.0.2.2:8000': (true, false),
       'http://ota.example.com': (false, false),
       'http://192.168.1.10:8000': (false, false),
@@ -246,7 +286,7 @@ void main() {
       final client = await start(serverUrl: 'http://ota.example.com');
       final result = await client.checkForUpdate();
       expect(result.status, UpdateStatus.failed);
-      expect(result.message, 'insecure URL http://ota.example.com: release builds require https:// (http:// only for localhost)');
+      expect(result.message, 'insecure URL http://ota.example.com: release builds require https://');
       expect(server.requests, 0);
     });
 
@@ -269,9 +309,36 @@ void main() {
       expect(server.requests, 0);
     });
 
-    test('release: http://localhost (adb reverse) works', () async {
+    for (final url in ['http://localhost:8000', 'http://127.0.0.1:8000', 'http://[::1]:8000']) {
+      test('release: $url is refused (no localhost exception)', () async {
+        debugReleaseModeOverride = true;
+        final client = await start(serverUrl: url);
+        final result = await client.checkForUpdate();
+        expect(result.status, UpdateStatus.failed);
+        expect(result.message, endsWith('release builds require https://'));
+        expect(server.requests, 0);
+      });
+
+      test('debug: $url works', () async {
+        debugReleaseModeOverride = false;
+        final client = await start(serverUrl: url);
+        expect((await client.checkForUpdate()).status, UpdateStatus.stagedRestartRequired);
+      });
+    }
+
+    test('release: an http://127.0.0.1 download URL is refused before downloading', () async {
       debugReleaseModeOverride = true;
-      final client = await start(serverUrl: 'http://localhost:8000');
+      server.downloadUrl = 'http://127.0.0.1:8080/cdn/patches/$_payloadSha';
+      final client = await start();
+      final result = await client.checkForUpdate();
+      expect(result.status, UpdateStatus.rejected);
+      expect(result.message, 'insecure URL http://127.0.0.1:8080: release builds require https://');
+      expect(server.downloads, 0);
+    });
+
+    test('debug: an http://localhost download URL works', () async {
+      server.downloadUrl = 'http://localhost:8080/cdn/patches/$_payloadSha';
+      final client = await start();
       expect((await client.checkForUpdate()).status, UpdateStatus.stagedRestartRequired);
     });
 
@@ -302,6 +369,142 @@ void main() {
     });
   });
 
+  group('SEC-02 redirects', () {
+    const cdn = 'https://cdn.test/cdn/patches/$_payloadSha';
+    Uri? Function(Uri) redirect(String fromUrl, String to) =>
+        (u) => '${u.scheme}://${u.authority}${u.path}' == fromUrl ? Uri.parse(to) : null;
+
+    for (final release in [false, true]) {
+      final mode = release ? 'release' : 'debug';
+
+      test('$mode: an https download redirected to another https host is followed (CDN/bucket)', () async {
+        debugReleaseModeOverride = release;
+        server.redirectTo = redirect(cdn, 'https://bucket.test/cdn/patches/$_payloadSha');
+        final result = await (await start()).checkForUpdate();
+        expect(result.status, UpdateStatus.stagedRestartRequired, reason: '$result');
+        expect(server.seen, contains('https://bucket.test/cdn/patches/$_payloadSha'));
+      });
+
+      test('$mode: a relative https redirect is resolved and followed', () async {
+        debugReleaseModeOverride = release;
+        server.redirectTo = redirect(cdn, '/cdn/patches/moved');
+        server.redirectStatus = 308;
+        final result = await (await start()).checkForUpdate();
+        expect(result.status, UpdateStatus.stagedRestartRequired, reason: '$result');
+        expect(server.seen, contains('https://cdn.test/cdn/patches/moved'));
+      });
+
+      for (final target in ['http://cdn.test/cdn/patches/x', 'http://localhost:8080/cdn/patches/x']) {
+        test('$mode: an https download redirected to $target is refused (no downgrade)', () async {
+          debugReleaseModeOverride = release;
+          server.redirectTo = redirect(cdn, target);
+          final result = await (await start()).checkForUpdate();
+          expect(result.status, UpdateStatus.rejected, reason: '$result');
+          expect(result.message, contains('downgrades are never followed'));
+          expect(server.seen.where((u) => u.startsWith('http://')), isEmpty, reason: 'never requested');
+          expect(server.downloads, 0);
+        });
+      }
+
+      test('$mode: a redirect to a non-http scheme is refused', () async {
+        debugReleaseModeOverride = release;
+        server.redirectTo = redirect(cdn, 'ftp://cdn.test/x');
+        final result = await (await start()).checkForUpdate();
+        expect(result.status, UpdateStatus.rejected);
+        expect(result.message, contains('unsupported URL scheme "ftp"'));
+      });
+
+      test('$mode: an API redirect from https to http is refused before the http request', () async {
+        debugReleaseModeOverride = release;
+        server.redirectTo = (u) => u.host == 'api.test' && u.path == '/v1/updates/check' ? u.replace(scheme: 'http') : null;
+        final result = await (await start()).checkForUpdate();
+        expect(result.status, UpdateStatus.failed);
+        expect(result.message, contains('downgrades are never followed'));
+        expect(server.seen.where((u) => u.startsWith('http://')), isEmpty);
+      });
+    }
+
+    test('debug: an http://localhost redirect to a LAN address is refused (every hop is checked)', () async {
+      server.downloadUrl = 'http://localhost:8080/cdn/patches/$_payloadSha';
+      server.redirectTo = redirect('http://localhost:8080/cdn/patches/$_payloadSha', 'http://192.168.1.10/cdn/x');
+      final result = await (await start()).checkForUpdate();
+      expect(result.status, UpdateStatus.rejected);
+      expect(result.message, contains('insecure URL http://192.168.1.10'));
+      expect(server.seen, isNot(contains('http://192.168.1.10/cdn/x')));
+    });
+
+    test('debug: an http://localhost redirect to http://localhost is followed', () async {
+      server.downloadUrl = 'http://localhost:8080/cdn/patches/$_payloadSha';
+      server.redirectTo = redirect('http://localhost:8080/cdn/patches/$_payloadSha', '/cdn/patches/moved');
+      expect((await (await start()).checkForUpdate()).status, UpdateStatus.stagedRestartRequired);
+    });
+
+    test('a redirect loop stops after 5 hops', () async {
+      server.redirectTo = (u) => u.host == 'cdn.test' ? u.replace(path: '${u.path}x') : null;
+      final result = await (await start()).checkForUpdate();
+      expect(result.status, UpdateStatus.failed);
+      expect(result.message, contains('too many redirects'));
+      expect(server.seen.where((u) => u.contains('cdn.test')).length, 6, reason: '1 request + 5 redirects');
+    });
+
+    test('a redirect without Location fails', () async {
+      server.redirectTo = (u) => u.host == 'cdn.test' ? Uri() : null;
+      final result = await (await start()).checkForUpdate();
+      expect(result.status, UpdateStatus.failed);
+      expect(result.message, contains('redirect without Location'));
+    });
+
+    test('the device token is not forwarded when a redirect changes the host', () async {
+      server.redirectTo = (u) => u.host == 'api.test' && u.path == '/v1/updates/check' ? u.replace(host: 'other.test') : null;
+      final result = await (await start()).checkForUpdate();
+      expect(result.status, UpdateStatus.stagedRestartRequired);
+      expect(server.authorization['https://api.test/v1/updates/check'], 'Bearer t');
+      expect(server.authorization['https://other.test/v1/updates/check'], isNull);
+    });
+
+    test('the device token is kept on a same-origin redirect', () async {
+      server.redirectTo = (u) => u.path == '/v1/updates/check' ? u.replace(path: '/v1/updates/check2') : null;
+      expect((await (await start()).checkForUpdate()).status, UpdateStatus.stagedRestartRequired);
+      expect(server.authorization['https://api.test/v1/updates/check2'], 'Bearer t');
+    });
+
+    test('POST requests do not follow redirects', () async {
+      server.redirectTo = (u) => u.path == '/v1/devices/register' ? u.replace(host: 'other.test') : null;
+      server.redirectStatus = 307;
+      final result = await (await start()).checkForUpdate();
+      expect(result.status, UpdateStatus.failed);
+      expect(result.message, contains('register failed: HTTP 307'));
+      expect(server.seen, isNot(contains('https://other.test/v1/devices/register')));
+    });
+  });
+
+  group('SEC-01 patch ids: Dart and Android agree, native ids are filtered', () {
+    test('OtaPaths.java uses exactly the Dart pattern', () {
+      final java = File(_javaPaths).readAsStringSync();
+      expect(java, contains('"$patchIdPatternSource"'));
+    });
+
+    test('invalid ids in the native boot report are ignored and never sent to the server', () async {
+      runtime = MockPatchRuntime();
+      final client = OtaClient(OtaConfig(
+        serverUrl: 'https://api.test',
+        appSlug: 'demo',
+        releaseVersion: '1.0.0+1',
+        publicKeys: const {'test-1': _point},
+        runtime: _BadReportRuntime(),
+        storageDir: dir,
+        platform: 'android',
+        arch: 'arm64-v8a',
+        httpClient: server.client,
+      ));
+      await client.boot();
+      expect(client.activePatch, isNull);
+      await client.checkForUpdate();
+      expect(server.lastFailedIds, isNull, reason: 'no invalid id is stored or reported');
+      expectNothingOutsideStorage();
+    });
+  });
+
   group('SEC-15 timeouts and broken downloads (real sockets on 127.0.0.1)', () {
     late HttpServer cdn;
     late String mode;
@@ -313,7 +516,12 @@ void main() {
       cdn.listen((req) async {
         final res = req.response;
         final body = utf8.encode(_payload);
+        if (req.uri.path == '/moved') mode = 'ok';
         switch (mode) {
+          case 'redirectOk':
+            await res.redirect(Uri.parse('/moved'));
+          case 'redirectLan':
+            await res.redirect(Uri.parse('http://10.0.2.3:1/x'));
           case 'ok':
             res.contentLength = body.length;
             res.add(body);
@@ -390,6 +598,21 @@ void main() {
         expect((await checkTimed(ota)).status, UpdateStatus.stagedRestartRequired,
             reason: 'a failed download must not block later checks');
       });
+    });
+
+    test('real sockets: a redirect is followed by our code, not by dart:io', () async {
+      mode = 'redirectOk';
+      final ota = await start(httpClient: client);
+      expect((await checkTimed(ota)).status, UpdateStatus.stagedRestartRequired);
+    });
+
+    test('real sockets: dart:io does not follow a redirect to a refused host behind our back', () async {
+      // If dart:io followed it, this would be a connection error to 10.0.2.3, not our refusal.
+      mode = 'redirectLan';
+      final ota = await start(httpClient: client);
+      final result = await checkTimed(ota);
+      expect(result.status, UpdateStatus.rejected, reason: '$result');
+      expect(result.message, contains('insecure URL http://10.0.2.3:1'));
     });
 
     test('an update check that never answers fails after the request timeout', () async {

@@ -34,8 +34,9 @@ class OtaConfig {
     this.httpClient,
   });
 
-  /// e.g. https://ota.example.com. Must be `https://`, except `http://localhost` (any build, for
-  /// `adb reverse`) and `http://10.0.2.2` (Android emulator, debug builds only).
+  /// e.g. https://ota.example.com. Release builds require `https://`. Debug builds may also use
+  /// `http://localhost` (e.g. with `adb reverse`) and `http://10.0.2.2` (Android emulator).
+  /// Patch download URLs and every redirect follow the same rules.
   final String serverUrl;
   final String appSlug;
 
@@ -69,7 +70,8 @@ class OtaConfig {
 class OtaClient {
   OtaClient(this.config)
       : _verifier = SignatureVerifier(config.publicKeys),
-        _http = config.httpClient ?? createDefaultHttpClient();
+        // Every request, including redirects, goes through the URL rules (SEC-02).
+        _http = SecureRedirectClient(config.httpClient ?? createDefaultHttpClient());
 
   final OtaConfig config;
   final SignatureVerifier _verifier;
@@ -178,7 +180,8 @@ class OtaClient {
   /// Code patches: native code already picked what runs (and caught crashes). Mirror it here.
   Future<void> _bootNative(NativeBootRuntime runtime) async {
     final report = await runtime.readBootReport();
-    for (final id in report.failedPatchIds) {
+    // Ids from native code are stored and sent to the server: keep only valid ones (SEC-01).
+    for (final id in report.failedPatchIds.where(isValidPatchId)) {
       if (_state.badPatchIds.add(id)) {
         _state.addEvent('patch_boot_failed', id);
         _state.addEvent('patch_auto_rollback', id);
@@ -382,6 +385,8 @@ class OtaClient {
       } on _IntegrityError catch (e) {
         _state.addEvent('patch_hash_failed', p.id);
         return reject(e.message);
+      } on InsecureUrlException catch (e) {
+        return reject(e.message); // a redirect to a refused URL, like a refused download URL
       }
       final digest = (await sha256.bind(tmp.openRead()).first).toString();
       if (digest != p.payloadSha256) {

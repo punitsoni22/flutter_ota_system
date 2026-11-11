@@ -59,6 +59,15 @@ Dart ≥ 3.12, Flutter ≥ 3.27 (tests ran with Flutter 3.44 stable). Android: `
 flutter pub get && flutter analyze && flutter test
 ```
 
+The Android code has JVM unit tests (`android/src/test`). They are not run in CI; run them
+locally through the example app, which hosts the plugin (needs JDK 17 or newer):
+
+```bash
+cd ../../example_app
+flutter build apk --config-only          # creates android/gradlew and local.properties
+cd android && ./gradlew :ota_client:testDebugUnitTest
+```
+
 ## Licence
 
 Apache License 2.0. Contains an implementation of the bspatch algorithm by Colin Percival
