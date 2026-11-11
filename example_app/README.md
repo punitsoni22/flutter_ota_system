@@ -10,10 +10,12 @@ Run it against the local stack by following [docs/installation.md](../docs/insta
 ```bash
 flutter run \
   --dart-define=OTA_SERVER_URL=http://10.0.2.2:8000 \
-  --dart-define=OTA_APP=punit-demo \
-  --dart-define=OTA_CHANNEL=dev \
-  --dart-define=OTA_PUBLIC_KEY=local-dev-1:<base64 point printed by ./scripts/seed_demo.sh>
+  --dart-define=OTA_PUBLIC_KEY=local-dev-1:<base64 point printed by ./punit.sh status>
 ```
+
+Defaults: `OTA_APP=punit-demo` and `OTA_CHANNEL=dev`, which match `./punit.sh demo`; override
+them with `--dart-define` if you use other values. For a USB phone, use
+`OTA_SERVER_URL=http://localhost:8000` with `adb reverse` (see the installation guide).
 
 A patch containing `{"crash": true}` makes the app exit on start, to demonstrate crash
 protection. The app allows cleartext HTTP for local testing only.
