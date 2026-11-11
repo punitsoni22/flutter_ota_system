@@ -115,10 +115,14 @@ a substituted hash and a different key are all rejected.
 
 ### Local development
 
-`./scripts/generate_dev_signing_key.sh` creates the key inside the Docker volume `punit_keys`
-(key id `local-dev-1`). It never touches the working tree; `cleanup_local.sh` deletes it.
-`OTA_AUTO_GENERATE_SIGNING_KEY=false` stops the API from creating keys silently. **Never ship an
-app that trusts a development key.**
+`./punit.sh setup` (through `./scripts/generate_dev_signing_key.sh`) creates the key once inside
+the Docker volume `punit_keys` (key id `local-dev-1`, file mode 600, owned by the API's non-root
+user). It never touches the working tree or the image, and restarts never replace it;
+`./punit.sh reset` (or `cleanup_local.sh`) deletes it. `./punit.sh backup` copies it, together
+with `.env`, into `backups/` (git-ignored): keep those folders private.
+`OTA_AUTO_GENERATE_SIGNING_KEY=false` stops the API from creating keys silently. `setup` also
+writes random local values for the admin key and server secrets into a new `.env`; they are still
+development values. **Never ship an app that trusts a development key.**
 
 ### Production (what exists today)
 

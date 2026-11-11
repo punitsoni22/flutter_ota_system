@@ -123,27 +123,26 @@ Full breakdown: [docs/limitations.md](docs/limitations.md) · roadmap:
 
 ## Installation overview
 
-Docker is the official installation method. Today you can run the full stack **locally**; a
-tested server quickstart is still to come.
+Docker is the official installation method. Today you can run the full stack **locally** with one
+command; a tested server quickstart is still to come.
 
-1. [Run the local stack](docs/installation.md) (Docker Compose: PostgreSQL, API, nginx).
+1. [Run the local stack](docs/installation.md) (`./punit.sh setup`: PostgreSQL, API, nginx).
 2. [Connect your Flutter app](docs/flutter-integration.md).
 3. [Ship a release and patches](docs/releases-and-patches.md), then [roll them out](docs/rollouts.md).
 4. For a server: [docs/operations.md](docs/operations.md) (draft, not yet verified).
 
 ## Quickstart (local, about 10 minutes)
 
-Requires Git, Docker with Compose v2, and free ports 8000, 8080 and 5432. Tested on Linux only
-(macOS and Windows are not tested).
+Requires Git, curl and Docker with Compose v2 (nothing else for the server), and free ports 8000
+and 8080. Tested on Linux only (macOS and Windows are not tested).
 
 ```bash
 git clone https://github.com/punitsoni22/flutter_ota_system.git
 cd flutter_ota_system
-cp .env.example .env                 # fake, local-only values
-./scripts/setup_local.sh             # builds, creates a LOCAL dev signing key, starts the stack
-./scripts/seed_demo.sh               # app punit-demo, channel dev, release android 1.0.0+1
-./scripts/publish_test_patch.sh      # signed mock-v1 test patch, 100% of dev
-./scripts/verify_demo.sh             # end-to-end checks; exits non-zero on any failure
+./punit.sh setup     # creates .env (random LOCAL secrets), builds, creates a LOCAL dev signing key,
+                     # starts the stack, waits for health checks, prints the URLs
+./punit.sh demo      # app punit-demo + release android 1.0.0+1, a signed mock-v1 test patch on
+                     # 100% of dev, then end-to-end checks (exits non-zero on any failure)
 ```
 
 Expected last line:
@@ -153,10 +152,13 @@ RESULT: all checks passed (artifact pipeline; mock-v1 does not execute code)
 ```
 
 Then open the admin page at <http://localhost:8000/admin> (key: `OTA_ADMIN_API_KEY` from `.env`)
-and the API docs at <http://localhost:8000/docs>. To see the patch in the example app and try
+and the API docs at <http://localhost:8000/docs>. `./punit.sh setup` is safe to re-run: it never
+overwrites `.env`, the database or the signing key. `./punit.sh help` lists every command (status,
+logs, stop, backup, restore, reset, CLI install). To see the patch in the example app and try
 rollback, crash protection and rollouts, continue with [docs/installation.md](docs/installation.md).
 
-Clean up with `./scripts/cleanup_local.sh` (deletes the local database, files and dev key).
+Stop with `./punit.sh stop` (keeps everything). `./punit.sh reset` deletes the local database,
+files and dev key after you confirm.
 
 ## Example usage
 

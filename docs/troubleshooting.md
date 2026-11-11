@@ -6,9 +6,10 @@ exact texts printed by the server, the CLI, the client or the scripts.
 **First steps for any problem**
 
 ```bash
+./punit.sh status                              # local stack: containers, health, URLs, key
 curl http://localhost:8000/health/ready        # {"status":"ok"}? (use your server URL)
 docker compose ps                              # all services "(healthy)"?
-docker compose logs --tail=100 api             # server errors
+docker compose logs --tail=100 api             # server errors (local: ./punit.sh logs api)
 adb logcat | grep -E "OtaBoot|OTA:"            # Android device side
 ```
 
@@ -19,15 +20,25 @@ tell you which step failed ([flutter-integration.md](flutter-integration.md#5-ha
 
 | Message / symptom | Cause | Fix |
 |---|---|---|
-| `ERROR docker not found. Install Docker Engine or Docker Desktop.` | Docker is not installed | Install it ([installation.md](installation.md#1-prerequisites)) |
+| `ERROR docker not found. Install Docker Engine (Linux) or Docker Desktop…` | Docker is not installed | Install it ([installation.md](installation.md#1-prerequisites)) |
 | `ERROR Docker is not running, or your user cannot use it` | Daemon stopped, or your user is not in the `docker` group | `sudo systemctl start docker`; `sudo usermod -aG docker $USER`, then log out and in |
 | `ERROR Docker Compose v2 not found` | Old `docker-compose` v1 only | Install the Compose v2 plugin (`docker compose version`) |
-| `ERROR .env not found. Run: cp .env.example .env` | No `.env` | `cp .env.example .env` |
+| `ERROR Docker Compose X is too old; Punit needs Compose v2.20 or newer.` | Old Compose plugin | Update Docker / the Compose plugin |
+| `ERROR Required files are missing.` | Incomplete clone or download | Clone the repository again with `git clone` |
+| `ERROR .env not found. Run: ./punit.sh setup …` | No `.env` (a script other than `setup` was run first) | `./punit.sh setup` |
 | `ERROR OTA_ENV=production in .env` | The local scripts refuse production settings | Use `OTA_ENV=development` locally |
-| `port is already allocated` / `address already in use` | Port 8000, 8080 or 5432 is taken | Change `PUNIT_API_PORT`, `PUNIT_CDN_PORT` or `PUNIT_POSTGRES_PORT` in `.env`, then `docker compose up -d` |
-| `api` stays unhealthy; logs show `Signing key not found: /data/keys/ota_signing_private.pem` | No signing key and `OTA_AUTO_GENERATE_SIGNING_KEY=false` | `./scripts/generate_dev_signing_key.sh`, then `docker compose up -d` |
-| `.env` change has no effect | Containers keep old values | `docker compose up -d` (recreates changed services) |
-| `[FAIL]` lines from `verify_demo.sh` | A step of the pipeline failed | Run `seed_demo.sh` and `publish_test_patch.sh` first; read `docker compose logs api` |
+| `Port 8000 (PUNIT_API_PORT) is already in use on this computer.` | Another program (or another Punit stack) uses the port | Stop it, or choose other ports ([installation.md](installation.md#ports-are-taken-or-a-second-stack)) |
+| `port is already allocated` / `address already in use` | Same, detected by Docker | As above, then `./punit.sh up` |
+| `ERROR The stack did not become healthy.` | A container failed its health check | `./punit.sh logs api` (or `postgres`); see the next rows |
+| `api` stays unhealthy; logs show `Signing key not found: /data/keys/ota_signing_private.pem` | No signing key and `OTA_AUTO_GENERATE_SIGNING_KEY=false` | `./punit.sh up` (creates it if missing; never replaces one) |
+| `api` logs `password authentication failed for user "punit"` | `POSTGRES_PASSWORD` in `.env` differs from the one the database volume was created with (for example `.env` was deleted and re-created) | Put the old `.env` back (a `./punit.sh backup` folder has a copy as `env`), or `./punit.sh reset` to start fresh |
+| `WARN Database volume … already exists: keeping the example POSTGRES_PASSWORD.` | `setup` created a new `.env` while old data still exists | As above if the API then cannot log in |
+| `.env` change has no effect | Containers keep old values | `./punit.sh up` (recreates changed services) |
+| `[FAIL]` lines from `verify_demo.sh` | A step of the pipeline failed | Run `./punit.sh demo` (seeds and publishes first); read `./punit.sh logs api` |
+| `ERROR CLI not installed. Run ./punit.sh cli first.` | `./punit.sh ota` without the CLI | `./punit.sh cli` |
+| `ERROR python3 venv module missing` | Ubuntu without `python3-venv` | `sudo apt install -y python3-venv` |
+| `ERROR Checksum mismatch in <dir>: the backup is damaged` | A backup file changed after it was written | Use another backup |
+| The app downloads nothing; `failed` with a connection error to `…:8080` | `OTA_CDN_BASE_URL` points at an address the device cannot reach, or `adb reverse` is missing for the file-server port | Fix `OTA_CDN_BASE_URL` ([configuration.md](configuration.md#which-ota_cdn_base_url)) and run `adb reverse tcp:8080 tcp:8080` for a USB phone |
 
 ## Backend connection failures
 
@@ -144,7 +155,8 @@ internals and have only been tested with the Flutter versions the maintainers us
 | Symptom | Cause | Fix |
 |---|---|---|
 | `/health/ready` fails; API logs show connection errors | Postgres down or wrong `OTA_DATABASE_URL` | `docker compose ps postgres`; `docker compose logs postgres`; fix the URL |
-| `psql: FATAL: role "ota" does not exist` locally | The local stack's user is `punit` (the single-server deploy uses `ota`) | `docker compose exec postgres psql -U punit -d punit` |
+| `psql: FATAL: role "ota" does not exist` locally | The local stack's user is `punit` (the single-server deploy uses `ota`) | `./punit.sh psql` (or `docker compose exec postgres psql -U punit -d punit`) |
+| `psql: … connection refused` on `localhost:5432` from your computer | Postgres has no host port by default | Use `./punit.sh psql`, or enable the port ([installation.md](installation.md#postgres-from-your-computer-optional)) |
 | Errors about too many connections on a small managed Postgres | Pool size × workers is too high | Lower `OTA_DB_POOL_SIZE` and/or `WEB_CONCURRENCY` |
 | Migration errors at startup | Schema changed by hand, or a downgrade | Restore from backup; never edit the schema by hand |
 

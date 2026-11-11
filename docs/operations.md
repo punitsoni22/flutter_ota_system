@@ -168,10 +168,48 @@ docker compose -f docker-compose.prod.yml restart api
 
 ### Local stack
 
+`./punit.sh` covers the local stack ([installation.md](installation.md#6-day-to-day-commands)).
+These commands were tested on Linux with a backup → change → restore round trip:
+
+```bash
+./punit.sh backup                 # -> backups/<project>-<YYYYmmdd-HHMMSS>/
+./punit.sh restore backups/punit-20261111-092352   # asks you to type "restore"
+```
+
+A backup folder (mode 700, files mode 600) contains:
+
+| File | Content |
+|---|---|
+| `db.dump` | `pg_dump --format=custom` of the database |
+| `files.tgz` | The `artifacts` (patches and store-build files) and `keys` (dev signing key) volumes |
+| `env` | A copy of `.env` (secrets!) |
+| `SHA256SUMS` | Checksums; `restore` refuses a damaged backup |
+
+`backup` works while the stack runs or is stopped (it starts Postgres if needed). `restore` stops
+`api` and `cdn`, recreates the database from `db.dump`, replaces the files and the signing key
+from `files.tgz`, starts everything and waits for health checks. It does **not** change `.env`; if
+your `.env` differs from the backed-up `env`, it tells you (copy `OTA_ROLLOUT_HMAC_SECRET` back if
+you need the same rollout groups). `./punit.sh update` takes a backup automatically before it
+rebuilds (skip with `--no-backup`).
+
+The backups contain the signing key and secrets: keep `backups/` private (it is git-ignored and
+never part of a Docker build context) and copy it off your computer if the data matters.
+
+By hand, the same backup is:
+
 ```bash
 docker compose exec -T postgres pg_dump -U punit -d punit --format=custom > punit-db.dump
-docker compose exec -T api tar -C /data -czf - artifacts keys > punit-files.tgz
+docker compose run --rm --no-deps -T --entrypoint tar api -C /data -czf - artifacts keys > punit-files.tgz
 ```
+
+### Local stack: restarts and recovery (tested on Linux)
+
+| Situation | What happens |
+|---|---|
+| `./punit.sh stop` / `up`, `down` / `up`, `restart`, computer reboot | Database, patch files and the signing key are kept (named volumes). Containers use `restart: unless-stopped`, so a running stack comes back after a Docker or computer restart |
+| Postgres restarts while the API runs | The API reconnects by itself (`pool_pre_ping`). `/health/ready` fails (HTTP 500) for a few seconds while Postgres starts |
+| API restarts | Migrations run again under a PostgreSQL advisory lock; nothing is lost |
+| Signing key | Created once; `setup`, `up`, `update` never replace it. Only `./punit.sh reset` deletes it |
 
 ## Failure recovery
 
@@ -187,14 +225,24 @@ docker compose exec -T api tar -C /data -czf - artifacts keys > punit-files.tgz
 
 ## Upgrading Punit
 
+Local stack:
+
+```bash
+git pull
+./punit.sh update        # backup, rebuild the API image, recreate the containers, wait for health
+```
+
+Single server:
+
 ```bash
 cd /opt/flutter_ota_system && git pull
-cd deploy && docker compose -f docker-compose.prod.yml up -d --build
+cd deploy && ./backup.sh && docker compose -f docker-compose.prod.yml up -d --build
 ```
 
 Database migrations run automatically on start. Before v1.0 the API, schema and patch formats may
-change between versions; read the [CHANGELOG](../CHANGELOG.md) and back up first. Upgrades have
-not been tested across versions yet.
+change between versions; read the [CHANGELOG](../CHANGELOG.md) and back up first. Upgrades across
+released versions have not been tested yet (`./punit.sh update` was tested only as a rebuild of
+the same version).
 
 ## Production considerations
 

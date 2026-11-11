@@ -49,9 +49,8 @@ careful fixes are the most useful contributions right now.
 ```bash
 git clone https://github.com/<your-user>/flutter_ota_system.git
 cd flutter_ota_system
-cp .env.example .env
-./scripts/setup_local.sh && ./scripts/seed_demo.sh && ./scripts/publish_test_patch.sh
-./scripts/verify_demo.sh
+./punit.sh setup      # .env, build, dev signing key, start, health checks (safe to re-run)
+./punit.sh demo       # seed, publish a test patch, end-to-end checks
 ```
 
 Repository layout:

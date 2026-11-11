@@ -1,19 +1,26 @@
 # CLI reference (`ota`)
 
 The `ota` command-line tool ([`cli/ota.py`](../cli/ota.py)) calls the [admin API](api-reference.md#admin-api).
-Install it as shown in [installation.md](installation.md#7-install-the-ota-cli):
+Install it as shown in [installation.md](installation.md#7-install-the-ota-cli). With the local
+stack, the shortest way is:
 
 ```bash
-python3 -m venv .venv && .venv/bin/pip install -r cli/requirements.txt
-alias ota="$PWD/.venv/bin/python $PWD/cli/ota.py"
-export OTA_API_URL=http://localhost:8000          # default http://127.0.0.1:8000
-export OTA_API_KEY=<the server's OTA_ADMIN_API_KEY>
+./punit.sh cli               # builds the wheel locally (scripts/build_cli.sh), installs it into .venv-cli/
+./punit.sh ota app list      # runs `ota` with OTA_API_URL/OTA_API_KEY taken from .env
 ```
 
-Or build and install it as a local package (not on PyPI): `./scripts/build_cli.sh`, then
-`pip install cli/dist/punit_cli-0.1.0a0-py3-none-any.whl` into a virtual environment
-([installation.md](installation.md#7-install-the-ota-cli)). The package needs Python 3.10+ and
-works with `bsdiff4` 1.2.6 to 1.4.2 (tested; [KI-7](known-issues.md#ki-7-the-cli-breaks-with-bsdiff4-142), fixed).
+For any other server, call the installed command directly and set the two variables:
+
+```bash
+export OTA_API_URL=https://ota.example.com        # default http://127.0.0.1:8000
+export OTA_API_KEY=<the server's OTA_ADMIN_API_KEY>
+.venv-cli/bin/ota app list
+```
+
+The package is built locally and is **not on PyPI**. It needs Python 3.10+ and works with
+`bsdiff4` 1.2.6 to 1.4.2 (tested; [KI-7](known-issues.md#ki-7-the-cli-breaks-with-bsdiff4-142), fixed). Without the
+package: `python3 -m venv .venv && .venv/bin/pip install -r cli/requirements.txt`, then
+`.venv/bin/python cli/ota.py …`.
 
 Every command prints JSON (or a table for `patch list`). On an API error it prints
 `error <HTTP status>: <detail>` and exits with a non-zero code. `ota <group> <command> --help`
@@ -87,16 +94,43 @@ Run inside the API environment, not through `ota`:
 | `python -m app.keygen` | Create the signing key file at `OTA_SIGNING_KEY_PATH` (refuses to overwrite). Prints `OTA_PUBLIC_KEY for the apps: <id>:<point>` |
 | `python -m app.keygen --pem` | Generate a key and print it as a one-line `OTA_SIGNING_KEY_PEM` value, plus the public key. Writes no file |
 
+## Local stack: `./punit.sh`
+
+[`punit.sh`](../punit.sh) runs and maintains the **local** Docker stack (development and
+evaluation only; tested on Linux). Every command acts on the Compose project in `.env`
+(default `punit`).
+
+| Command | Purpose |
+|---|---|
+| `./punit.sh setup` | Check requirements, create `.env` with random local secrets if missing, build, create the dev signing key once, start, wait for health checks, print URLs. Safe to re-run |
+| `./punit.sh up` / `start` | Start (build the image if missing) and wait until healthy |
+| `./punit.sh stop` | Stop the containers; keep everything |
+| `./punit.sh down` | Remove containers and network; keep the volumes (data and key) |
+| `./punit.sh restart` | Restart all services and wait until healthy |
+| `./punit.sh status` | Containers, health checks, URLs, volumes and the app's `OTA_PUBLIC_KEY` |
+| `./punit.sh logs [service…]` | Follow the logs |
+| `./punit.sh update [--no-backup]` | Back up, rebuild the API image from the checkout, recreate, wait |
+| `./punit.sh backup [dir]` | Database dump, patch files, signing key and a copy of `.env` into `backups/<project>-<time>/` |
+| `./punit.sh restore <dir>` | Replace database, files and key with a backup (type `restore` to confirm) |
+| `./punit.sh psql [args]` | psql in the database container |
+| `./punit.sh reset` | Delete database, files and key (type the project name to confirm) |
+| `./punit.sh demo [--banner T] [--color C]` | Seed `punit-demo`, publish a test patch, run `verify_demo.sh` |
+| `./punit.sh verify` | Run `verify_demo.sh` |
+| `./punit.sh cli` | Build the CLI wheel and install it into `.venv-cli/` |
+| `./punit.sh ota <args>` | Run the installed CLI against this stack |
+
 ## Local scripts
+
+`punit.sh` uses these; they can still be run on their own.
 
 | Script | Purpose |
 |---|---|
-| `./scripts/setup_local.sh` | Build the image, create the dev signing key, start the local stack |
-| `./scripts/generate_dev_signing_key.sh` | Create the dev signing key in volume `punit_keys` (never replaces one) |
+| `./scripts/setup_local.sh` | Same as `./punit.sh setup` (kept for CI and older instructions) |
+| `./scripts/generate_dev_signing_key.sh` | Create the dev signing key in volume `<project>_keys` (default `punit_keys`); never replaces one |
 | `./scripts/seed_demo.sh` | Create `punit-demo`, its channel and release; print the app's `--dart-define`s |
 | `./scripts/publish_test_patch.sh` | Publish a signed `mock-v1` test patch to `dev` at 100% |
 | `./scripts/verify_demo.sh` | End-to-end checks; exits non-zero on failure |
-| `./scripts/cleanup_local.sh [--yes \| --keep-data]` | Remove the stack and its volumes (asks first). `--keep-data` stops it without deleting data |
+| `./scripts/cleanup_local.sh [--yes \| --keep-data]` | Remove the stack and its volumes (asks y/N; `--yes` for CI). `--keep-data` removes the containers only |
 | `./scripts/build_cli.sh` | Build the `ota` CLI as a wheel and sdist in `cli/dist/` (local only; nothing is uploaded) |
 | `./scripts/prepublish_check.sh [--no-e2e]` | Maintainers: secret scan, required files, tests, demo |
-| `python scripts/simulate_fleet.py --app A --release V [--channel C] [--arch A] [--devices N]` | Register N fake devices and count which patch each is offered |
+| `python scripts/simulate_fleet.py --app A --release V [--channel C] [--arch A] [--devices N]` | Register N fake devices and count which patch each is offered (needs `httpx`, e.g. `.venv-cli/bin/python`; reads `OTA_API_URL`) |

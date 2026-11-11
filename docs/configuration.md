@@ -34,7 +34,7 @@ in tests). The local Docker stack overrides several of them; see the next column
 | `OTA_S3_PUBLIC_BUCKET` | `ota-public` | — | Bucket for `patches/` (must be publicly readable at `OTA_CDN_BASE_URL`) |
 | `OTA_S3_PRIVATE_BUCKET` | `ota-private` | — | Bucket for `releases/` (must **not** be public) |
 | `OTA_SIGNING_KEY_PEM` | empty | — | The ES256 private key itself, as PEM. One line with `\n` escapes is accepted. Takes priority over the key file |
-| `OTA_SIGNING_KEY_PATH` | `backend/data/keys/ota_signing_private.pem` | `/data/keys/ota_signing_private.pem` (volume `punit_keys`) | Key file used when `OTA_SIGNING_KEY_PEM` is empty |
+| `OTA_SIGNING_KEY_PATH` | `backend/data/keys/ota_signing_private.pem` | `/data/keys/ota_signing_private.pem` (volume `punit_keys`; `<project>_keys` with another project name) | Key file used when `OTA_SIGNING_KEY_PEM` is empty |
 | `OTA_SIGNING_KEY_ID` | `dev-1` | `local-dev-1` | Name of the key. Apps trust keys by this id |
 | `OTA_AUTO_GENERATE_SIGNING_KEY` | `true` | `false` | Create a key at startup if the file is missing. Must be `false` in production |
 
@@ -65,31 +65,56 @@ Read by the API image's start command ([`backend/Dockerfile`](../backend/Dockerf
 
 ## Local stack settings (`.env`, Docker Compose)
 
-Read by [`docker-compose.yml`](../docker-compose.yml) and the scripts. Copy
-[`.env.example`](../.env.example) to `.env`. All example values are fake and local-only.
+Read by [`docker-compose.yml`](../docker-compose.yml), [`punit.sh`](../punit.sh) and the scripts.
+`./punit.sh setup` creates `.env` from [`.env.example`](../.env.example) when it is missing and
+replaces the four example secrets with random local values (`local-<64 hex>`). It **never changes
+an existing `.env`**. `cp .env.example .env` also works; the stack then uses the fake example
+values. Either way, the values are for this computer only, never for a server.
 
-| Variable | Example value | Purpose |
-|---|---|---|
-| `PUNIT_API_PORT` | `8000` | Host port for the API |
-| `PUNIT_CDN_PORT` | `8080` | Host port for the nginx file server |
-| `PUNIT_POSTGRES_PORT` | `5432` | Host port for Postgres (always bound to 127.0.0.1) |
-| `PUNIT_BIND_ADDRESS` | not set (= `127.0.0.1`) | Set `0.0.0.0` to let phones on your network reach the API and file server |
-| `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | `punit` / fake / `punit` | Local database credentials |
-| `OTA_ENV`, `OTA_ADMIN_API_KEY`, `OTA_DEVICE_JWT_SECRET`, `OTA_ROLLOUT_HMAC_SECRET`, `OTA_CDN_BASE_URL`, `OTA_SERVE_ARTIFACTS_LOCALLY`, `OTA_SIGNING_KEY_ID`, `OTA_AUTO_GENERATE_SIGNING_KEY` | see `.env.example` | Passed to the API (see above) |
-| `PUNIT_DEMO_APP`, `PUNIT_DEMO_CHANNEL`, `PUNIT_DEMO_RELEASE`, `PUNIT_DEMO_PLATFORM`, `PUNIT_DEMO_ARCH` | `punit-demo`, `dev`, `1.0.0+1`, `android`, `arm64-v8a` | What the demo scripts create and test |
+Like Docker Compose, the scripts let a variable exported in your shell win over `.env`.
+
+| Variable | Required | Example value | Purpose |
+|---|---|---|---|
+| `PUNIT_API_PORT` | yes (has default) | `8000` | Host port for the API |
+| `PUNIT_CDN_PORT` | yes (has default) | `8080` | Host port for the nginx file server. Keep `OTA_CDN_BASE_URL` on the same port |
+| `PUNIT_BIND_ADDRESS` | optional | not set (= `127.0.0.1`) | Set `0.0.0.0` to let phones on your network reach the API and file server |
+| `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | yes | `punit` / random / `punit` | Local database credentials. The password is used only when the database volume is first created: changing it later breaks the login |
+| `OTA_ENV`, `OTA_ADMIN_API_KEY`, `OTA_DEVICE_JWT_SECRET`, `OTA_ROLLOUT_HMAC_SECRET`, `OTA_CDN_BASE_URL`, `OTA_SERVE_ARTIFACTS_LOCALLY`, `OTA_SIGNING_KEY_ID`, `OTA_AUTO_GENERATE_SIGNING_KEY` | yes (have defaults) | see `.env.example` | Passed to the API (see above) |
+| `OTA_PROTECTED_CHANNELS` | optional | not set (= `production`) | Passed to the API (see above) |
+| `PUNIT_DEMO_APP`, `PUNIT_DEMO_CHANNEL`, `PUNIT_DEMO_RELEASE`, `PUNIT_DEMO_PLATFORM`, `PUNIT_DEMO_ARCH` | optional | `punit-demo`, `dev`, `1.0.0+1`, `android`, `arm64-v8a` | What the demo scripts create and test |
+| `COMPOSE_PROJECT_NAME` | optional | not set (= `punit`) | Compose project: container and volume names (`punit_pgdata`, `punit_artifacts`, `punit_keys`). Change it only to run a second stack next to the first |
+| `PUNIT_API_IMAGE` | optional | not set (= `punit-api:local`) | Tag of the locally built API image. Give a second stack its own tag |
+| `COMPOSE_FILE` | optional | not set | `docker-compose.yml:docker/compose.postgres-port.yml` also publishes Postgres on `127.0.0.1:${PUNIT_POSTGRES_PORT}` |
+| `PUNIT_POSTGRES_PORT` | optional | `5432` | Host port for Postgres, used only with `docker/compose.postgres-port.yml` (always bound to 127.0.0.1) |
+
+To choose ports or a project name for a **new** `.env`, export them before the first setup:
+`PUNIT_API_PORT=18000 PUNIT_CDN_PORT=18080 ./punit.sh setup` writes them into `.env` (and sets
+`OTA_CDN_BASE_URL` to the new file-server port).
 
 The scripts refuse to run when `.env` contains `OTA_ENV=production`.
+
+### Local development key vs production key
+
+| | Local development key | Production key |
+|---|---|---|
+| Created by | `./punit.sh setup` (via `scripts/generate_dev_signing_key.sh`), once | You, once, on the server ([operations.md](operations.md#2-create-the-signing-key-once-ever)) |
+| Stored in | Docker volume `<project>_keys` (mode 600 file, non-root owner) | Server volume or `OTA_SIGNING_KEY_PEM` from your secret manager |
+| Key id | `local-dev-1` | e.g. `prod-1` |
+| Replaced | Never on restart, `up`, `down` or `update`; only `./punit.sh reset` deletes it | Never (apps trust only it) |
+| Backed up by | `./punit.sh backup` | `deploy/backup.sh` + an offline copy |
+| Use for real apps | **Never** | Yes, after your own validation |
 
 ### Which `OTA_CDN_BASE_URL`?
 
 | Who downloads | Value |
 |---|---|
 | Scripts, desktop, iOS simulator (iOS not tested) | `http://localhost:8080/cdn` |
+| USB phone with `adb reverse tcp:8080 tcp:8080` | `http://localhost:8080/cdn` |
 | Android emulator | `http://10.0.2.2:8080/cdn` |
 | Phone on your Wi-Fi | `http://<computer-LAN-IP>:8080/cdn` (+ `PUNIT_BIND_ADDRESS=0.0.0.0`) |
 | Production | `https://<your-domain>/cdn` |
 
-Apply changes with `docker compose up -d`.
+Apply changes with `./punit.sh up` (or `docker compose up -d`).
 
 ## Single-server deployment settings (`deploy/.env`)
 
