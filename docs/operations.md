@@ -13,7 +13,7 @@ Running a Flutter OTA System server: deployment, monitoring, logs, backups and r
 > [!IMPORTANT]
 > **Status: draft, not yet verified end to end.** Docker is Flutter OTA System's official installation
 > method, but this production-style setup has **not** been tested from a clean server for
-> v0.1.0-alpha. Test it on a throwaway server first. Planned work:
+> v0.1.0-alpha.1. Test it on a throwaway server first. Planned work:
 > [roadmap/installation-improvements.md](roadmap/installation-improvements.md).
 
 Linux is the only host OS the maintainers have tested Flutter OTA System on (with the local stack); other

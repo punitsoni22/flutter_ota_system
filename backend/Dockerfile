@@ -2,18 +2,17 @@
 #
 # Stage 1 installs the Python dependencies into a virtualenv; stage 2 copies only that virtualenv
 # and the application code, so pip caches and build leftovers never reach the final image.
-# The base image is pinned to an exact Python and Debian release; bump it deliberately.
+# The base image is pinned to an exact Python and Debian release, written out in both stages so
+# Dependabot can propose updates (.github/dependabot.yml); keep the two FROM lines identical.
 # No secrets, .env files or signing keys are copied in (see backend/.dockerignore): the signing
 # key lives in a volume mounted at /data/keys.
-ARG PYTHON_IMAGE=python:3.13.18-slim-trixie
-
-FROM ${PYTHON_IMAGE} AS deps
+FROM python:3.13.18-slim-trixie AS deps
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1 PIP_NO_CACHE_DIR=1
 RUN python -m venv /opt/venv
 COPY requirements.txt /tmp/requirements.txt
 RUN /opt/venv/bin/pip install -r /tmp/requirements.txt
 
-FROM ${PYTHON_IMAGE}
+FROM python:3.13.18-slim-trixie
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PATH=/opt/venv/bin:$PATH
 WORKDIR /srv

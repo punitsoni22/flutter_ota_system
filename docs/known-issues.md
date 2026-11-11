@@ -1,32 +1,33 @@
 # Known issues
 
-Bugs and gaps found while documenting and testing **v0.1.0-alpha**. Each entry is written so it
-can be copied into an issue. Fixes are listed under **Unreleased** in the
-[CHANGELOG](../CHANGELOG.md): they are on `main`, not in a tagged release yet.
+Bugs and gaps found while preparing and testing **v0.1.0-alpha.1**. Each entry is written so it
+can be copied into an issue. The fixes marked "Fixed in v0.1.0-alpha.1" are part of that release
+(see the [CHANGELOG](../CHANGELOG.md)); new reports go to the
+[issue tracker](https://github.com/punitsoni22/flutter_ota_system/issues).
 
 | ID | Title | Type | Priority | Status |
 |---|---|---|---|---|
-| [KI-4](#ki-4-promote-safety-checks-are-enforced-only-by-the-cli) | Promote safety checks are enforced only by the CLI | Bug (safety) | **Critical** | ✅ Fixed (Unreleased) |
-| [KI-1](#ki-1-re-creating-a-deleted-release-breaks-existing-installs) | Re-creating a deleted release breaks existing installs | Bug | **High** | ✅ Fixed (Unreleased) |
-| [KI-7](#ki-7-the-cli-breaks-with-bsdiff4-142) | The CLI breaks with `bsdiff4` 1.4.2 | Bug (dependency) | High | ✅ Fixed (Unreleased) |
-| [KI-2](#ki-2-the-policy-approval-reason-is-not-stored) | The policy-approval reason is not stored | Bug | Medium | ✅ Fixed (Unreleased) |
-| [KI-5](#ki-5-example-app-and-demo-scripts-use-different-app-slugs) | Example app and demo scripts use different app slugs | Bug (demo) | Low | ✅ Fixed (Unreleased) |
+| [KI-4](#ki-4-promote-safety-checks-are-enforced-only-by-the-cli) | Promote safety checks are enforced only by the CLI | Bug (safety) | **Critical** | ✅ Fixed in v0.1.0-alpha.1 |
+| [KI-1](#ki-1-re-creating-a-deleted-release-breaks-existing-installs) | Re-creating a deleted release breaks existing installs | Bug | **High** | ✅ Fixed in v0.1.0-alpha.1 |
+| [KI-7](#ki-7-the-cli-breaks-with-bsdiff4-142) | The CLI breaks with `bsdiff4` 1.4.2 | Bug (dependency) | High | ✅ Fixed in v0.1.0-alpha.1 |
+| [KI-2](#ki-2-the-policy-approval-reason-is-not-stored) | The policy-approval reason is not stored | Bug | Medium | ✅ Fixed in v0.1.0-alpha.1 |
+| [KI-5](#ki-5-example-app-and-demo-scripts-use-different-app-slugs) | Example app and demo scripts use different app slugs | Bug (demo) | Low | ✅ Fixed in v0.1.0-alpha.1 |
 | [KI-8](#ki-8-a-failed-ota-patch-android-leaves-an-empty-draft-patch) | A failed `ota patch android` leaves an empty draft patch | Bug | Low | Open |
-| [KI-9](#ki-9-admin-page-shows-the-wrong-default-key) | Admin page shows the wrong default key | Bug (UI text) | Low | ✅ Fixed (Unreleased) |
+| [KI-9](#ki-9-admin-page-shows-the-wrong-default-key) | Admin page shows the wrong default key | Bug (UI text) | Low | ✅ Fixed in v0.1.0-alpha.1 |
 | [KI-10](#ki-10-stale-patch-display-after-rollback) | Stale patch display after rollback | Bug (UI) | Low | Open |
 | [KI-11](#ki-11-healthready-returns-500-instead-of-503-while-the-database-is-down) | `/health/ready` returns 500 instead of 503 while the database is down | Bug | Low | Open |
-| [KI-12](#ki-12-backup-could-write-a-damaged-archive) | `backup` could write a damaged archive | Bug (data safety) | High | ✅ Fixed (Unreleased) |
-| [KI-3](#ki-3-channels-can-be-created-only-through-the-api) | Channels can be created only through the API | Limitation | Low | Accepted for v0.1.0-alpha |
+| [KI-12](#ki-12-backup-could-write-a-damaged-archive) | `backup` could write a damaged archive | Bug (data safety) | High | ✅ Fixed in v0.1.0-alpha.1 |
+| [KI-3](#ki-3-channels-can-be-created-only-through-the-api) | Channels can be created only through the API | Limitation | Low | Accepted for v0.1.0-alpha.1 |
 | [KI-6](#ki-6-old-docs-described-a-30-minute-background-check) | Old docs described a 30-minute background check | Docs bug | — | ✅ Fixed in the docs |
 
 KI-1 and KI-4 were the known blockers for production use. Their fixes still need wider testing,
-and production use is not supported in v0.1.0-alpha anyway ([limitations.md](limitations.md)).
+and production use is not supported in v0.1.0-alpha.1 anyway ([limitations.md](limitations.md)).
 
 ---
 
 ## KI-4: Promote safety checks are enforced only by the CLI
 
-> ✅ **Fixed (Unreleased).** The server now enforces the checks for protected channels
+> ✅ **Fixed in v0.1.0-alpha.1.** The server now enforces the checks for protected channels
 > (`OTA_PROTECTED_CHANNELS`, default `production`) on `publish` and `rollout`, for every client.
 > `force: true` with a `reason` overrides them and is logged. The CLI (`--force --reason`) and the
 > admin page (asks for a typed reason) use it. Tested: backend test, admin page in a browser, CLI.
@@ -69,7 +70,7 @@ rollout to 0% always allowed; `patch android --channel production` refused.
 
 ## KI-1: Re-creating a deleted release breaks existing installs
 
-> ✅ **Fixed (Unreleased).** The client now switches to a re-created release by itself: it drops
+> ✅ **Fixed in v0.1.0-alpha.1.** The client now switches to a re-created release by itself: it drops
 > the old release's patches and resets anti-replay, but never goes back to a retired release id.
 > The server refuses to register a version again that devices still report, unless `replace: true`
 > (CLI `--replace`). Tested: client and backend tests, and on an Android phone: a release was
@@ -108,7 +109,7 @@ rejected); backend test for the re-create refusal; end-to-end run of the reprodu
 
 ## KI-2: The policy-approval reason is not stored
 
-> ✅ **Fixed (Unreleased).** Every approval and withdrawal is stored with its reason and time
+> ✅ **Fixed in v0.1.0-alpha.1.** Every approval and withdrawal is stored with its reason and time
 > (migration 0003; apps approved earlier get one "reason unknown" record). `AppOut` shows the
 > latest; `GET /v1/admin/apps/{slug}/policy-approvals` and `ota app policy-history` list them.
 > Who approved is still not recorded (one shared admin key). The text below describes the
@@ -137,7 +138,7 @@ migration upgrade on an existing database.
 
 ## KI-5: Example app and demo scripts use different app slugs
 
-**Priority:** Low. **Status:** ✅ Fixed (Unreleased): `example_app` now defaults `OTA_APP` to
+**Priority:** Low. **Status:** ✅ Fixed in v0.1.0-alpha.1: `example_app` now defaults `OTA_APP` to
 `flutter-ota-system-demo`; tested on a phone without an `OTA_APP` define (registered, no 404).
 
 **Current behaviour.** `example_app` defaults to `OTA_APP=demo`
@@ -152,7 +153,7 @@ demo workflow ([installation.md](installation.md)) to confirm it.
 
 ## KI-3: Channels can be created only through the API
 
-**Priority:** Low. Accepted limitation for v0.1.0-alpha.
+**Priority:** Low. Accepted limitation for v0.1.0-alpha.1.
 
 `production`, `staging` and `dev` exist for every app. Other channels are created with the admin
 API; there is no CLI command or admin-page control, and channels cannot be renamed or deleted:
@@ -180,7 +181,7 @@ behaviour: [flutter-integration.md](flutter-integration.md#activation).
 
 ## KI-7: The CLI breaks with `bsdiff4` 1.4.2
 
-> ✅ **Fixed (Unreleased).** `cli/otadiff.py` now uses only the public `bsdiff4.diff()` and
+> ✅ **Fixed in v0.1.0-alpha.1.** `cli/otadiff.py` now uses only the public `bsdiff4.diff()` and
 > `bsdiff4.patch()` and converts the standard BSDIFF40 format itself. Output is unchanged
 > (byte-identical with 1.4.1). Tested with bsdiff4 1.2.6, 1.3.2, 1.4.0, 1.4.1 and 1.4.2, the Dart
 > reader, and a real `ota patch android` run with 1.4.2. The requirement is now `bsdiff4>=1.2.6`,
@@ -229,7 +230,7 @@ draft when an upload fails (a `DELETE` for draft patches would be needed).
 
 ## KI-9: Admin page shows the wrong default key
 
-**Priority:** Low. **Status:** ✅ Fixed (Unreleased): the page now points to `OTA_ADMIN_API_KEY` in `.env`.
+**Priority:** Low. **Status:** ✅ Fixed in v0.1.0-alpha.1: the page now points to `OTA_ADMIN_API_KEY` in `.env`.
 
 Before you connect, the admin page said the default key for local Docker is `dev-admin-key`.
 The local stack actually uses `OTA_ADMIN_API_KEY` from `.env` (`local-dev-admin-key-not-a-secret`
@@ -266,7 +267,7 @@ the readiness handler and return 503.
 
 ## KI-12: `backup` could write a damaged archive
 
-**Priority:** High (data safety). **Status:** ✅ Fixed (Unreleased).
+**Priority:** High (data safety). **Status:** ✅ Fixed in v0.1.0-alpha.1.
 
 Found while testing the rename upgrade. `backup` streams the patch files and signing key out of a
 one-off API container into `files.tgz`. When the API image did not exist yet, Docker Compose built

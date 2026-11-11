@@ -1,6 +1,6 @@
 # Security
 
-> **Alpha disclaimer.** Flutter OTA System v0.1.0-alpha has **not** undergone an independent security audit.
+> **Alpha disclaimer.** Flutter OTA System v0.1.0-alpha.1 has **not** undergone an independent security audit.
 > This page describes the security model as implemented, and its known gaps. It does not certify
 > that the implementation is free of flaws. Validate it yourself before users depend on it. Report
 > vulnerabilities privately as described in [SECURITY.md](../SECURITY.md).

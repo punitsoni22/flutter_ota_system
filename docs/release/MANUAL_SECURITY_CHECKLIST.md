@@ -66,8 +66,8 @@ These are done on github.com by the maintainer.
 
 ## D. Release
 
-- [ ] The tag `v0.1.0-alpha` is created as a **pre-release**, with
-      [v0.1.0-alpha.md](v0.1.0-alpha.md) as its notes.
+- [ ] The tag `v0.1.0-alpha.1` is created as a **pre-release**, with
+      [v0.1.0-alpha.1.md](v0.1.0-alpha.1.md) as its notes.
 - [ ] The release says clearly: alpha, not production-ready, self-hosted only.
 - [ ] No binaries, keys or `.env` files are attached to the release.
 

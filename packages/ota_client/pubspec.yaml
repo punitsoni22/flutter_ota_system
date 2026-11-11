@@ -1,6 +1,6 @@
 name: ota_client
 description: "Over-the-air patch client for Flutter: check, download, verify (SHA-256 + ES256), stage, boot protection."
-version: 0.1.0
+version: 0.1.0-alpha.1
 publish_to: none
 
 environment:

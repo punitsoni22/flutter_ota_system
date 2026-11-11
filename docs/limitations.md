@@ -1,6 +1,6 @@
 # Limitations and project status
 
-Flutter OTA System v0.1.0-alpha is an **experimental, self-hosted** open-source project. It has been tested
+Flutter OTA System v0.1.0-alpha.1 is an **experimental, self-hosted** open-source project. It has been tested
 internally by its maintainers, but it has **not** been comprehensively validated in production,
 has **not** had an independent security audit, and has **no** published load tests.
 
@@ -108,8 +108,8 @@ What each app platform can do:
   channel/release/arch/percentage.
 - Telemetry is counts per patch only; no per-device history.
 - No structured logs, metrics endpoint or tracing.
-- Release identity (KI-1) and server-side promotion checks (KI-4) are fixed on `main` (not in a
-  tagged release yet). Both are covered by automated tests and were checked on one Android phone
+- Release identity (KI-1) and server-side promotion checks (KI-4) are fixed in v0.1.0-alpha.1.
+  Both are covered by automated tests and were checked on one Android phone
   ([known-issues.md](known-issues.md)).
 - Channels can be created only through the API; they cannot be renamed or deleted
   ([KI-3](known-issues.md#ki-3-channels-can-be-created-only-through-the-api)).

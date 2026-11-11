@@ -42,7 +42,7 @@ def create_app() -> FastAPI:
     settings = get_settings()
     # API docs only off the server: in production they would map the admin API for anyone.
     docs = {} if settings.env != "production" else {"docs_url": None, "redoc_url": None, "openapi_url": None}
-    app = FastAPI(title="Flutter OTA", version="0.1.0", lifespan=lifespan, **docs)
+    app = FastAPI(title="Flutter OTA System", version="0.1.0-alpha.1", lifespan=lifespan, **docs)
     app.include_router(devices.router)
     app.include_router(admin.router)
 

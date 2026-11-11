@@ -54,7 +54,7 @@ the [README](../README.md) for an overview. The pages below are grouped by what 
 | [CONTRIBUTING.md](../CONTRIBUTING.md) | Development setup, tests, pull requests |
 | [SECURITY.md](../SECURITY.md) | Reporting vulnerabilities privately |
 | [CODE_OF_CONDUCT.md](../CODE_OF_CONDUCT.md) | Community rules |
-| [release/](release/v0.1.0-alpha.md) | Release notes and pre-publish checklists |
+| [release/](release/v0.1.0-alpha.1.md) | Release notes and pre-publish checklists |
 
-All documentation describes **v0.1.0-alpha**. Where a page and the code disagree, the code is
+All documentation describes **v0.1.0-alpha.1**. Where a page and the code disagree, the code is
 correct; please open an issue.

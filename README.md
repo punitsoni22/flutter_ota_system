@@ -5,7 +5,7 @@
 **Self-hosted, experimental over-the-air (OTA) patch delivery for Flutter apps.**
 
 > [!WARNING]
-> **Flutter OTA System is an experimental, self-hosted open-source project (v0.1.0-alpha).** It has undergone
+> **Flutter OTA System is an experimental, self-hosted open-source project (v0.1.0-alpha.1).** It has undergone
 > internal testing but has **not** yet been comprehensively validated in production.
 >
 > - It has **not** undergone an independent security audit.
@@ -102,7 +102,7 @@ Details: [docs/architecture.md](docs/architecture.md) · terms: [docs/concepts.m
 
 ## Project status
 
-| Area | State in v0.1.0-alpha |
+| Area | State in v0.1.0-alpha.1 |
 |---|---|
 | Control plane (FastAPI + PostgreSQL) | Working, internally tested, automated tests |
 | Signed patch metadata (ES256) + SHA-256 | Working, covered by tests and `scripts/verify_demo.sh` |
