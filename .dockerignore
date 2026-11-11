@@ -18,3 +18,7 @@ demo_video
 example_app
 packages
 docs
+backups
+.venv-cli
+**/*.dump
+**/*.tgz

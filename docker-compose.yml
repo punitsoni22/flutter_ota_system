@@ -1,17 +1,31 @@
 # Punit local self-hosted stack (development / evaluation only).
 #
-#   cp .env.example .env
-#   ./scripts/setup_local.sh        # generates the dev signing key, builds and starts the stack
+#   ./punit.sh setup          creates .env with random local secrets, builds the image, creates the
+#                             LOCAL dev signing key, starts everything and waits for health checks
+#   ./punit.sh help           all commands (start/stop/logs/backup/restore/demo/reset ...)
 #
-# Services:
-#   postgres  PostgreSQL 17 (127.0.0.1 only)
+# Plain `docker compose ...` commands work too: Compose reads .env from this folder.
+#
+# Services (all images pinned; the API image is built locally from ./backend):
+#   postgres  PostgreSQL 17, private network only (no host port unless you opt in, see below)
 #   api       FastAPI control plane + /admin page          http://localhost:8000  (docs: /docs)
 #   cdn       nginx serving immutable patch files           http://localhost:8080/cdn/patches/<sha256>
 #   tools     one-off demo/verification container (profile "tools", never started by "up")
 #
-# Not included on purpose: Redis (the backend does not use it yet) and an Azure Blob emulator
-# (the backend supports local disk and S3-compatible storage, not Azure Blob). See README "Known
-# limitations".
+# Networks:
+#   edge  normal bridge network: api, cdn and tools; host ports are published from here
+#   db    internal network (no outside access): postgres and api only
+#
+# Postgres host port (optional): add docker/compose.postgres-port.yml, e.g. in .env:
+#   COMPOSE_FILE=docker-compose.yml:docker/compose.postgres-port.yml
+# You do not need it for `./punit.sh psql` or `docker compose exec postgres psql ...`.
+#
+# Not included on purpose: Redis (the backend does not use it) and an Azure Blob emulator
+# (the backend supports local disk and S3-compatible storage, not Azure Blob). No container gets
+# the Docker socket.
+#
+# The project name defaults to "punit" (volumes punit_pgdata, punit_artifacts, punit_keys).
+# Set COMPOSE_PROJECT_NAME in .env to run a second, independent stack next to it.
 name: punit
 
 x-api-env: &api-env
@@ -27,17 +41,25 @@ x-api-env: &api-env
   OTA_ADMIN_API_KEY: ${OTA_ADMIN_API_KEY:-local-dev-admin-key-not-a-secret}
   OTA_DEVICE_JWT_SECRET: ${OTA_DEVICE_JWT_SECRET:-local-dev-device-jwt-secret-not-a-secret}
   OTA_ROLLOUT_HMAC_SECRET: ${OTA_ROLLOUT_HMAC_SECRET:-local-dev-rollout-secret-not-a-secret}
+  # Channels where the server enforces promotion checks (KI-4). Default: production.
+  OTA_PROTECTED_CHANNELS: ${OTA_PROTECTED_CHANNELS:-production}
+
+x-logging: &logging
+  driver: json-file
+  options: { max-size: "10m", max-file: "3" }
 
 services:
   postgres:
-    image: postgres:17-alpine
+    image: postgres:17.11-alpine
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-punit}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-local-dev-only-not-a-secret}
       POSTGRES_DB: ${POSTGRES_DB:-punit}
-    ports: ["127.0.0.1:${PUNIT_POSTGRES_PORT:-5432}:5432"]
+    networks: [db]
     volumes: [pgdata:/var/lib/postgresql/data]
+    security_opt: ["no-new-privileges:true"]
+    logging: *logging
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 3s
@@ -45,18 +67,23 @@ services:
       retries: 20
 
   api:
-    build: ./backend
-    image: punit-api:local
+    build:
+      context: ./backend
+    # Override PUNIT_API_IMAGE when you run two stacks side by side from different checkouts.
+    image: ${PUNIT_API_IMAGE:-punit-api:local}
     restart: unless-stopped
     depends_on:
       postgres: { condition: service_healthy }
     environment: *api-env
-    # 127.0.0.1 by default. The Android emulator reaches it as 10.0.2.2. For a physical phone,
-    # set PUNIT_BIND_ADDRESS=0.0.0.0 (anyone on your network can then reach the dev API).
+    networks: [edge, db]
+    # 127.0.0.1 by default. The Android emulator reaches it as 10.0.2.2; a USB phone can use
+    # `adb reverse` (docs/installation.md). PUNIT_BIND_ADDRESS=0.0.0.0 exposes it to your network.
     ports: ["${PUNIT_BIND_ADDRESS:-127.0.0.1}:${PUNIT_API_PORT:-8000}:8000"]
     volumes:
       - artifacts:/data/artifacts
       - keys:/data/keys
+    security_opt: ["no-new-privileges:true"]
+    logging: *logging
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready', timeout=3)"]
       interval: 5s
@@ -65,14 +92,18 @@ services:
       retries: 20
 
   cdn:
-    image: nginx:1.27-alpine
+    image: nginx:1.27.5-alpine
     restart: unless-stopped
+    # The api container must create the artifacts volume first (so it is owned by the API user).
     depends_on:
       api: { condition: service_started }
+    networks: [edge]
     ports: ["${PUNIT_BIND_ADDRESS:-127.0.0.1}:${PUNIT_CDN_PORT:-8080}:80"]
     volumes:
       - artifacts:/data/artifacts:ro
       - ./docker/nginx-cdn.conf:/etc/nginx/conf.d/default.conf:ro
+    security_opt: ["no-new-privileges:true"]
+    logging: *logging
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/health"]
       interval: 5s
@@ -80,11 +111,12 @@ services:
       retries: 20
 
   tools:
-    image: punit-api:local
+    image: ${PUNIT_API_IMAGE:-punit-api:local}
     profiles: ["tools"]
     depends_on:
       api: { condition: service_healthy }
       cdn: { condition: service_healthy }
+    networks: [edge]
     entrypoint: ["python", "/demo/punit_demo.py"]
     environment:
       PUNIT_API_URL: http://api:8000
@@ -100,6 +132,11 @@ services:
       PUNIT_DEMO_ARCH: ${PUNIT_DEMO_ARCH:-arm64-v8a}
     volumes:
       - ./scripts/demo:/demo:ro
+
+networks:
+  edge: {}
+  db:
+    internal: true
 
 volumes:
   pgdata:

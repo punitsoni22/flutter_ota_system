@@ -14,9 +14,13 @@ deploy/backups/
 keys/
 .local/
 secrets/
+# ./punit.sh backup output (contains the signing key and .env) and setup temp files
+backups/
+.env.tmp.*
 
 # ---- Python -------------------------------------------------------------------------------
 .venv/
+.venv-cli/
 venv/
 __pycache__/
 *.pyc

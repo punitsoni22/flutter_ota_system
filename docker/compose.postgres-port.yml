@@ -1,0 +1,10 @@
+# OPTIONAL override: publish PostgreSQL on 127.0.0.1:${PUNIT_POSTGRES_PORT:-5432} for local tools
+# (psql, DBeaver, ...). Off by default: the database is on an internal network only.
+#
+# Enable it in .env (Linux/macOS path separator ":"):
+#   COMPOSE_FILE=docker-compose.yml:docker/compose.postgres-port.yml
+# then run ./punit.sh up (or docker compose up -d).
+services:
+  postgres:
+    networks: [db, edge]
+    ports: ["127.0.0.1:${PUNIT_POSTGRES_PORT:-5432}:5432"]

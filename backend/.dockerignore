@@ -1,9 +1,21 @@
+# Build context is ./backend. Nothing secret or local may enter the image.
 data/
 tests/
 __pycache__/
+**/__pycache__/
 *.pyc
 .pytest_cache/
+.ruff_cache/
+.venv/
+venv/
 .env
 .env.*
 *.pem
 *.key
+*.dump
+*.tgz
+keys/
+backups/
+requirements-dev.txt
+Dockerfile
+.dockerignore

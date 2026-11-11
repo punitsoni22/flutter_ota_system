@@ -2,10 +2,19 @@
 #   cp .env.example .env   # fill it in
 #   docker compose -f docker-compose.prod.yml up -d --build
 # Caddy gets the HTTPS certificate automatically for OTA_DOMAIN.
+# DRAFT: not yet verified end to end on a clean server (docs/operations.md).
+# Only Caddy publishes ports; Postgres is on an internal network. Images are pinned; the API image
+# is built from ../backend. No Redis, no Docker socket mounts.
+x-logging: &logging
+  driver: json-file
+  options: { max-size: "10m", max-file: "5" }
+
 services:
   postgres:
-    image: postgres:17-alpine
+    image: postgres:17.11-alpine
     restart: unless-stopped
+    networks: [db]
+    logging: *logging
     environment:
       POSTGRES_USER: ota
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
@@ -35,21 +44,45 @@ services:
       OTA_DEVICE_JWT_SECRET: ${OTA_DEVICE_JWT_SECRET:?}
       OTA_ROLLOUT_HMAC_SECRET: ${OTA_ROLLOUT_HMAC_SECRET:?}
       FORWARDED_ALLOW_IPS: "*" # only Caddy can reach the API (no published port)
+    networks: [edge, db]
     volumes:
       - artifacts:/data/artifacts
       - keys:/data/keys
+    security_opt: ["no-new-privileges:true"]
+    logging: *logging
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      start_period: 30s
+      retries: 10
 
   cdn:
-    image: nginx:1.27-alpine
+    image: nginx:1.27.5-alpine
     restart: unless-stopped
+    # The api container creates the artifacts volume first (so the API's non-root user owns it).
+    depends_on:
+      api: { condition: service_started }
+    networks: [edge]
     volumes:
       - artifacts:/data/artifacts:ro
       - ../docker/nginx-cdn.conf:/etc/nginx/conf.d/default.conf:ro
+    security_opt: ["no-new-privileges:true"]
+    logging: *logging
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
 
   caddy:
-    image: caddy:2.8-alpine
+    image: caddy:2.8.4-alpine
     restart: unless-stopped
-    depends_on: [api, cdn]
+    depends_on:
+      api: { condition: service_healthy }
+      cdn: { condition: service_healthy }
+    networks: [edge]
+    logging: *logging
     ports: ["80:80", "443:443"]
     environment:
       OTA_DOMAIN: ${OTA_DOMAIN}
@@ -57,6 +90,11 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
+
+networks:
+  edge: {}
+  db:
+    internal: true
 
 volumes:
   pgdata:
