@@ -46,8 +46,12 @@ tell you which step failed ([flutter-integration.md](flutter-integration.md#5-ha
 |---|---|---|---|
 | CLI: `httpx.ConnectError` / connection refused | Wrong `OTA_API_URL`, or the API is down | `curl $OTA_API_URL/health/ready` | Start the stack; fix `OTA_API_URL` |
 | CLI: `error 401: Invalid or missing X-API-Key` | `OTA_API_KEY` missing or different from the server's `OTA_ADMIN_API_KEY` | Compare with `.env` / `deploy/.env` | `export OTA_API_KEY=…` |
-| App: `failed`, `Connection refused` / timeout | The device cannot reach `OTA_SERVER_URL` | Open `<server>/health/ready` in the phone's browser | Emulator: use `10.0.2.2`, not `localhost`. Phone: computer's LAN IP and `FLUTTER_OTA_BIND_ADDRESS=0.0.0.0`; same Wi-Fi; firewall |
+| App: `failed`, `Connection refused` / timeout | The device cannot reach `OTA_SERVER_URL` | Open `<server>/health/ready` in the phone's browser | Emulator: use `10.0.2.2`, not `localhost`. USB phone: `adb reverse tcp:8000 tcp:8000` (and the CDN port) with `http://localhost:8000`. Wi-Fi phone: an `https://` address only (plain `http://` to a LAN IP is refused); same Wi-Fi; firewall |
 | App: `failed` with a cleartext / `CLEARTEXT communication not permitted` error | Android blocks plain `http://` | — | Use HTTPS, or (test builds only) `android:usesCleartextTraffic="true"` |
+| App: `failed` with `insecure URL … release builds require https://` or `… only allowed for localhost or the Android emulator` | `ota_client` refuses plain `http://` except loopback (any build) and `10.0.2.2` (debug builds) | Check `OTA_SERVER_URL` | Use `https://`, or `adb reverse` with `http://localhost:8000` |
+| App: `rejected` with `insecure URL …` or `unsupported URL scheme` | The server's `OTA_CDN_BASE_URL` gives devices a plain `http://` download URL | Check `OTA_CDN_BASE_URL` in `.env` | Use `https://`, or `http://localhost:8080/cdn` with `adb reverse` |
+| App: `rejected` with `invalid patch id` | The update-check response named a patch id that is not a lowercase UUID | Compare the server version; check for a proxy rewriting responses | Use an unmodified Flutter OTA System server |
+| App: `failed` with `TimeoutException` (`no response`, `download stalled`, `download too slow`) | The server or file server stopped answering, or the download took over 10 minutes | Open the patch URL in the phone's browser | Fix the server/CDN; the next check retries |
 | Server won't start: `Unsafe production settings:` + list | `OTA_ENV=production` with unsafe values | `docker compose logs api` | Fix each listed setting ([configuration.md](configuration.md#production-safety-checks)) |
 
 ## Device registration failures

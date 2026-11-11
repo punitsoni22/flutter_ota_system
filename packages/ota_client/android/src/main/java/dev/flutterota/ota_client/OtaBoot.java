@@ -79,6 +79,7 @@ final class OtaBoot {
       JSONArray failed = nat.optJSONArray("failed");
       if (failed == null) failed = new JSONArray();
       String attempt = nat.has("attempt") ? nat.optString("attempt") : null;
+      if (attempt != null && !OtaPaths.isValidPatchId(attempt)) attempt = null;
       nat.remove("attempt");
 
       // boot.json from another install (store update, reinstall): its patches were built for a
@@ -100,6 +101,10 @@ final class OtaBoot {
       for (JSONObject candidate : new JSONObject[] {next, good}) {
         if (candidate == null) continue;
         String id = candidate.optString("id");
+        if (!OtaPaths.isValidPatchId(id)) {
+          Log.w(TAG, "boot.json names an invalid patch id: ignoring it");
+          continue;
+        }
         if (contains(failed, id)) continue;
         if (isValid(context, candidate, nat)) {
           chosen = candidate;
@@ -187,13 +192,16 @@ final class OtaBoot {
     if (!newlyFailed.contains(id)) newlyFailed.add(id);
   }
 
-  /** Inside the app's files dir, the size Dart wrote, and the hash Dart verified. */
+  /**
+   * {@code <files dir>/.../<id>/libapp.so} for this patch's (valid) id, the size Dart wrote, and
+   * the hash Dart verified.
+   */
   private static boolean isValid(Context context, JSONObject patch, JSONObject nat) {
     try {
       File file = new File(patch.getString("file"));
       String path = file.getCanonicalPath();
-      String root = context.getFilesDir().getCanonicalPath() + File.separator;
-      if (!path.startsWith(root) || !path.endsWith(".so") || !file.isFile()) return false;
+      String root = context.getFilesDir().getCanonicalPath();
+      if (!OtaPaths.isPatchLibrary(path, root, patch.getString("id")) || !file.isFile()) return false;
       if (file.length() != patch.getLong("size")) return false;
       // Hashing ~20 MB costs a little startup time, so do it once per file, not every start.
       String stamp = patch.getString("id") + ":" + file.length() + ":" + file.lastModified();

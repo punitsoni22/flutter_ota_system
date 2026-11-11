@@ -11,6 +11,7 @@ import 'package:flutter/services.dart';
 
 import 'bsdiff.dart';
 import 'models.dart';
+import 'patch_id.dart';
 import 'runtime.dart';
 
 /// `aot-bidiff-android-v1`: real Dart code patches on Android.
@@ -92,7 +93,8 @@ class AotPatchRuntime implements NativeBootRuntime {
     final r = _report;
     if (r == null || !_enabled) return;
     Map<String, dynamic>? entry(PatchRecord? p, Directory? dir) {
-      if (p == null || dir == null) return null;
+      // The native side checks ids too (OtaPaths.java); never hand it one that names a path.
+      if (p == null || dir == null || !isValidPatchId(p.id)) return null;
       final file = File('${dir.path}/libapp.so');
       if (!file.existsSync()) return null;
       return {'id': p.id, 'number': p.number, 'file': file.path, 'sha256': p.resultSha256, 'size': file.lengthSync()};

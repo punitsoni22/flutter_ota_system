@@ -60,6 +60,11 @@ public final class OtaClientPlugin implements FlutterPlugin, MethodChannel.Metho
         break;
       case "extractBase":
         String abi = call.argument("abi");
+        // The ABI becomes part of a file name: accept only the four Android ABIs (SEC-01).
+        if (!OtaPaths.isValidAbi(abi)) {
+          result.error("invalid_abi", "Unsupported ABI", null);
+          break;
+        }
         io.execute(
             () -> {
               try {

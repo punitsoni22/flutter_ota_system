@@ -6,6 +6,24 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Security
+
+- `ota_client`: patch ids from the server are not covered by the signature but name files and
+  directories. A manipulated update-check response could use an id such as `../..` to delete or
+  write files outside the client's storage. The client (Dart and Android) now accepts only
+  canonical lowercase UUIDs and refuses any other id before downloading.
+- `ota_client`: plain `http://` is refused for the server and for patch downloads, except for
+  loopback (`localhost`, `127.0.0.0/8`, `[::1]`, any build) and the emulator host `10.0.2.2`
+  (debug builds only).
+- `ota_client`: patch downloads now time out (no response 30 s, stalled 30 s, total 10 min) and
+  the default HTTP client has a 15 s connect timeout. Before, a stalled download could block
+  every later `checkForUpdate()` until the app restarted.
+
+### Changed
+
+- **Breaking for some setups:** apps that pointed `ota_client` at `http://<LAN IP>` (phone on
+  Wi-Fi) must use HTTPS or `adb reverse` with `http://localhost`.
+
 ## [0.1.0-alpha.1] - 2026-11-11
 
 First public, **experimental** release (an earlier planned `0.1.0-alpha` tag was never created).
