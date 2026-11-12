@@ -1,0 +1,20 @@
+# Copyright 2026 The Punit Authors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Shared, host-owned code of the demo app. It is part of the store build and a patch never
+# changes it. Keep code here that every feature can rely on.
+name: core
+description: Shared, host-owned code of the Flutter OTA System demo app.
+publish_to: none
+version: 1.0.0
+
+environment:
+  sdk: ^3.13.0
+  flutter: ">=3.47.9"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_lints: ^6.0.0
