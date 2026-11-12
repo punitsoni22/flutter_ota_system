@@ -17,7 +17,7 @@
   <a href="https://github.com/punitsoni22/flutter_ota_system/releases"><img src="https://img.shields.io/github/v/release/punitsoni22/flutter_ota_system?include_prereleases&label=release" alt="Latest release"></a>
   <a href="https://github.com/punitsoni22/flutter_ota_system/actions/workflows/ci.yml"><img src="https://github.com/punitsoni22/flutter_ota_system/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI"></a>
   <br>
-  <img src="https://img.shields.io/badge/Flutter-%E2%89%A53.27-02569B?logo=flutter&logoColor=white" alt="Flutter 3.27 or newer">
+  <img src="https://img.shields.io/badge/Flutter-%E2%89%A53.44.9-02569B?logo=flutter&logoColor=white" alt="Flutter 3.44.9 or newer">
   <img src="https://img.shields.io/badge/Python-3.13%20%C2%B7%20FastAPI-3776AB?logo=python&logoColor=white" alt="Python 3.13, FastAPI">
   <img src="https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white" alt="Docker Compose">
 </p>
@@ -38,6 +38,16 @@
 > use it for production OTA delivery** until you have validated its security, reliability,
 > compatibility, rollback, signing and recovery for your own apps. Use at your own risk
 > ([Apache-2.0](LICENSE), sections 7 and 8: no warranty, no liability).
+
+> [!CAUTION]
+> Flutter OTA System is an experimental, self-hosted OTA platform. Its Android AotPatchRuntime
+> modifies executable application code and presents significant platform-policy and security
+> considerations. It has not been independently security-audited or validated for production use.
+> Developers must evaluate applicable app-store policies and deployment risks before integrating it
+> into distributed applications. See [Google Play](docs/policy/google-play.md),
+> [Apple App Store](docs/policy/apple-app-store.md), [security](docs/security.md) and
+> [privacy and data handling](docs/privacy-and-data-handling.md). No store has reviewed or
+> approved this project.
 
 ## Why Flutter OTA System?
 
@@ -300,15 +310,17 @@ Especially wanted:
 |---|---|---|
 | Linux development environment | Internally tested | Ubuntu, Docker Engine + Compose v2. Backend, CLI and `scripts/verify_demo.sh` |
 | Android Flutter application | Internally tested | `mock-v1` config patches and experimental Android Dart code patches, on a small number of devices |
-| iOS | Not tested | Needs macOS + Xcode. iOS code patches are not implemented. `mock-v1` is pure Dart and might work, but is untested |
+| iOS | Not supported | Not implemented: the Flutter SDK declares Android only, and nothing has been tested on iOS |
 | macOS | Not tested | Neither as a development machine nor as a Docker Desktop host |
 | Windows | Not tested | Neither as a development machine nor as a Docker Desktop host |
 
 Android testing does **not** establish compatibility with every Android device, OS version, CPU
 architecture (ABI) or Flutter version. No device compatibility matrix is published.
 
-Flutter: `ota_client` analysis and unit tests ran with Flutter 3.44 stable. The package requires
-Flutter ≥ 3.27 and Dart ≥ 3.12; other Flutter versions are not tested.
+Flutter: devices were tested with Flutter 3.44.9 (Dart 3.12.2); CI runs analysis and unit tests
+with the current stable. The SDK (`flutter_ota_system`) requires Flutter `>=3.44.9` and Dart
+`^3.12.2`. Full matrix and the Flutter internals code patches depend on:
+[docs/platform-compatibility.md](docs/platform-compatibility.md).
 
 | Area | State in v0.1.0-alpha.1 |
 |---|---|
@@ -336,7 +348,7 @@ Full breakdown: [docs/limitations.md](docs/limitations.md) · roadmap:
 | Server | Python 3.13, FastAPI, Uvicorn, SQLAlchemy 2, Alembic, PyJWT, `cryptography`, boto3 |
 | Database | PostgreSQL 17 (SQLite only for tests) |
 | File serving | nginx (local disk) or any S3-compatible bucket; Caddy for HTTPS in the single-server setup |
-| Client | Dart / Flutter package `ota_client` (`crypto`, `pointycastle`, `http`, `path_provider`) + an Android part in Java 17 |
+| Client | Dart / Flutter package `flutter_ota_system` (in `packages/ota_client`; `crypto`, `pointycastle`, `http`, `path_provider`) + an Android part in Java 17 |
 | Tooling | Python CLI `ota` (`httpx`, `bsdiff4`), Bash scripts, Docker Compose, GitHub Actions |
 
 ## Documentation
@@ -349,6 +361,7 @@ Everything is indexed in [docs/index.md](docs/index.md):
 | How-to | [Flutter integration](docs/flutter-integration.md) · [Releases and patches](docs/releases-and-patches.md) · [Rollouts](docs/rollouts.md) · [Operations](docs/operations.md) · [Troubleshooting](docs/troubleshooting.md) |
 | Reference | [API](docs/api-reference.md) · [CLI](docs/cli-reference.md) · [Configuration](docs/configuration.md) |
 | Explanation | [Why Flutter OTA System?](docs/why-flutter-ota-system.md) · [Concepts](docs/concepts.md) · [Architecture](docs/architecture.md) · [Security](docs/security.md) · [Limitations](docs/limitations.md) · [Roadmap](docs/roadmap/README.md) |
+| Security, privacy and policy | [Signing keys and trust model](docs/signing-key-management.md) · [Privacy and data handling](docs/privacy-and-data-handling.md) · [Platform compatibility](docs/platform-compatibility.md) · [Google Play](docs/policy/google-play.md) · [Apple App Store](docs/policy/apple-app-store.md) |
 
 ## Known limitations
 
@@ -361,6 +374,9 @@ Everything is indexed in [docs/index.md](docs/index.md):
   There are no iOS code patches.
 - Only Linux (development) and Android (app) are internally tested
   ([details](#platform-support--testing-status)).
+- Android code patches download and load native code (`libapp.so`): a significant Google Play
+  policy risk ([docs/policy/google-play.md](docs/policy/google-play.md)). No store approval is
+  claimed.
 - One shared admin API key; no users, roles, SSO or audit log.
 - Device registration is open, and there is no rate limiting. Patch files are public by hash, so
   never put secrets in patches.
@@ -377,8 +393,14 @@ More: [docs/limitations.md](docs/limitations.md). Known bugs: [docs/known-issues
 
 ## Security
 
-Read [docs/security.md](docs/security.md) before deploying anything. Report vulnerabilities
-privately as described in [SECURITY.md](SECURITY.md), **never in public issues**.
+Read [docs/security.md](docs/security.md) and
+[docs/signing-key-management.md](docs/signing-key-management.md) before deploying anything.
+Report vulnerabilities privately as described in [SECURITY.md](SECURITY.md), **never in public
+issues**.
+
+This documentation is provided for technical guidance and is not legal advice. Platform policies
+can change. Developers are responsible for independently reviewing the policies applicable to
+their applications and distribution channels.
 
 ## Contributing
 

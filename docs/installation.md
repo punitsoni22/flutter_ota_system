@@ -317,6 +317,12 @@ still be set with `--dart-define` if you use other values.
 The example app allows plain `http://` (`android:usesCleartextTraffic="true"` in its manifest).
 Your own production app should use HTTPS and must not keep that setting.
 
+> [!IMPORTANT]
+> This local setup is for evaluation. Before you distribute an app that uses Flutter OTA System,
+> read the [Google Play policy considerations](policy/google-play.md) (code patches load native
+> code), the [privacy and data handling](privacy-and-data-handling.md) inventory and the
+> [signing-key trust model](signing-key-management.md).
+
 ## 9. Try more cases (optional)
 
 Install the CLI first ([step 7](#7-install-the-ota-cli)). Make some patch files:

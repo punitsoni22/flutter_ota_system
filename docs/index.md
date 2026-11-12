@@ -6,8 +6,9 @@ the [README](../README.md) for an overview. The pages below are grouped by what 
 > [!NOTE]
 > **Testing status.** Flutter OTA System has been tested internally on a **Linux** development machine and
 > Docker backend, and with **Android** Flutter apps only (a small number of devices). iOS, macOS
-> and Windows are **not tested**. Code that may support a platform is not the same as a tested
-> platform. See
+> and Windows are **not tested**; the Flutter SDK supports Android only. Code that may support a
+> platform is not the same as a tested platform. Before distributing an app, read the
+> [Google Play policy considerations](policy/google-play.md). See
 > [Platform Support & Testing Status](../README.md#platform-support--testing-status) and
 > [limitations.md](limitations.md#platform-limitations).
 
@@ -22,7 +23,7 @@ the [README](../README.md) for an overview. The pages below are grouped by what 
 
 | Page | Task |
 |---|---|
-| [flutter-integration.md](flutter-integration.md) | Add `ota_client` to your Flutter app |
+| [flutter-integration.md](flutter-integration.md) | Add the Flutter SDK (`flutter_ota_system`) to your Flutter app |
 | [releases-and-patches.md](releases-and-patches.md) | Register a store release, build and publish patches |
 | [rollouts.md](rollouts.md) | Go from staging to 1% → 100%, roll back, revoke |
 | [operations.md](operations.md) | Deploy a server, monitor it, back it up, recover |
@@ -44,6 +45,11 @@ the [README](../README.md) for an overview. The pages below are grouped by what 
 | [concepts.md](concepts.md) | Releases, patches, compatibility, channels, rollouts, rollback, revocation |
 | [architecture.md](architecture.md) | Control plane, data plane and on-device runtime; flows and database |
 | [security.md](security.md) | Security model, implemented vs planned controls, threat model |
+| [signing-key-management.md](signing-key-management.md) | Signing keys and the trust model: verified limitations, rotation, compromise, future Key Vault |
+| [privacy-and-data-handling.md](privacy-and-data-handling.md) | Field-by-field inventory of what the SDK and server store, send and log |
+| [platform-compatibility.md](platform-compatibility.md) | Supported and tested platforms, Flutter versions, Flutter internals relied upon |
+| [policy/google-play.md](policy/google-play.md) | Google Play policy considerations for code patches (Device and Network Abuse) |
+| [policy/apple-app-store.md](policy/apple-app-store.md) | Apple App Store considerations (Guideline 2.5.2); no iOS support |
 | [limitations.md](limitations.md) | What is tested, experimental, planned or unsupported |
 | [known-issues.md](known-issues.md) | Known bugs, with priority and proposed fixes |
 | [roadmap/](roadmap/README.md) | Implemented, partial and planned work by phase |

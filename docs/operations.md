@@ -273,7 +273,7 @@ matches it.
 - [ ] Random 32+ character secrets; `OTA_ENV=production` (the API checks this)
 - [ ] HTTPS for the API and file server; no `usesCleartextTraffic` in apps
 - [ ] Signing key created once, backed up offline, readable only by the API
-- [ ] Apps ship with the production key **and** a backup key ([security.md](security.md#trusted-keys-in-apps-and-rotation))
+- [ ] Apps ship with the production key **and** a backup key ([signing-key-management.md](signing-key-management.md#rotation-today))
 - [ ] Admin access restricted at the network level; admin key shared with as few people as possible
 - [ ] Off-server backups, and a tested restore
 - [ ] Uptime monitoring on `/health/ready`
