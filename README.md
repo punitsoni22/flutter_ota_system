@@ -368,9 +368,10 @@ Everything is indexed in [docs/index.md](docs/index.md):
   key-rotation tooling.
 - Devices learn about patches, rollbacks and revocations only when the app checks.
 - No dashboards, alerts or automatic rollout pausing; no load tests.
-- The Android application ID and Java package use `dev.flutterota.*`. Ownership of the domain
-  `flutterota.dev` has **not** been confirmed, so these identifiers may change before a stable
-  release. Use your own application ID in your apps.
+- The Flutter SDK's Android code uses the Java package `io.github.punitsoni22.flutter_ota_system`.
+  The demo app (`example_app`) still uses the application ID `dev.flutterota.ota_example`;
+  ownership of `flutterota.dev` has **not** been confirmed. Use your own application ID in your
+  apps.
 
 More: [docs/limitations.md](docs/limitations.md). Known bugs: [docs/known-issues.md](docs/known-issues.md).
 

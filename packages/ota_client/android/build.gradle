@@ -1,12 +1,12 @@
-// Android side of ota_client: picks the patched libapp.so before the Flutter engine starts.
+// Android side of flutter_ota_system: picks the patched libapp.so before the Flutter engine starts.
 // Plain Java, so it builds with the host app's Android Gradle Plugin (8.x or 9.x) and no Kotlin setup.
-group = "dev.flutterota.ota_client"
+group = "io.github.punitsoni22.flutter_ota_system"
 version = "1.0"
 
 apply plugin: "com.android.library"
 
 android {
-    namespace = "dev.flutterota.ota_client"
+    namespace = "io.github.punitsoni22.flutter_ota_system"
     compileSdk = 36
 
     defaultConfig {

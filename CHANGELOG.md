@@ -31,6 +31,9 @@ All notable changes to this project are documented here. The format follows
   `OtaConfig.storageDir`, `platform` and `arch` were test-only and are removed. Protocol,
   patch-format, signature and native details (`UpdateCheckResponse`, `SignedFields`,
   `SignatureVerifier`, `NativeBootRuntime`, `NativeBootReport`) are no longer exported.
+- The SDK's Android Java package and namespace are now `io.github.punitsoni22.flutter_ota_system`
+  (was `dev.flutterota.ota_client`, whose domain ownership is unconfirmed). Plugin registration
+  is automatic; apps need no change. On-device file locations are unchanged.
 - `./flutter-ota-system.sh status` and the demo seed print the demo app's
   `OTA_APPLICATION_ID` for `example_app`.
 - **Breaking for some setups:** release builds must use `https://` (local `adb reverse` testing

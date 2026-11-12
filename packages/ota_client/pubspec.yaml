@@ -30,10 +30,14 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+  # Not used by the code and not shipped to apps. Every path_provider version allows
+  # platform 3.0.0 (via path_provider_platform_interface), which no longer compiles with
+  # Dart 3.12; this keeps `pub downgrade` testing of our own lower bounds meaningful.
+  platform: ^3.1.0
 
 flutter:
   plugin:
     platforms:
       android:
-        package: dev.flutterota.ota_client
+        package: io.github.punitsoni22.flutter_ota_system
         pluginClass: OtaClientPlugin
