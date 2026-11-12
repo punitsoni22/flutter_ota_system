@@ -1,0 +1,11 @@
+# Copyright 2026 The Punit Authors
+# SPDX-License-Identifier: Apache-2.0
+name: case_host_list_clean
+publish_to: none
+environment:
+  sdk: ^3.13.0
+dependencies:
+  clean_dep:
+    path: ../clean_dep
+  native_crypto:
+    path: ../native_crypto

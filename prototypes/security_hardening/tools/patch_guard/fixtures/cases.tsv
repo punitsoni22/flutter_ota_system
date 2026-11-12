@@ -17,3 +17,5 @@ dyn_no_such_method	case_dyn_no_such_method	reject	no_such_method
 dyn_reflection	case_dyn_reflection	reject	mirrors
 dyn_type_only	case_dyn_type_only	accept	-
 static_dispatch	case_static_dispatch	accept	-
+compile_error	case_compile_error	reject	analysis_error
+compile_error_part	case_compile_error_part	reject	analysis_error

@@ -1,0 +1,4 @@
+{
+  "internal": ["native_crypto"],
+  "all": ["flutter", "meta", "native_crypto", "sky_engine"]
+}

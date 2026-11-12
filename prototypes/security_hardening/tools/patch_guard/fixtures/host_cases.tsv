@@ -1,0 +1,11 @@
+# Copyright 2026 The Punit Authors
+# SPDX-License-Identifier: Apache-2.0
+# Cases run with --host-packages (scripts in tools/patch_guard/test/run_host_cases.sh).
+# case	module packages (declared)	host packages file (fixtures/hosts, - = legacy mode)	expected	expected rules
+undeclared_ffi	case_undeclared_ffi	host_packages.json	reject	ffi,undeclared_dependency,ffi_in_host
+undeclared_ffi_lock	case_undeclared_ffi	host_pubspec.lock	reject	ffi,undeclared_dependency,ffi_in_host
+undeclared_dyn	case_undeclared_dyn	host_packages.json	reject	dynamic_call,undeclared_dependency
+undeclared_clean	case_undeclared_clean	host_packages.json	reject	undeclared_dependency
+host_list_clean	case_host_list_clean,clean_dep	host_packages.json	accept	ffi_in_host
+declared_ffi_dep	case_undeclared_ffi,undeclared_native	host_packages.json	reject	ffi,ffi_in_host
+legacy_mode_hole	case_undeclared_ffi	-	accept	ffi_in_host

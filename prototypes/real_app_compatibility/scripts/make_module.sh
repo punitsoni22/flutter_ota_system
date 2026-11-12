@@ -70,9 +70,13 @@ PY
 if [[ -n ${GUARD:-} ]]; then
   snapshot "$GUARD" "$TOOLS/patch_guard.aot"
   read -r MODULE_PKGS ORIGINALS < <(python3 -I -c 'import json,sys; r=json.load(open(sys.argv[1])); print(",".join([r["module"], *r["renames"].values()]), ",".join(f"{v}={k}" for k, v in r["renames"].items()) or "-")' "$OUT.rename.json")
+  # Every package in the module's config that the host does not provide is scanned (and refused
+  # if not declared in module.yaml). Phase 3 baselines record host_packages.json; older ones only
+  # have the host's pubspec.lock.
+  HOST_PKGS="$BASE/host_packages.json"; [[ -f $HOST_PKGS ]] || HOST_PKGS="$BASE/pubspec.lock"
   "$DART_AOT" "$TOOLS/patch_guard.aot" --root "$OUT" --package-config "$OUT/$MODPKG/.dart_tool/package_config.json" \
-    --module-packages "$MODULE_PKGS" --original-names "${ORIGINALS/#-/}" --sdk "$SDK/bin/cache/dart-sdk" \
-    --json "$OUT.guard.json" || exit $?
+    --module-packages "$MODULE_PKGS" --host-packages "$HOST_PKGS" --original-names "${ORIGINALS/#-/}" \
+    --sdk "$SDK/bin/cache/dart-sdk" --json "$OUT.guard.json" || exit $?
 fi
 
 START=$(date +%s%N)

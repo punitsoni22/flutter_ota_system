@@ -49,10 +49,12 @@ These must be fixed in the production patch pipeline (milestone 4E).
    - It compares the diagnostic severity with `'ERROR'`, but the runtime value is `error`.
    - As a result, compile errors were reported as accepted.
    - `dart2bytecode` still caught them, but the guard check itself is dead and has no test case.
+   - **Fixed:** the guard now compares the analyzer's `Severity.error` enum value. Every compile error becomes an `analysis_error` finding (file and line), and the module is rejected. New fixture cases `compile_error` (error in the library) and `compile_error_part` (error in a `part` file) are rejected; the old guard accepted both.
 2. **`patch_guard` coverage hole.**
    - A dependency that is neither a host package nor listed in `external:` is compiled into the module, but it is not passed to the guard as a module package. So that dependency is **not scanned**.
    - `pkg_rename` also wrote an unpinned version constraint for it.
    - Fix: treat every package in the module that is not a host package as a module package, or refuse such dependencies.
+   - **Fixed:** the guard takes `--host-packages` (the baseline's `host_packages.json`, or the host's `pubspec.lock`), and `make_module.sh` passes it. Every package in the module's package config that is not a host package (`flutter` and `sky_engine` always count as host) is scanned, together with `--module-packages`. Such a package that the module reaches but that is not declared in `module.yaml` (`change:` or `external:`) is also rejected (`undeclared_dependency`). New fixture cases (`tools/patch_guard/fixtures/host_cases.tsv`, run with `tools/patch_guard/test/run_host_cases.sh`) show that FFI and a dynamic call inside an undeclared dependency are now rejected. Without `--host-packages`, the guard keeps the old behaviour.
 3. **Stale generated files are not detected.**
    - Changing a `@JsonKey` name without re-running build_runner passed every tool, so the patch would silently use the old JSON key.
    - Fix: regenerate in a clean copy and compare, or record input and output hashes. Then refuse the patch with clear instructions.
