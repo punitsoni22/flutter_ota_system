@@ -4,6 +4,9 @@
 import 'dart:convert';
 import 'dart:io';
 
+// Deprecated from Flutter 3.47 (replacement: package:material_ui), but kept so this demo also
+// builds with Flutter 3.44.9, the SDK's minimum supported version.
+// ignore: deprecated_member_use
 import 'package:flutter/material.dart';
 import 'package:flutter_ota_system/flutter_ota_system.dart';
 import 'package:package_info_plus/package_info_plus.dart';
