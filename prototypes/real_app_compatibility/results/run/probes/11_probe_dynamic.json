@@ -1,0 +1,30 @@
+{
+  "file": "11_probe_dynamic",
+  "name": "probe_dynamic",
+  "module_bytes": 3658,
+  "load_ms": 0.524,
+  "result": {
+    "dynamic getter on module class": 7,
+    "dynamic method on module class": 42,
+    "noSuchMethod on module class": "THREW NoSuchMethodError: NoSuchMethodError: Class 'Own' has no instance method 'missing'.\nReceiver: Instance of 'Own'\nTried calling: missing()",
+    "jsonDecode(s)['id'] (dynamic [] on a dart:core Map)": "THREW NoSuchMethodError: NoSuchMethodError: Class '_Map<String, dynamic>' has no instance method '[]' with matching arguments.\nReceiver: _Map len:1\nTried calling: [](\"id\")\nFound: [](Object?) => X1?",
+    "dynamic getter on host User (app_models: dynamically-callable)": "Asha",
+    "dynamic method on host User (app_models: dynamically-callable)": "{\"id\":\"u1\",\"name\":\"Asha\"}",
+    "dynamic getter on host AppConfig (app_core: NOT dynamically-callable)": 725185800,
+    "same, repeated 3x (reproducible?)": [
+      "706151494",
+      "860853860",
+      "183242539"
+    ],
+    "dynamic getter on host AppConfig.apiBase (NOT dynamically-callable)": "THREW NoSuchMethodError: NoSuchMethodError: Class 'AppConfig' has no instance getter 'apiBase'.\nReceiver: Instance of 'AppConfig'\nTried calling: apiBase",
+    "typed access for comparison": "prototype",
+    "dynamic call on module A object (other module)": 1
+  },
+  "status": "RAN",
+  "memory_after": {
+    "VmRSS_kb": 226656,
+    "VmHWM_kb": 226656,
+    "dart_current_rss": 232095744,
+    "dart_max_rss": 232095744
+  }
+}

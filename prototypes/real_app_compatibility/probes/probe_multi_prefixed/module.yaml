@@ -1,0 +1,10 @@
+# Copyright 2026 The Punit Authors
+# SPDX-License-Identifier: Apache-2.0
+# Scenario F: same content as probe_multi_dup (a library URI that module A also defines), compiled
+# with dart2bytecode --prefix-library-uris to test whether a per-module URI prefix avoids the clash.
+kind: probe
+number: 112
+suffix: multi
+flags: --prefix-library-uris=m112
+change:
+  - patchable_utils

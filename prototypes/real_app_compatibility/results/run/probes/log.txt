@@ -1,0 +1,43 @@
+[compat] START mode=home app=7c1d2e3f-4a5b-4c6d-8e7f-90a1b2c3d4e5 baseline=6a2a62a6-34c8-426a-9f57-4d99e02c3760
+[compat] host AppState token=1794480144441933 createdAt=2026-11-12 16:12:24.441935
+[compat] LAST_EXIT USER_REQUESTED(status=0, stop io.github.punitsoni22.compat_host due to from pid N|J:0)
+[compat] TEST_HOOK private patch store wiped
+[compat] NO_PATCH running baseline (AOT) code
+[compat] FIRST_FRAME main_to_first_frame_ms=146.0 boot_ms=112.8 module_load_ms=-
+[compat] RESULT boot
+[compat] RESULT ui_1
+[compat] PROBE 01_probe_lang loading
+[compat] PROBE 01_probe_lang RAN
+[compat] RESULT probe_01_probe_lang
+[compat] PROBE 02_probe_state loading
+[compat] host: hello from probe_state
+[compat] PROBE 02_probe_state RAN
+[compat] RESULT probe_02_probe_state
+[compat] PROBE 03_probe_ui loading
+[compat] PROBE 03_probe_ui RAN
+[compat] RESULT probe_03_probe_ui
+[compat] PROBE 04_probe_plugins loading
+[compat] PROBE 04_probe_plugins RAN
+[compat] RESULT probe_04_probe_plugins
+[compat] PROBE 05_probe_assets loading
+[compat] PROBE 05_probe_assets RAN
+[compat] RESULT probe_05_probe_assets
+[compat] PROBE 06_probe_multi_a loading
+[compat] PROBE 06_probe_multi_a RAN
+[compat] RESULT probe_06_probe_multi_a
+[compat] PROBE 07_probe_multi_a loading
+[compat] PROBE 07_probe_multi_a LOAD_ERROR
+[compat] RESULT probe_07_probe_multi_a
+[compat] PROBE 08_probe_multi_b loading
+[compat] PROBE 08_probe_multi_b RAN
+[compat] RESULT probe_08_probe_multi_b
+[compat] PROBE 09_probe_multi_dup loading
+[compat] PROBE 09_probe_multi_dup LOAD_ERROR
+[compat] RESULT probe_09_probe_multi_dup
+[compat] PROBE 10_probe_multi_prefixed loading
+[compat] PROBE 10_probe_multi_prefixed RAN
+[compat] RESULT probe_10_probe_multi_prefixed
+[compat] PROBE 11_probe_dynamic loading
+[compat] PROBE 11_probe_dynamic RAN
+[compat] RESULT probe_11_probe_dynamic
+[compat] PROBES_DONE

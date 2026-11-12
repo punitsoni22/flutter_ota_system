@@ -1,0 +1,67 @@
+{
+  "route_stack_top": "detail (patch 2)",
+  "texts": [
+    "Home",
+    "Welcome (strings from patch v2)",
+    "Shop (config from patch v2)",
+    "logo 8x2",
+    "User: Asha",
+    "Featured: Product price: ₹399",
+    "catalog slot: patch #2 patch_v2 (catalog v3 (patch 2) / product_service v2 (patch 2))",
+    "profile slot: patch #2 patch_v2 (profile v2 (patch 2))",
+    "Open catalog >",
+    "Open profile >",
+    "Open feed >",
+    "Catalogue",
+    "Catalogue (catalog v3 (patch 2) / product_service v2 (patch 2))",
+    "Festival sale: 20% off books",
+    "live ticks: 5 (done)",
+    "Flutter Handbook | Product price: ₹399 | ref b78f57",
+    "  p1 stock: in stock",
+    "USB-C Cable | Product price: ₹299 | ref c5fd96",
+    "  p2 stock: in stock",
+    "Green Tea | Product price: ₹199 | ref e4fbe6",
+    "  p3 stock: low stock",
+    "cart: 0",
+    "Detail (patch 2): Flutter Handbook",
+    "Product price: ₹399",
+    "was ₹499, cart now 1"
+  ],
+  "tap_targets": {
+    "nav-catalog": [
+      360,
+      464
+    ],
+    "nav-profile": [
+      360,
+      527
+    ],
+    "nav-feed": [
+      360,
+      589
+    ],
+    "row-p1": [
+      315,
+      327
+    ],
+    "row-p2": [
+      289,
+      412
+    ],
+    "row-p3": [
+      275,
+      497
+    ]
+  },
+  "slots": {
+    "catalog": "patch #2 patch_v2",
+    "profile": "patch #2 patch_v2"
+  },
+  "cart": 1,
+  "memory": {
+    "VmRSS_kb": 218244,
+    "VmHWM_kb": 219760,
+    "dart_current_rss": 223481856,
+    "dart_max_rss": 225034240
+  }
+}

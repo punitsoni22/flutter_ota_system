@@ -1,0 +1,9 @@
+[compat] START mode=home app=7c1d2e3f-4a5b-4c6d-8e7f-90a1b2c3d4e5 baseline=6a2a62a6-34c8-426a-9f57-4d99e02c3760
+[compat] host AppState token=1794480236193252 createdAt=2026-11-12 16:13:56.193254
+[compat] LAST_EXIT USER_REQUESTED(status=0, stop io.github.punitsoni22.compat_host due to from pid N|J:0)
+[compat] MODULE_LOAD_FAILED patch #21 crash_throw: StateError: Bad state: crash-test: entry point throws during initialisation
+[compat] FAILURE_COUNT patch=0052f30574ec count=2/2 reason="module load/entry failed"
+[compat] ROLLED_BACK patch=0052f30574ec blacklisted after 2 failed starts; baseline will run
+[compat] FIRST_FRAME main_to_first_frame_ms=216.6 boot_ms=172.7 module_load_ms=-
+[compat] RESULT boot
+[compat] RESULT ui_1

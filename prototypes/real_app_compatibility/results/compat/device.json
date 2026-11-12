@@ -1,0 +1,22 @@
+{
+  "model": "CPH2375",
+  "android": "13",
+  "sdk": "33",
+  "abi": "arm64-v8a",
+  "baseline": {
+    "app_id": "7c1d2e3f-4a5b-4c6d-8e7f-90a1b2c3d4e5",
+    "baseline_id": "6a2a62a6-34c8-426a-9f57-4d99e02c3760",
+    "runtime": "proto-dbc-flutter-3.47.9",
+    "interface": "full",
+    "engine_commit": "89c39edfdfae2949f6806e4a315c0c08522238b7",
+    "libflutter_sha256": "5f67f76fb8614b7bf7ae15eeb22840d52f285896210895df22cf8a44aac19ddf",
+    "libapp_sha256": "b027bcdcabe41929599201b85a8c69609fe1f7c0234ca0bc911bdb2d58ef138e",
+    "apk_sha256": "6b70abd8600a33367314a5b46ae431ad5e2d4015af5b02a2a73e1165f09fbba3",
+    "link_dill_sha256": "235406a17c58545b1992686e92fb97130d7966fb45b815f7f3abfd04ec1ac185",
+    "apk_bytes": 35403951,
+    "libapp_bytes": 21693320,
+    "build_seconds": 75
+  },
+  "started": "2026-11-12 16:21:15",
+  "apk_installed": "6b70abd8600a33367314a5b46ae431ad5e2d4015af5b02a2a73e1165f09fbba3 2026-11-12 16:10:26"
+}

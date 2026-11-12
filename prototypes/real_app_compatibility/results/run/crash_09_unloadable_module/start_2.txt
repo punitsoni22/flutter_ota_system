@@ -1,0 +1,6 @@
+[compat] START mode=home app=7c1d2e3f-4a5b-4c6d-8e7f-90a1b2c3d4e5 baseline=6a2a62a6-34c8-426a-9f57-4d99e02c3760
+[compat] host AppState token=1794480405543715 createdAt=2026-11-12 16:16:45.543717
+[compat] LAST_EXIT CRASH_NATIVE(status=6, crash|J:0)
+[compat] UNCONFIRMED_START patch=bd9c358d6042 previous exit: CRASH_NATIVE(status=6, crash|J:0)
+[compat] FAILURE_COUNT patch=bd9c358d6042 count=1/2 reason="start not confirmed (CRASH_NATIVE)"
+F/libc    (27311): Fatal signal 6 (SIGABRT), code -1 (SI_QUEUE) in tid 27311 (i22.compat_host), pid N (i22.compat_host)

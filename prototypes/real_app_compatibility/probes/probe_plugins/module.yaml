@@ -1,0 +1,8 @@
+# Copyright 2026 The Punit Authors
+# SPDX-License-Identifier: Apache-2.0
+# Part 9: plugins. Host wrapper, host plugin Dart API from bytecode, and a renamed COPY of the plugin's Dart wrapper at a newer version (2.5.5 -> 2.5.6) over the same installed native code.
+kind: probe
+number: 105
+suffix: plugins
+external:
+  shared_preferences: 2.5.6

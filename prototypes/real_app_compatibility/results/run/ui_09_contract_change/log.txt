@@ -1,0 +1,11 @@
+[compat] START mode=home app=7c1d2e3f-4a5b-4c6d-8e7f-90a1b2c3d4e5 baseline=6a2a62a6-34c8-426a-9f57-4d99e02c3760
+[compat] host AppState token=1794480111552055 createdAt=2026-11-12 16:11:51.552057
+[compat] LAST_EXIT USER_REQUESTED(status=0, stop io.github.punitsoni22.compat_host due to from pid N|J:0)
+[compat] TEST_HOOK private patch store wiped
+[compat] INSTALLED patch #5 patch_v5 (8470 bytes)
+[compat] LOADED patch #5 patch_v5 in 1.5 ms (8139 bytes bytecode)
+[compat] APPLIED catalog:IGNORED(CatalogFeatureImpl is not CatalogFeature)
+[compat] FIRST_FRAME main_to_first_frame_ms=160.6 boot_ms=128.8 module_load_ms=1.5
+[compat] RESULT boot
+[compat] CONFIRMED patch=20f2fb3adf39 start confirmed
+[compat] RESULT ui_1

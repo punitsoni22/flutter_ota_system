@@ -1,0 +1,31 @@
+{
+  "file": "05_probe_assets",
+  "name": "probe_assets",
+  "module_bytes": 4481,
+  "load_ms": 0.494,
+  "result": {
+    "read existing APK asset (rootBundle.loadString)": {
+      "title": "Shop (bundled config v1)",
+      "featured": "p1"
+    },
+    "decode existing APK image": "4x4",
+    "read missing asset": "THREW FlutterError: Unable to load asset: \"assets/not_in_apk.json\".",
+    "AssetManifest lists APK assets only": [
+      "assets/config.json",
+      "assets/logo.png",
+      "assets/strings_en.json"
+    ],
+    "decode image bytes embedded in the module": "2x3",
+    "register a font at runtime (FontLoader, bytes from APK font)": "loaded",
+    "runtime asset override via host overlay map": [
+      "assets/probe_added.json"
+    ]
+  },
+  "status": "RAN",
+  "memory_after": {
+    "VmRSS_kb": 222020,
+    "VmHWM_kb": 222020,
+    "dart_current_rss": 227348480,
+    "dart_max_rss": 227348480
+  }
+}

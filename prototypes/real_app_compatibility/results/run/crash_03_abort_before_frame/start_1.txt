@@ -1,0 +1,7 @@
+[compat] START mode=home app=7c1d2e3f-4a5b-4c6d-8e7f-90a1b2c3d4e5 baseline=6a2a62a6-34c8-426a-9f57-4d99e02c3760
+[compat] host AppState token=1794480267272920 createdAt=2026-11-12 16:14:27.272922
+[compat] LAST_EXIT USER_REQUESTED(status=0, stop io.github.punitsoni22.compat_host due to from pid N|J:0)
+[compat] TEST_HOOK private patch store wiped
+[compat] INSTALLED patch #22 crash_abort_before_frame (3351 bytes)
+[compat] TEST_CRASH aborting process (before first frame)
+F/libc    (25425): Fatal signal 6 (SIGABRT), code 0 (SI_USER) in tid 25425 (i22.compat_host), pid N (i22.compat_host)

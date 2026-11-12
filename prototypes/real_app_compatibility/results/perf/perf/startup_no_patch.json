@@ -1,0 +1,45 @@
+{
+  "am_start_total_ms": [
+    437,
+    445,
+    435,
+    432,
+    433,
+    430,
+    438,
+    426,
+    443,
+    434
+  ],
+  "main_to_first_frame_ms": [
+    144.625,
+    143.246,
+    146.097,
+    142.925,
+    144.607,
+    146.691,
+    142.557,
+    142.973,
+    143.563,
+    143.988
+  ],
+  "module_load_ms": [
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null
+  ],
+  "total_pss_kb": 117202,
+  "app_memory": {
+    "VmRSS_kb": 205504,
+    "VmHWM_kb": 205504,
+    "dart_current_rss": 210436096,
+    "dart_max_rss": 210436096
+  }
+}

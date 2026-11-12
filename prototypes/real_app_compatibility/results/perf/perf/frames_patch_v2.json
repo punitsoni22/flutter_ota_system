@@ -1,0 +1,32 @@
+{
+  "slot": "patch #2 patch_v2",
+  "refresh_hz": 60.000003814697266,
+  "budget_ms": 16.666665607028605,
+  "frames": 1089,
+  "build_ms": {
+    "count": 1089,
+    "avg": 2.890931129476586,
+    "median": 2.862,
+    "p90": 3.903,
+    "p99": 4.547,
+    "worst": 15.601
+  },
+  "raster_ms": {
+    "count": 1089,
+    "avg": 3.271830119375572,
+    "median": 3.16,
+    "p90": 4.021,
+    "p99": 5.158,
+    "worst": 12.99
+  },
+  "total_span_ms": {
+    "count": 1089,
+    "avg": 7.640605142332414,
+    "median": 7.653,
+    "p90": 9.159,
+    "p99": 11.032,
+    "worst": 27.842
+  },
+  "missed_budget_frames": 0,
+  "missed_16ms_frames": 0
+}

@@ -1,7 +1,10 @@
 # ADR 0001 (architecture series): Bytecode patch engine and developer experience
 
 - **Status:** Proposed. The Phase 1 prototype succeeded on a physical Android 13 arm64 device
-  ([phase-1-prototype-report.md](../phase-1-prototype-report.md)). Not approved for implementation.
+  ([phase-1-prototype-report.md](../phase-1-prototype-report.md)). Phase 2 tested real-app
+  compatibility on the same device ([phase-2-compatibility-report.md](../phase-2-compatibility-report.md),
+  [bytecode-compatibility-matrix.md](../bytecode-compatibility-matrix.md)); its findings are added
+  below and labelled **[Verified, Phase 2]**. Not approved for implementation.
 - **Date:** 2026-11-12
 - **Scope:** replaces only patch **generation** and patch **execution**. Backend, database,
   device management, releases, channels, rollouts, signing, admin dashboard, artifact storage,
@@ -111,6 +114,20 @@ A patch therefore carries a **renamed copy** of each changed package (e.g. `pack
 generated indirection. Granularity: **whole package** (not function). State in the AOT copy is
 not shared with the patched copy **[Assumption]**.
 
+**Phase 2 update [Verified, Phase 2].**
+- A renamed copy has its own types and state: a copied model is not the host type (cast throws
+  `TypeError`), and a copied singleton or event bus is separate.
+- Therefore contracts, models, state and services stay in the host (**host-owned contract**).
+  Features are reached through slots typed by host interfaces. A module copies only the changed
+  `PATCHABLE` packages and **references** the unchanged ones, keeping one identity and one state.
+- If an unchanged package the module reaches depends on a changed one, that package must be in the
+  patch too (closure rule).
+- Import rewriting uses the analyzer's parser and touches only directive URIs.
+- Modules cannot import other modules (one `--import-dill`). The same library URI in two modules is
+  refused by the VM.
+- The indirection was written by hand in the prototype; generating it for arbitrary apps remains
+  open **[Assumption]**.
+
 ## 10. Application bootstrap
 
 The CLI generates the bootstrap so the developer's `main.dart` stays one call:
@@ -149,6 +166,15 @@ integrity and identity only (no signature).
 Unchanged server rollback/revoke and client bad-patch lists. On device: a boot-attempt marker; a
 start that does not confirm drops the patch; any load error falls back to the baseline AOT code
 (verified on a physical device in Phase 1; crash-loop guard with a crashing module not yet tested).
+
+**Phase 2 update [Verified, Phase 2].**
+- Real crashes were tested: throws during initialisation, SIGABRT before and after the first frame,
+  exceptions in `build()`, damaged files, and a new store release over an active patch.
+- The runtime counts failures per patch, blacklists after 2, falls back to AOT in-process for
+  errors before confirmation, and uses Android `ApplicationExitInfo` (API 30+) so that a user
+  force-stop is not counted. No crash loop was observed.
+- **The VM aborts the process on malformed bytecode** that passes the file checks. Signature
+  verification **before** loading (section 12) is therefore mandatory, not optional.
 
 ## 14. Self-hosted backend integration
 
@@ -199,14 +225,16 @@ version in the app's `pubspec.lock`.
 
 ## 16. Supported and unsupported changes
 
-| Change | Phase 1 status |
-|---|---|
-| Pure-Dart code in the app's own packages | Supported by design; one package verified on a physical device in Phase 1 |
-| Pure-Dart dependencies | Supported by design (renamed copies) **[Assumption]** |
-| Flutter framework | Not patchable (host code) **[Verified, flutter_patcher source]** |
-| Native plugins, Kotlin/Java, FFI | Not patchable; modules cannot make FFI calls in AOT runtimes **[Verified, source]** |
-| Manifest, Gradle, native assets, Flutter SDK upgrade | Need a store release |
-| Assets | Not in Phase 1 (flutter_patcher needs an engine patch) |
+| Change | Phase 1 status | Phase 2 finding |
+|---|---|---|
+| Pure-Dart code in the app's own packages | Supported by design; one package verified on a physical device in Phase 1 | Supported for packages behind host contracts; several interdependent packages and transitive changes verified **[Verified, Phase 2]** |
+| Pure-Dart dependencies | Supported by design (renamed copies) **[Assumption]** | Supported with restrictions: `crypto` 3.0.6 → 3.0.8 as a renamed copy; the host interface must cover what it extends **[Verified, Phase 2]** |
+| Host contracts, shared models, shared state | (not covered) | Need a store release (a copy has new identities and state) **[Verified, Phase 2]** |
+| Flutter framework | Not patchable (host code) **[Verified, flutter_patcher source]** | Unchanged; patched widgets can use the framework if its libraries are in the interface (size cost: `libapp.so` 5.0 → 21.7 MB for the test app) **[Verified, Phase 2]** |
+| Native plugins, Kotlin/Java, FFI | Not patchable; modules cannot make FFI calls in AOT runtimes **[Verified, source]** | A plugin's **Dart** wrapper can be patched if its channel API is unchanged. FFI in a module compiles and passes validation but **aborts the process**: the generator must refuse `dart:ffi` **[Verified, Phase 2]** |
+| Manifest, Gradle, native assets, Flutter SDK upgrade | Need a store release | Unchanged |
+| Assets | Not in Phase 1 (flutter_patcher needs an engine patch) | Without an engine change, a host-owned overlay `AssetBundle` serves module-carried assets to all `DefaultAssetBundle` users; `rootBundle` callers, pubspec fonts and removals need a store release **[Verified, Phase 2]** |
+| Dynamic calls in module code | (not covered) | Refused by default; when allowed, an unexposed host member returned a wrong value: must stay forbidden **[Verified, Phase 2]** |
 
 The CLI rejects unsupported changes at build time (compile-time validation against the dynamic
 interface; package classification).
@@ -234,10 +262,23 @@ claimed. Not legal advice.
 ## 20. Risks and unresolved questions
 
 - Dart dynamic modules are experimental and may change or be removed upstream.
-- Interpreted code is slower; performance limits are unmeasured.
+- Interpreted code is slower; performance limits are unmeasured. *Phase 2 measured on one phone:*
+  - interpreted CPU-bound kernels were 1.5–165× slower than AOT;
+  - an active 15.5 KB patch added about 19 ms (4 %) to cold start;
+  - scrolling with interpreted row builders showed no frame regression.
+
+  **[Verified, Phase 2]**
+- The dynamic interface is fixed at store-build time; it limits later patches and costs app size
+  (+16.6 MB `libapp.so` for the full Flutter interface in the test app) **[Verified, Phase 2]**.
+- The VM loader aborts on malformed bytecode; FFI and (allowed) dynamic calls are unsafe in modules
+  **[Verified, Phase 2]**.
+- Modules embed absolute source paths of the build machine; the generator must strip them
+  **[Verified, Phase 2]**.
 - Rewriting a real app so patchable packages are called through indirections, at scale (many
   packages, classes crossing the boundary, global state) is unproven.
-- Engine bytecode-reader bugs (e.g. factory constructors) may need our own VM fixes.
+- Engine bytecode-reader bugs (e.g. factory constructors) may need our own VM fixes. *Phase 2:* 49
+  language features, including factory and redirecting factory constructors, gave the AOT result
+  when interpreted; no reader bug was found in those cases **[Verified, Phase 2]**.
 - Toolchain bundle distribution, signing and reproducibility need infrastructure.
 - iOS is out of scope; a separate engineering and Apple policy review would be needed.
 

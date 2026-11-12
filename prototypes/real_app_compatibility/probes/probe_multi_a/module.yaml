@@ -1,0 +1,9 @@
+# Copyright 2026 The Punit Authors
+# SPDX-License-Identifier: Apache-2.0
+# Scenario F (module A): publishes objects through the host PatchRegistry; also carries a renamed copy patchable_utils_multi.
+kind: probe
+number: 108
+suffix: multi
+change:
+  - patchable_utils
+allow_stale: true

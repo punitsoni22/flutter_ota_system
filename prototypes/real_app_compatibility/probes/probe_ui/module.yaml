@@ -1,0 +1,6 @@
+# Copyright 2026 The Punit Authors
+# SPDX-License-Identifier: Apache-2.0
+# Part 8: Flutter framework types used from bytecode in a live route.
+kind: probe
+number: 104
+suffix: ui

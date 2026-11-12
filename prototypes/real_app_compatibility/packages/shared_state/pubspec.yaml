@@ -1,0 +1,11 @@
+# Copyright 2026 The Punit Authors
+# SPDX-License-Identifier: Apache-2.0
+name: shared_state
+description: Shared application state, event bus and statics (host-owned).
+publish_to: none
+version: 1.0.0
+environment:
+  sdk: ^3.13.0
+dependencies:
+  app_models:
+    path: ../app_models

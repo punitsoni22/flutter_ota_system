@@ -1,0 +1,379 @@
+{
+  "dynamic_modules": {
+    "kind": "internal",
+    "deps": [],
+    "used_by": [],
+    "class": "REQUIRES_FULL_RELEASE",
+    "reasons": [
+      "patch runtime (module loader) of the host"
+    ]
+  },
+  "product_service": {
+    "kind": "internal",
+    "deps": [
+      "app_models",
+      "collection",
+      "patchable_utils"
+    ],
+    "used_by": [
+      "feature_catalog"
+    ],
+    "class": "PATCHABLE",
+    "reasons": [
+      "pure Dart"
+    ]
+  },
+  "shared_state": {
+    "kind": "internal",
+    "deps": [
+      "app_models"
+    ],
+    "used_by": [
+      "feature_catalog",
+      "user_service"
+    ],
+    "class": "REQUIRES_FULL_RELEASE",
+    "reasons": [
+      "host-owned contract/model/state package: a copy has new class identities and separate state"
+    ]
+  },
+  "patchable_utils": {
+    "kind": "internal",
+    "deps": [],
+    "used_by": [
+      "product_service"
+    ],
+    "class": "PATCHABLE",
+    "reasons": [
+      "pure Dart"
+    ]
+  },
+  "app_core": {
+    "kind": "internal",
+    "deps": [
+      "app_models",
+      "flutter"
+    ],
+    "used_by": [
+      "feature_catalog",
+      "feature_profile"
+    ],
+    "class": "REQUIRES_FULL_RELEASE",
+    "reasons": [
+      "host-owned contract/model/state package: a copy has new class identities and separate state"
+    ]
+  },
+  "feature_catalog": {
+    "kind": "internal",
+    "deps": [
+      "app_core",
+      "app_models",
+      "crypto",
+      "flutter",
+      "product_service",
+      "shared_state"
+    ],
+    "used_by": [],
+    "class": "PATCHABLE",
+    "reasons": [
+      "pure Dart"
+    ]
+  },
+  "app_models": {
+    "kind": "internal",
+    "deps": [
+      "meta"
+    ],
+    "used_by": [
+      "app_core",
+      "compat_suites",
+      "feature_catalog",
+      "feature_profile",
+      "product_service",
+      "shared_state",
+      "user_service"
+    ],
+    "class": "REQUIRES_FULL_RELEASE",
+    "reasons": [
+      "host-owned contract/model/state package: a copy has new class identities and separate state"
+    ]
+  },
+  "user_service": {
+    "kind": "internal",
+    "deps": [
+      "app_models",
+      "shared_state"
+    ],
+    "used_by": [
+      "feature_profile"
+    ],
+    "class": "PATCHABLE",
+    "reasons": [
+      "pure Dart"
+    ]
+  },
+  "compat_suites": {
+    "kind": "internal",
+    "deps": [
+      "app_models",
+      "flutter"
+    ],
+    "used_by": [],
+    "class": "PATCHABLE",
+    "reasons": [
+      "pure Dart"
+    ]
+  },
+  "feature_profile": {
+    "kind": "internal",
+    "deps": [
+      "app_core",
+      "app_models",
+      "flutter",
+      "user_service"
+    ],
+    "used_by": [],
+    "class": "PATCHABLE",
+    "reasons": [
+      "pure Dart"
+    ]
+  },
+  "args": {
+    "kind": "hosted",
+    "version": "2.7.0",
+    "class": "PATCHABLE",
+    "reasons": [
+      "pure Dart"
+    ]
+  },
+  "characters": {
+    "kind": "hosted",
+    "version": "1.4.1",
+    "class": "PATCHABLE",
+    "reasons": [
+      "pure Dart"
+    ]
+  },
+  "collection": {
+    "kind": "hosted",
+    "version": "1.19.1",
+    "class": "PATCHABLE",
+    "reasons": [
+      "pure Dart"
+    ]
+  },
+  "crypto": {
+    "kind": "hosted",
+    "version": "3.0.6",
+    "class": "PATCHABLE",
+    "reasons": [
+      "pure Dart"
+    ]
+  },
+  "ffi": {
+    "kind": "hosted",
+    "version": "2.2.0",
+    "class": "NOT_PATCHABLE",
+    "reasons": [
+      "imports dart:ffi (FFI calls are not supported in interpreted bytecode; see Phase 2 FFI probe)"
+    ]
+  },
+  "file": {
+    "kind": "hosted",
+    "version": "7.0.1",
+    "class": "PATCHABLE",
+    "reasons": [
+      "pure Dart"
+    ]
+  },
+  "jni": {
+    "kind": "hosted",
+    "version": "1.1.2",
+    "class": "NOT_PATCHABLE",
+    "reasons": [
+      "imports dart:ffi (FFI calls are not supported in interpreted bytecode; see Phase 2 FFI probe)"
+    ]
+  },
+  "jni_util": {
+    "kind": "hosted",
+    "version": "1.0.0",
+    "class": "PATCHABLE",
+    "reasons": [
+      "pure Dart"
+    ]
+  },
+  "material_color_utilities": {
+    "kind": "hosted",
+    "version": "0.13.0",
+    "class": "PATCHABLE",
+    "reasons": [
+      "pure Dart"
+    ]
+  },
+  "meta": {
+    "kind": "hosted",
+    "version": "1.18.3",
+    "class": "PATCHABLE",
+    "reasons": [
+      "pure Dart"
+    ]
+  },
+  "package_config": {
+    "kind": "hosted",
+    "version": "3.0.0",
+    "class": "PATCHABLE",
+    "reasons": [
+      "pure Dart"
+    ]
+  },
+  "path": {
+    "kind": "hosted",
+    "version": "1.9.1",
+    "class": "PATCHABLE",
+    "reasons": [
+      "pure Dart"
+    ]
+  },
+  "path_provider_linux": {
+    "kind": "hosted",
+    "version": "2.2.2",
+    "class": "NOT_PATCHABLE",
+    "reasons": [
+      "imports dart:ffi (FFI calls are not supported in interpreted bytecode; see Phase 2 FFI probe)"
+    ]
+  },
+  "path_provider_platform_interface": {
+    "kind": "hosted",
+    "version": "2.1.3",
+    "class": "PATCHABLE",
+    "reasons": [
+      "pure Dart"
+    ]
+  },
+  "path_provider_windows": {
+    "kind": "hosted",
+    "version": "2.3.0",
+    "class": "NOT_PATCHABLE",
+    "reasons": [
+      "imports dart:ffi (FFI calls are not supported in interpreted bytecode; see Phase 2 FFI probe)"
+    ]
+  },
+  "platform": {
+    "kind": "hosted",
+    "version": "3.2.0",
+    "class": "NOT_PATCHABLE",
+    "reasons": [
+      "web-only package (unconditional dart:js_interop/ui_web/html import): not compiled for Android"
+    ]
+  },
+  "plugin_platform_interface": {
+    "kind": "hosted",
+    "version": "2.1.8",
+    "class": "PATCHABLE",
+    "reasons": [
+      "pure Dart"
+    ]
+  },
+  "shared_preferences": {
+    "kind": "hosted",
+    "version": "2.5.5",
+    "class": "PATCHABLE_WITH_RESTRICTIONS",
+    "reasons": [
+      "Flutter plugin / native code (flutter.plugin): only the Dart side can change, the platform channel API must stay the same; native changes need a full release"
+    ]
+  },
+  "shared_preferences_android": {
+    "kind": "hosted",
+    "version": "2.5.5",
+    "class": "PATCHABLE_WITH_RESTRICTIONS",
+    "reasons": [
+      "Flutter plugin / native code (flutter.plugin, android): only the Dart side can change, the platform channel API must stay the same; native changes need a full release"
+    ]
+  },
+  "shared_preferences_foundation": {
+    "kind": "hosted",
+    "version": "2.5.7",
+    "class": "PATCHABLE_WITH_RESTRICTIONS",
+    "reasons": [
+      "Flutter plugin / native code (flutter.plugin): only the Dart side can change, the platform channel API must stay the same; native changes need a full release"
+    ]
+  },
+  "shared_preferences_linux": {
+    "kind": "hosted",
+    "version": "2.4.1",
+    "class": "PATCHABLE_WITH_RESTRICTIONS",
+    "reasons": [
+      "Flutter plugin / native code (flutter.plugin): only the Dart side can change, the platform channel API must stay the same; native changes need a full release"
+    ]
+  },
+  "shared_preferences_platform_interface": {
+    "kind": "hosted",
+    "version": "2.4.2",
+    "class": "PATCHABLE",
+    "reasons": [
+      "pure Dart"
+    ]
+  },
+  "shared_preferences_web": {
+    "kind": "hosted",
+    "version": "2.4.3",
+    "class": "PATCHABLE_WITH_RESTRICTIONS",
+    "reasons": [
+      "Flutter plugin / native code (flutter.plugin): only the Dart side can change, the platform channel API must stay the same; native changes need a full release"
+    ]
+  },
+  "shared_preferences_windows": {
+    "kind": "hosted",
+    "version": "2.4.1",
+    "class": "PATCHABLE_WITH_RESTRICTIONS",
+    "reasons": [
+      "Flutter plugin / native code (flutter.plugin): only the Dart side can change, the platform channel API must stay the same; native changes need a full release"
+    ]
+  },
+  "typed_data": {
+    "kind": "hosted",
+    "version": "1.4.0",
+    "class": "PATCHABLE",
+    "reasons": [
+      "pure Dart"
+    ]
+  },
+  "vector_math": {
+    "kind": "hosted",
+    "version": "2.4.0",
+    "class": "PATCHABLE",
+    "reasons": [
+      "pure Dart"
+    ]
+  },
+  "web": {
+    "kind": "hosted",
+    "version": "1.1.2",
+    "class": "NOT_PATCHABLE",
+    "reasons": [
+      "web-only package (unconditional dart:js_interop/ui_web/html import): not compiled for Android"
+    ]
+  },
+  "xdg_directories": {
+    "kind": "hosted",
+    "version": "1.1.0",
+    "class": "PATCHABLE",
+    "reasons": [
+      "pure Dart"
+    ]
+  },
+  "flutter": {
+    "kind": "sdk",
+    "class": "REQUIRES_FULL_RELEASE",
+    "reasons": [
+      "SDK package"
+    ]
+  },
+  "sky_engine": {
+    "kind": "sdk",
+    "class": "REQUIRES_FULL_RELEASE",
+    "reasons": [
+      "SDK package"
+    ]
+  }
+}

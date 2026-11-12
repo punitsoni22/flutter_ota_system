@@ -1,0 +1,20 @@
+{
+  "file": "06_probe_multi_a",
+  "name": "probe_multi_a",
+  "module_bytes": 3257,
+  "load_ms": 0.426,
+  "result": {
+    "registered": [
+      "a.greeter",
+      "a.counter",
+      "a.fn"
+    ]
+  },
+  "status": "RAN",
+  "memory_after": {
+    "VmRSS_kb": 222136,
+    "VmHWM_kb": 222136,
+    "dart_current_rss": 227467264,
+    "dart_max_rss": 227467264
+  }
+}

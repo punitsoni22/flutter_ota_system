@@ -1,0 +1,36 @@
+{
+  "file": "03_probe_ui",
+  "name": "probe_ui",
+  "module_bytes": 13614,
+  "load_ms": 2.89,
+  "result": {
+    "host Navigator reachable (NavigatorState)": "NavigatorState",
+    "State.initState": true,
+    "BuildContext.mounted": true,
+    "MediaQuery size > 0": true,
+    "Directionality": "ltr",
+    "LayoutBuilder constraints": true,
+    "CustomPainter.paint called": true,
+    "AnimationController completed, ticks": 18,
+    "Navigator.push/pop result": "popped-with-result",
+    "postFrameCallback": true,
+    "StreamBuilder saw": [
+      "3"
+    ],
+    "FutureBuilder states": [
+      "waiting:null",
+      "done:loaded",
+      "waiting:loaded",
+      "done:loaded"
+    ],
+    "StatefulBuilder/StateSetter taps": 2,
+    "build() calls": 2
+  },
+  "status": "RAN",
+  "memory_after": {
+    "VmRSS_kb": 219952,
+    "VmHWM_kb": 219968,
+    "dart_current_rss": 225230848,
+    "dart_max_rss": 225247232
+  }
+}

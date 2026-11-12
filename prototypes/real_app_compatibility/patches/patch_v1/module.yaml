@@ -1,0 +1,9 @@
+# Copyright 2026 The Punit Authors
+# SPDX-License-Identifier: Apache-2.0
+# Scenario A + C: only feature_catalog changes; it keeps using the host's (unchanged) app_models,
+# shared_state, app_core and product_service.
+kind: patch
+number: 1
+suffix: patch1
+change:
+  - feature_catalog

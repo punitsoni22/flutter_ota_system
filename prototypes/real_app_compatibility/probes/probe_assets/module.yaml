@@ -1,0 +1,6 @@
+# Copyright 2026 The Punit Authors
+# SPDX-License-Identifier: Apache-2.0
+# Part 10: assets from patched code (APK assets, module-embedded bytes, fonts, manifest).
+kind: probe
+number: 107
+suffix: assets

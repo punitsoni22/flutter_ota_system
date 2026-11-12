@@ -1,0 +1,16 @@
+{
+  "file": "10_probe_multi_prefixed",
+  "name": "probe_multi_prefixed",
+  "module_bytes": 2524,
+  "load_ms": 0.401,
+  "result": {
+    "formatPrice": "₹123"
+  },
+  "status": "RAN",
+  "memory_after": {
+    "VmRSS_kb": 226656,
+    "VmHWM_kb": 226656,
+    "dart_current_rss": 232095744,
+    "dart_max_rss": 232095744
+  }
+}

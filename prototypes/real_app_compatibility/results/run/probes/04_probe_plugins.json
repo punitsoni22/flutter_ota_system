@@ -1,0 +1,22 @@
+{
+  "file": "04_probe_plugins",
+  "name": "probe_plugins",
+  "module_bytes": 18887,
+  "load_ms": 12.487,
+  "result": {
+    "host wrapper (KeyValueStore) write+read": "host-wrapper-1794480147628",
+    "host plugin Dart API (AOT) called from bytecode": "host-wrapper-1794480147628",
+    "COPY of plugin Dart wrapper (2.5.6) reads host-written value": "host-wrapper-1794480147628",
+    "COPY writes, host wrapper reads (same native store)": "copy-1794480147628",
+    "COPY: SharedPreferencesAsync API": "async-1794480147628",
+    "raw MethodChannel to host native code": "reason=10",
+    "MethodChannel to a channel with no native handler": "THREW MissingPluginException: MissingPluginException(No implementation found for method x on channel compat/does_not_exist)"
+  },
+  "status": "RAN",
+  "memory_after": {
+    "VmRSS_kb": 221440,
+    "VmHWM_kb": 221440,
+    "dart_current_rss": 226754560,
+    "dart_max_rss": 226754560
+  }
+}

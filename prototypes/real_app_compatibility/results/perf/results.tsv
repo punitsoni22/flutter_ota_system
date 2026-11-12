@@ -1,0 +1,8 @@
+id	part	status	title	detail
+perf:startup_no_patch	11	PASS	cold start x10 (startup_no_patch)	am start TotalTime median 434.5 ms; PSS 117202 kB
+perf:startup_patch_v2	11	PASS	cold start x10 (startup_patch_v2)	am start TotalTime median 454.0 ms; PSS 117443 kB
+perf:startup_after_rollback	11	PASS	cold start x10 after rollback	median 442.5 ms
+perf:frames_no_patch	11	PASS	scrolling frame timings (frames_no_patch)	{"frames": 1056, "missed_budget_frames": 1, "refresh_hz": 60.000003814697266}
+perf:frames_patch_v2	11	PASS	scrolling frame timings (frames_patch_v2)	{"frames": 1089, "missed_budget_frames": 0, "refresh_hz": 60.000003814697266}
+perf:bench	11	PASS	execution benchmarks AOT vs interpreted	
+apk_unchanged	-	PASS	installed APK is byte-identical to the baseline APK after all tests (patches never modify it)	6b70abd8600a33367314a5b46ae431ad5e2d4015af5b02a2a73e1165f09fbba3

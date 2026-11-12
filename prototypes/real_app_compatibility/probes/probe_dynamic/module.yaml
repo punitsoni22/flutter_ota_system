@@ -1,0 +1,8 @@
+# Copyright 2026 The Punit Authors
+# SPDX-License-Identifier: Apache-2.0
+# Dynamic calls are a compile error in modules by default. This probe opts in to measure what
+# works at runtime. Runs after probe_multi_a (uses its registry object).
+kind: probe
+number: 111
+suffix: dynamic
+flags: --allow-dynamic-calls-in-dynamic-modules --extra-selectors-allowed-in-dynamic-calls=value,twice,missing,[],environment,apiBase,increment

@@ -1,0 +1,41 @@
+{
+  "route_stack_top": "/",
+  "texts": [
+    "Home",
+    "Welcome (bundled strings v1)",
+    "Shop (bundled config v1)",
+    "logo 4x4",
+    "User: Asha",
+    "Featured: Product price: ₹499",
+    "catalog slot: aot (catalog v1 / product_service v1)",
+    "profile slot: aot (profile v1)",
+    "Open catalog >",
+    "Open profile >",
+    "Open feed >"
+  ],
+  "tap_targets": {
+    "nav-catalog": [
+      360,
+      435
+    ],
+    "nav-profile": [
+      360,
+      498
+    ],
+    "nav-feed": [
+      360,
+      561
+    ]
+  },
+  "slots": {
+    "catalog": "aot",
+    "profile": "aot"
+  },
+  "cart": 0,
+  "memory": {
+    "VmRSS_kb": 217932,
+    "VmHWM_kb": 217932,
+    "dart_current_rss": 223162368,
+    "dart_max_rss": 223162368
+  }
+}

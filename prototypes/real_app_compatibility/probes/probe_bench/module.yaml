@@ -1,0 +1,8 @@
+# Copyright 2026 The Punit Authors
+# SPDX-License-Identifier: Apache-2.0
+# Part 11: identical benchmark kernels, AOT (host) vs interpreted (copy compat_suites_bench).
+kind: probe
+number: 102
+suffix: bench
+change:
+  - compat_suites

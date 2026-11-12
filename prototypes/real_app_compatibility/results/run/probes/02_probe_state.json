@@ -1,0 +1,60 @@
+{
+  "file": "02_probe_state",
+  "name": "probe_state",
+  "module_bytes": 14238,
+  "load_ms": 2.699,
+  "result": {
+    "6.1 host user runtimeType": "User",
+    "6.1 host user is User (host type)": true,
+    "6.1 module-created User has the host runtimeType": true,
+    "6.1 field access": "u1/Asha",
+    "6.1 mutation seen by host AOT code (UserService.currentUser)": "Asha K",
+    "6.1 equality (==, hashCode)": true,
+    "6.1 cast Object -> User": "u1",
+    "6.1 serialization round trip": true,
+    "6.1 host enum identity": true,
+    "6.1 const Product canonicalised across boundary": "identical=true equal=true",
+    "6.1 COPY: copied User is host User?": false,
+    "6.1 COPY: copied User == host user": false,
+    "6.1 COPY: cast copied User to host User": "THREW _TypeError: type 'User' is not a subtype of type 'User' in type cast where\n  User is from package:app_models_state/src/user.dart\n  User is from package:app_models/src/user.dart\n",
+    "6.1 COPY: same JSON": true,
+    "6.1 COPY: copied enum == host enum": false,
+    "6.2 singleton identical across boundary": true,
+    "6.2 host token / createdAt (compare with host START log)": "1794480144441933 2026-11-12 16:12:24.441935",
+    "6.2 top-level var write visible (host list written by AOT listener)": "globalLog grew by 1: host saw from-module",
+    "6.2 static field": 3,
+    "6.2 COPY: singleton is a different object": false,
+    "6.2 COPY: separate state (currentUser in copy)": "null",
+    "6.2 COPY: separate top-level var": "copy=100 host=0",
+    "6.2 COPY: different token": false,
+    "6.3 DI container: same instance, host services visible": "4 prototype",
+    "6.3 logger shared": 1,
+    "6.3 auth service: login from module updates host session + host AOT listener": "User(u7, Neha) / host saw login:u7",
+    "6.3 event bus: module listener receives host event": [
+      "logout"
+    ],
+    "6.3 COPY: event on the copied bus is NOT seen by host": "host entries mentioning copy-event: 0",
+    "6.3 module registers a service the host can resolve": "module greets host",
+    "6.4 callback (module closure called by AOT)": 21,
+    "6.4 Future from host": 8,
+    "6.4 Stream from host": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "6.4 host exception caught in module": "caught HostError(from host)",
+    "6.4 module exception caught by host": "host caught StateError: Bad state: module error",
+    "6.4 generics reified across boundary": "true String/String ModuleThing/ModuleThing",
+    "6.4 interface implemented in module, called by host": "module greets host",
+    "6.4 module Future awaited by host": "host awaited module future",
+    "6.4 module async* stream consumed by host": "host summed 6"
+  },
+  "status": "RAN",
+  "memory_after": {
+    "VmRSS_kb": 217036,
+    "VmHWM_kb": 218744,
+    "dart_current_rss": 222244864,
+    "dart_max_rss": 223993856
+  }
+}
