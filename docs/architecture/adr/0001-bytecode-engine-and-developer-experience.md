@@ -4,7 +4,9 @@
   ([phase-1-prototype-report.md](../phase-1-prototype-report.md)). Phase 2 tested real-app
   compatibility on the same device ([phase-2-compatibility-report.md](../phase-2-compatibility-report.md),
   [bytecode-compatibility-matrix.md](../bytecode-compatibility-matrix.md)); its findings are added
-  below and labelled **[Verified, Phase 2]**. Not approved for implementation.
+  below and labelled **[Verified, Phase 2]**. Phase 3 security hardening
+  ([phase-3-security-report.md](../phase-3-security-report.md)) adds findings labelled
+  **[Verified, Phase 3]**; one blocker remains open (section 12). Not approved for implementation.
 - **Date:** 2026-11-12
 - **Scope:** replaces only patch **generation** and patch **execution**. Backend, database,
   device management, releases, channels, rollouts, signing, admin dashboard, artifact storage,
@@ -161,6 +163,37 @@ base hash = baseline fingerprint, payload = module archive, result = module. Add
 re-verification before every load and sign `patch_id` (protocol v2). The Phase 1 prototype checks
 integrity and identity only (no signature).
 
+**Phase 3 update [Verified, Phase 3]**
+([bytecode-validation-architecture.md](../bytecode-validation-architecture.md)).
+
+*Authenticity and integrity are not safety.* Signature, hash and compatibility checks prove who
+signed and that nothing changed. A correctly signed module can still contain bytecode that aborts
+the Dart VM.
+
+**Decision [Decision, Phase 3] for the production design:**
+- A **canonical signed manifest** (prototype container v2). It binds the app id, store release,
+  `libapp.so` SHA-256 (hashed on the device), patch id and sequence, runtime versions, the
+  dynamic-interface hash, the module hash and size, and the package list. Signatures are
+  domain-separated, and signed revocation lists are supported.
+- Every patch passes the full pipeline before any module loader sees it.
+- The stored patch is re-verified at every start.
+- A **new** patch is first loaded in a separate Android process (`:otaverify`) before it is
+  activated. The Dart VM has no validate-only API, reads every declaration and function body at
+  load time, and aborts the process on malformed input (`FATAL`; release builds have no
+  `ASSERT`s). A malformed module therefore kills only the verifier.
+- On the phone, the app survived all 65 corpus files; 47 of 53 signed malformed modules were
+  refused.
+- Build time: `patch_guard` refuses FFI (the upstream validator accepts it) and dynamic calls
+  before `dart2bytecode` runs.
+
+**Open blocker:** the VM does not verify bytecode **instructions**. Two signed modules with
+changed opcodes passed the isolated load. They could crash the app when the changed code runs,
+until the crash guard rolls back (at most 2 starts). A complete fix needs an instruction verifier
+in the engine's bytecode reader, or exclusive reproducible compilation of every signed module.
+Both are open.
+
+**Key separation (proposal, not implemented):** the signing key must leave the server (developer
+or CI signing), with an offline root key for rotation.
 ## 13. Rollback
 
 Unchanged server rollback/revoke and client bad-patch lists. On device: a boot-attempt marker; a
@@ -176,6 +209,15 @@ start that does not confirm drops the patch; any load error falls back to the ba
 - **The VM aborts the process on malformed bytecode** that passes the file checks. Signature
   verification **before** loading (section 12) is therefore mandatory, not optional.
 
+**Phase 3 update [Verified, Phase 3].**
+- Activation is atomic: staging, then rename, then state, each with fsync, and leftovers are
+  removed at start-up.
+- The **previous confirmed patch is kept**, and restored when the active patch is blacklisted,
+  revoked or found damaged, instead of falling back to the baseline.
+- Explicit rollback still returns to the baseline.
+- Tested on the phone: a process killed during activation, a torn stored patch, a signed
+  revocation, and crashes before and after the first frame. Each state-dependent crash passed the
+  isolated load and was rolled back after 2 failed starts.
 ## 14. Self-hosted backend integration
 
 New `artifact_format` (e.g. `dbc-android-v1`) and `runtime_abi` per toolchain build; baseline stored
@@ -234,7 +276,8 @@ version in the app's `pubspec.lock`.
 | Native plugins, Kotlin/Java, FFI | Not patchable; modules cannot make FFI calls in AOT runtimes **[Verified, source]** | A plugin's **Dart** wrapper can be patched if its channel API is unchanged. FFI in a module compiles and passes validation but **aborts the process**: the generator must refuse `dart:ffi` **[Verified, Phase 2]** |
 | Manifest, Gradle, native assets, Flutter SDK upgrade | Need a store release | Unchanged |
 | Assets | Not in Phase 1 (flutter_patcher needs an engine patch) | Without an engine change, a host-owned overlay `AssetBundle` serves module-carried assets to all `DefaultAssetBundle` users; `rootBundle` callers, pubspec fonts and removals need a store release **[Verified, Phase 2]** |
-| Dynamic calls in module code | (not covered) | Refused by default; when allowed, an unexposed host member returned a wrong value: must stay forbidden **[Verified, Phase 2]** |
+| Dynamic calls in module code | (not covered) | Refused by default; when allowed, an unexposed host member returned a wrong value: must stay forbidden **[Verified, Phase 2]**. Phase 3: `patch_guard` also refuses them, plus `noSuchMethod` (accepted upstream) and `dart:mirrors` **[Verified, Phase 3]** |
+| FFI in module code | (not covered) | Phase 3: refused before bytecode generation, including transitive, conditional, re-exported and generated cases; a signed FFI module that bypassed the guard crashed only the isolated verifier **[Verified, Phase 3]** |
 
 The CLI rejects unsupported changes at build time (compile-time validation against the dynamic
 interface; package classification).
@@ -274,6 +317,11 @@ claimed. Not legal advice.
   **[Verified, Phase 2]**.
 - Modules embed absolute source paths of the build machine; the generator must strip them
   **[Verified, Phase 2]**.
+- A correctly signed module with invalid instructions can still crash the app at run time; no
+  pre-activation check in the current Dart VM detects it (open blocker, section 12)
+  **[Verified, Phase 3]**.
+- The patch-signing key is held by the server and one admin key controls uploads; key
+  separation, rotation and approvals are not implemented **[Verified, Phase 3 audit]**.
 - Rewriting a real app so patchable packages are called through indirections, at scale (many
   packages, classes crossing the boundary, global state) is unproven.
 - Engine bytecode-reader bugs (e.g. factory constructors) may need our own VM fixes. *Phase 2:* 49

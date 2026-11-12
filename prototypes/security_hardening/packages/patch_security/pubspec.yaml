@@ -1,0 +1,15 @@
+# Copyright 2026 The Punit Authors
+# SPDX-License-Identifier: Apache-2.0
+# Phase 3 prototype: patch container v2, canonical manifest, ES256 verification and the ordered
+# verification pipeline. Pure Dart: the same code runs in the Android host and in Linux tests.
+name: patch_security
+publish_to: none
+version: 0.0.0
+environment:
+  sdk: ^3.13.0
+dependencies:
+  # Same libraries as the production SDK (packages/ota_client): already reviewed.
+  crypto: 3.0.6
+  pointycastle: 4.0.0
+dev_dependencies:
+  test: any

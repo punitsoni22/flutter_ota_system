@@ -1,0 +1,19 @@
+case	expected	guard	guard_rules	validator	validator_first_error	result
+ffi_direct	reject	reject	ffi	compiles	-	PASS
+ffi_transitive	reject	reject	ffi	rejects	Error: Method not found: 'catalogTitle'.	PASS
+ffi_conditional	reject	reject	ffi	compiles	-	PASS
+ffi_export_in_module	reject	reject	ffi	compiles	-	PASS
+ffi_reexport_from_host	reject	reject	ffi,ffi_in_host	compiles	-	PASS
+ffi_generated	reject	reject	ffi	compiles	-	PASS
+ffi_alias	reject	reject	ffi	compiles	-	PASS
+ffi_host_only	accept	accept	ffi_in_host	compiles	-	PASS
+ffi_false_positive	accept	accept	-	compiles	-	PASS
+dyn_method	reject	reject	dynamic_call	rejects	Error: Dynamic calls are not allowed in dynamic modules by default as they increase risks of runt	PASS
+dyn_function	reject	reject	dynamic_call	rejects	Error: Dynamic calls are not allowed in dynamic modules by default as they increase risks of runt	PASS
+dyn_member	reject	reject	dynamic_call	rejects	Error: Dynamic calls are not allowed in dynamic modules by default as they increase risks of runt	PASS
+dyn_index_and_operator	reject	reject	dynamic_call	rejects	Error: Dynamic calls are not allowed in dynamic modules by default as they increase risks of runt	PASS
+dyn_iteration	accept	accept	-	compiles	-	PASS
+dyn_no_such_method	reject	reject	no_such_method	compiles	-	PASS
+dyn_reflection	reject	reject	mirrors	rejects	Error: Dart library 'dart:mirrors' is not available on this platform.	PASS
+dyn_type_only	accept	accept	-	compiles	-	PASS
+static_dispatch	accept	accept	-	compiles	-	PASS

@@ -1,0 +1,6 @@
+# Copyright 2026 The Punit Authors
+# SPDX-License-Identifier: Apache-2.0
+name: native_crypto
+publish_to: none
+environment:
+  sdk: ^3.13.0

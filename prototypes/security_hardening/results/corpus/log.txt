@@ -1,0 +1,139 @@
+[compat] START mode=home app=7c1d2e3f-4a5b-4c6d-8e7f-90a1b2c3d4e5 release=41322cab-cad4-45e2-bd14-586d7cc9ac33 pid=N
+[compat] host AppState token=1794485223340930
+[compat] LAST_EXIT USER_REQUESTED(status=0, stop io.github.punitsoni22.compat_host due to from pid N|J:0)
+[compat] TEST_HOOK private patch store wiped
+[compat] NO_PATCH running baseline (AOT) code
+[compat] FIRST_FRAME main_to_first_frame_ms=175.3 boot_ms=144.1
+[compat] RESULT boot
+[compat] RESULT ui_1
+[compat] VERIFY_ONLY A00_control_valid crypto=OK isolated=OK 
+[compat] RESULT verify_results
+[compat] VERIFY_ONLY A01_untrusted_key crypto=REJECTED isolated=NOT_RUN unknown_key
+[compat] RESULT verify_results
+[compat] VERIFY_ONLY A02_wrong_app crypto=REJECTED isolated=NOT_RUN wrong_app
+[compat] RESULT verify_results
+[compat] VERIFY_ONLY A03_wrong_baseline crypto=REJECTED isolated=NOT_RUN wrong_baseline
+[compat] RESULT verify_results
+[compat] VERIFY_ONLY A04_wrong_engine crypto=REJECTED isolated=NOT_RUN wrong_runtime
+[compat] RESULT verify_results
+[compat] VERIFY_ONLY A05_expired crypto=REJECTED isolated=NOT_RUN expired
+[compat] RESULT verify_results
+[compat] VERIFY_ONLY A06_second_trusted_key crypto=OK isolated=OK 
+[compat] RESULT verify_results
+[compat] VERIFY_ONLY A07_tampered_module crypto=REJECTED isolated=NOT_RUN bad_hash
+[compat] RESULT verify_results
+[compat] VERIFY_ONLY A08_tampered_manifest crypto=REJECTED isolated=NOT_RUN bad_signature
+[compat] RESULT verify_results
+[compat] VERIFY_ONLY A09_truncated_download crypto=REJECTED isolated=NOT_RUN wrong_size
+[compat] RESULT verify_results
+[compat] VERIFY_ONLY A10_trusted_id_wrong_key crypto=REJECTED isolated=NOT_RUN bad_signature
+[compat] RESULT verify_results
+[compat] VERIFY_ONLY B01_truncated_half crypto=OK isolated=CRASHED 
+[compat] RESULT verify_results
+[compat] VERIFY_ONLY B02_truncated_header crypto=OK isolated=CRASHED 
+[compat] RESULT verify_results
+[compat] VERIFY_ONLY B03_truncated_magic_only crypto=OK isolated=CRASHED 
+[compat] RESULT verify_results
+[compat] VERIFY_ONLY B04_truncated_last_byte crypto=OK isolated=OK 
+[compat] RESULT verify_results
+[compat] VERIFY_ONLY B05_truncated_at_codes crypto=OK isolated=CRASHED 
+[compat] RESULT verify_results
+[compat] VERIFY_ONLY B06_bad_magic crypto=OK isolated=CRASHED 
+[compat] RESULT verify_results
+[compat] VERIFY_ONLY B07_bad_version_next crypto=OK isolated=CRASHED 
+[compat] RESULT verify_results
+[compat] VERIFY_ONLY B08_bad_version_zero crypto=OK isolated=CRASHED 
+[compat] RESULT verify_results
+[compat] VERIFY_ONLY B09_strings_offset_past_end crypto=OK isolated=CRASHED 
+[compat] RESULT verify_results
+[compat] VERIFY_ONLY B10_objects_offset_zero crypto=OK isolated=CRASHED 
+[compat] RESULT verify_results
+[compat] VERIFY_ONLY B11_codes_offset_huge crypto=OK isolated=CRASHED 
+[compat] RESULT verify_results
+[compat] VERIFY_ONLY B12_libraries_count_huge crypto=OK isolated=CRASHED 
+[compat] RESULT verify_results
+[compat] VERIFY_ONLY B13_libraries_count_zero crypto=OK isolated=CRASHED 
+[compat] RESULT verify_results
+[compat] VERIFY_ONLY B14_main_offset_zero crypto=OK isolated=REJECTED 
+[compat] RESULT verify_results
+[compat] VERIFY_ONLY B15_all_sections_empty crypto=OK isolated=REJECTED 
+[compat] RESULT verify_results
+[compat] VERIFY_ONLY B16_unknown_host_library crypto=OK isolated=CRASHED 
+[compat] RESULT verify_results
+[compat] VERIFY_ONLY B17_unknown_host_class crypto=OK isolated=OK 
+[compat] RESULT verify_results
+[compat] VERIFY_ONLY B18_unknown_host_member crypto=OK isolated=CRASHED 
+[compat] RESULT verify_results
+[compat] VERIFY_ONLY B19_module_library_collides crypto=OK isolated=CRASHED 
+[compat] RESULT verify_results
+[compat] VERIFY_ONLY B20_strings_garbled crypto=OK isolated=CRASHED 
+[compat] RESULT verify_results
+[compat] VERIFY_ONLY B21_objects_flip_0 crypto=OK isolated=CRASHED 
+[compat] RESULT verify_results
+[compat] VERIFY_ONLY B22_objects_flip_1 crypto=OK isolated=CRASHED 
+[compat] RESULT verify_results
+[compat] VERIFY_ONLY B23_objects_flip_2 crypto=OK isolated=CRASHED 
+[compat] RESULT verify_results
+[compat] VERIFY_ONLY B24_codes_opcode_0 crypto=OK isolated=CRASHED 
+[compat] RESULT verify_results
+[compat] VERIFY_ONLY B25_codes_opcode_1 crypto=OK isolated=OK 
+[compat] RESULT verify_results
+[compat] VERIFY_ONLY B26_codes_opcode_2 crypto=OK isolated=CRASHED 
+[compat] RESULT verify_results
+[compat] VERIFY_ONLY B27_codes_opcode_3 crypto=OK isolated=OK 
+[compat] RESULT verify_results
+[compat] VERIFY_ONLY B28_codes_all_ff crypto=OK isolated=CRASHED 
+[compat] RESULT verify_results
+[compat] VERIFY_ONLY B29_libraries_garbled crypto=OK isolated=CRASHED 
+[compat] RESULT verify_results
+[compat] VERIFY_ONLY B30_classes_garbled crypto=OK isolated=CRASHED 
+[compat] RESULT verify_results
+[compat] VERIFY_ONLY B31_members_garbled crypto=OK isolated=CRASHED 
+[compat] RESULT verify_results
+[compat] VERIFY_ONLY B32_appended_garbage crypto=OK isolated=OK 
+[compat] RESULT verify_results
+[compat] VERIFY_ONLY B33_duplicated_module crypto=OK isolated=OK 
+[compat] RESULT verify_results
+[compat] VERIFY_ONLY B34_random_00_flip crypto=OK isolated=CRASHED 
+[compat] RESULT verify_results
+[compat] VERIFY_ONLY B35_random_01_insert crypto=OK isolated=CRASHED 
+[compat] RESULT verify_results
+[compat] VERIFY_ONLY B36_random_02_delete crypto=OK isolated=CRASHED 
+[compat] RESULT verify_results
+[compat] VERIFY_ONLY B37_random_03_flip crypto=OK isolated=CRASHED 
+[compat] RESULT verify_results
+[compat] VERIFY_ONLY B38_random_04_flip crypto=OK isolated=CRASHED 
+[compat] RESULT verify_results
+[compat] VERIFY_ONLY B39_random_05_flip crypto=OK isolated=CRASHED 
+[compat] RESULT verify_results
+[compat] VERIFY_ONLY B40_random_06_delete crypto=OK isolated=CRASHED 
+[compat] RESULT verify_results
+[compat] VERIFY_ONLY B41_random_07_insert crypto=OK isolated=CRASHED 
+[compat] RESULT verify_results
+[compat] VERIFY_ONLY B42_random_08_flip crypto=OK isolated=CRASHED 
+[compat] RESULT verify_results
+[compat] VERIFY_ONLY B43_random_09_insert crypto=OK isolated=CRASHED 
+[compat] RESULT verify_results
+[compat] VERIFY_ONLY B44_random_10_flip crypto=OK isolated=CRASHED 
+[compat] RESULT verify_results
+[compat] VERIFY_ONLY B45_random_11_flip crypto=OK isolated=CRASHED 
+[compat] RESULT verify_results
+[compat] VERIFY_ONLY B46_random_12_flip crypto=OK isolated=CRASHED 
+[compat] RESULT verify_results
+[compat] VERIFY_ONLY B47_random_13_delete crypto=OK isolated=CRASHED 
+[compat] RESULT verify_results
+[compat] VERIFY_ONLY B48_random_14_delete crypto=OK isolated=CRASHED 
+[compat] RESULT verify_results
+[compat] VERIFY_ONLY B49_random_15_overwrite crypto=OK isolated=CRASHED 
+[compat] RESULT verify_results
+[compat] VERIFY_ONLY B50_random_16_flip crypto=OK isolated=CRASHED 
+[compat] RESULT verify_results
+[compat] VERIFY_ONLY B51_random_17_insert crypto=OK isolated=CRASHED 
+[compat] RESULT verify_results
+[compat] VERIFY_ONLY B52_random_18_overwrite crypto=OK isolated=CRASHED 
+[compat] RESULT verify_results
+[compat] VERIFY_ONLY B53_random_19_overwrite crypto=OK isolated=CRASHED 
+[compat] RESULT verify_results
+[compat] VERIFY_ONLY C01_signed_ffi_module crypto=OK isolated=CRASHED 
+[compat] RESULT verify_results
+[compat] VERIFY_ONLY_DONE 65 files, main process pid=N alive
