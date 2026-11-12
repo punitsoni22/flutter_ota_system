@@ -7,5 +7,12 @@
             android:authorities="${applicationId}.ota_boot"
             android:exported="false"
             android:initOrder="1000" />
+        <!-- Bytecode runtime (Phase 4): loads a NEW patch once in this separate process before it
+             is activated. Same UID as the app (Android isolated processes cannot start Flutter
+             in release builds). Not exported: only this app can bind it. -->
+        <service
+            android:name="io.github.punitsoni22.flutter_ota_system.FlutterOtaVerifierService"
+            android:process=":flutter_ota_verify"
+            android:exported="false" />
     </application>
 </manifest>

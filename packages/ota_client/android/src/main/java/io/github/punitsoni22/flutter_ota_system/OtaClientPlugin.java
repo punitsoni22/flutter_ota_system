@@ -28,9 +28,13 @@ import io.flutter.plugin.common.MethodChannel;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-/** Channel "ota_client/aot": the boot report, and a copy of the store libapp.so to patch. */
+/**
+ * Channel "ota_client/aot": the boot report, and a copy of the store libapp.so to patch. Also
+ * registers channel "flutter_ota/runtime" of the bytecode runtime ({@link OtaRuntimeChannel}).
+ */
 public final class OtaClientPlugin implements FlutterPlugin, MethodChannel.MethodCallHandler {
   private MethodChannel channel;
+  private OtaRuntimeChannel runtime;
   private Context context;
   private final ExecutorService io = Executors.newSingleThreadExecutor();
   private final Handler main = new Handler(Looper.getMainLooper());
@@ -41,11 +45,15 @@ public final class OtaClientPlugin implements FlutterPlugin, MethodChannel.Metho
     OtaBoot.prepare(context); // no-op when the provider already ran
     channel = new MethodChannel(binding.getBinaryMessenger(), "ota_client/aot");
     channel.setMethodCallHandler(this);
+    // Bytecode runtime (FlutterOta): channel "flutter_ota/runtime".
+    runtime = new OtaRuntimeChannel(context, binding.getBinaryMessenger());
   }
 
   @Override
   public void onDetachedFromEngine(FlutterPluginBinding binding) {
     channel.setMethodCallHandler(null);
+    if (runtime != null) runtime.dispose();
+    runtime = null;
   }
 
   @Override
