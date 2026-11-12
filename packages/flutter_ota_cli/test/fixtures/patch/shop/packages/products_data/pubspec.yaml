@@ -1,0 +1,6 @@
+# Copyright 2026 The Punit Authors
+# SPDX-License-Identifier: Apache-2.0
+name: products_data
+version: 1.0.0
+environment:
+  sdk: ^3.8.0

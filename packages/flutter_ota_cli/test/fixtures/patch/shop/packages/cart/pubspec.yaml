@@ -1,0 +1,13 @@
+# Copyright 2026 The Punit Authors
+# SPDX-License-Identifier: Apache-2.0
+name: cart
+version: 0.3.0
+environment:
+  sdk: ^3.8.0
+dependencies:
+  core:
+    path: ../core
+  analytics:
+    path: ../analytics
+  products:
+    path: ../products

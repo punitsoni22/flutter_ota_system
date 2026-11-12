@@ -19,7 +19,7 @@ import '../toolchain/records.dart';
 ///     <lab>/flutter/<gen_snapshot path>          our interpreter-enabled gen_snapshot
 ///     <lab>/flutter/<gen_snapshot path>.stock    the stock one it replaced
 ///     <lab>/mirror/download.flutter.io/...       Maven mirror with our libflutter jar + POMs
-///     <lab>/work/tools/{dart2bytecode,pkg_rename,patch_guard}.aot
+///     <lab>/work/tools/{dart2bytecode,pkg_rename,patch_guard,bc_verify}.aot
 ///     <lab>/work/toolchain.json                  content-hash toolchain record
 class OverlayBuildResult {
   OverlayBuildResult(this.path, this.sha256, this.size, this.unpackedSize, this.toolchainId);
@@ -30,6 +30,9 @@ class OverlayBuildResult {
   final String toolchainId;
 }
 
+/// Files of the `dynamic_modules` package shipped in an overlay under `packages/dynamic_modules/`.
+const dynamicModulesPackageFiles = ['pubspec.yaml', 'lib/dynamic_modules.dart'];
+
 Future<OverlayBuildResult> buildOverlay({
   required String labDir,
   required String outFile,
@@ -37,6 +40,7 @@ Future<OverlayBuildResult> buildOverlay({
   required String engineCommit,
   required String flutterVersion,
   required Map<String, String> notices,
+  String? dynamicModulesDir,
   void Function(String)? log,
 }) async {
   final stage = Directory('$outFile.stage');
@@ -75,6 +79,13 @@ Future<OverlayBuildResult> buildOverlay({
   for (final t in toolSnapshots) {
     await add(p.join(labDir, 'work', 'tools', '$t.aot'), 'tools/$t.aot');
   }
+  // The `dynamic_modules` package (Dart only lets a package with this name call the VM's module
+  // loader). `flutter_ota release` copies it into the app; see docs/releasing-with-flutter-ota.md.
+  if (dynamicModulesDir != null) {
+    for (final rel in dynamicModulesPackageFiles) {
+      await add(p.join(dynamicModulesDir, rel), '$dynamicModulesToolchainDir/$rel');
+    }
+  }
   for (final n in notices.entries) {
     await add(n.value, 'NOTICES/${n.key}');
   }
@@ -91,7 +102,7 @@ It contains:
     The Flutter engine and the Dart SDK are BSD-3-Clause licensed: see LICENSE.flutter,
     LICENSE.dart and the third-party notices in LICENSE.engine-third-party.
   - The official, unmodified flutter_embedding_release jar and POMs (BSD-3-Clause, Flutter).
-  - Tool snapshots: dart2bytecode (Dart SDK, BSD-3-Clause), pkg_rename and patch_guard
+  - Tool snapshots: dart2bytecode (Dart SDK, BSD-3-Clause), pkg_rename, patch_guard and bc_verify
     (Flutter OTA System, Apache-2.0, see LICENSE.flutter-ota-system and NOTICE.flutter-ota-system).
 ''');
   files['NOTICES/README.txt'] = {'sha256': await sha256OfFile(readme.path), 'size': readme.lengthSync()};

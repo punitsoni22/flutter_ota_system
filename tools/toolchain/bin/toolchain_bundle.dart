@@ -119,6 +119,7 @@ Future<void> _build(ArgResults c) async {
     engineCommit: engine,
     flutterVersion: flutter,
     notices: notices,
+    dynamicModulesDir: p.join(repo, 'prototypes', 'real_app_compatibility', 'packages', 'dynamic_modules'),
     log: stdout.writeln,
   );
   final entry = indexEntry(

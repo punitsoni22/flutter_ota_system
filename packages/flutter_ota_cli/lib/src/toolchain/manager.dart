@@ -45,6 +45,13 @@ class ResolvedToolchain {
   String get toolchainJson => p.join(root, 'toolchain.json');
   Map<String, String> get toolSnapshotPaths => {for (final t in toolSnapshots) t: p.join(root, 'tools', '$t.aot')};
 
+  /// The reference bytecode verifier snapshot (`tools/bc_verify.aot`).
+  String get bcVerifySnapshot => p.join(root, 'tools', 'bc_verify.aot');
+
+  /// The unchanged `dynamic_modules` package shipped by the overlay (the only package the pinned
+  /// Dart lets call the VM's module loader). Missing in overlays built before milestone 4D.
+  String get dynamicModulesPackage => p.join(root, dynamicModulesToolchainDir);
+
   /// Environment for `flutter build` with this toolchain.
   Map<String, String> get buildEnvironment => {
     'FLUTTER_STORAGE_BASE_URL': 'file://$mirrorDir',
@@ -52,6 +59,9 @@ class ResolvedToolchain {
     'FLUTTER_SUPPRESS_ANALYTICS': 'true',
   };
 }
+
+/// Environment variable of the developer/owner escape hatch (see [ToolchainManager.resolve]).
+const toolchainDirEnv = 'FLUTTER_OTA_TOOLCHAIN_DIR';
 
 /// One doctor result line.
 class DoctorCheck {
@@ -160,14 +170,27 @@ class ToolchainManager {
 
   /// Resolves the toolchain pinned by [lock], verifying every recorded file. Throws
   /// [ToolchainUnavailableException] when it is missing or modified; there is no fallback.
+  ///
+  /// Developer/owner escape hatch: `FLUTTER_OTA_TOOLCHAIN_DIR=<dir>` uses an already-installed
+  /// toolchain directory instead of the cache entry. Its `install.json` must still name the
+  /// pinned toolchain, and every recorded file is verified exactly as for a cache install.
   Future<ResolvedToolchain> resolve(Lockfile lock, {String? lockPath}) async {
-    final dir = cache.toolchainDir(lock.toolchain);
+    final override = toolchainDirOverride;
+    final dir = override ?? cache.toolchainDir(lock.toolchain);
     final rec = readInstallRecord(dir);
     if (rec == null) {
       throw ToolchainUnavailableException(
-        'The toolchain ${lock.toolchain} pinned in $lockFileName is not installed.\n'
-        'Install it with:  flutter_ota toolchain install\n'
-        'flutter_ota never falls back to a stock or global Flutter SDK.',
+        override != null
+            ? '$toolchainDirEnv=$override is not an installed toolchain (no valid $installRecordName).\n'
+                  'flutter_ota never falls back to a stock or global Flutter SDK.'
+            : 'The toolchain ${lock.toolchain} pinned in $lockFileName is not installed.\n'
+                  'Install it with:  flutter_ota toolchain install\n'
+                  'flutter_ota never falls back to a stock or global Flutter SDK.',
+      );
+    }
+    if (override != null && rec['toolchain'] != lock.toolchain) {
+      throw ToolchainUnavailableException(
+        '$toolchainDirEnv=$override contains ${rec['toolchain']}, but $lockFileName pins ${lock.toolchain}.',
       );
     }
     if (rec['toolchain_id'] != lock.toolchainId || rec['engine'] != lock.engine || rec['flutter'] != lock.flutter) {
@@ -185,8 +208,15 @@ class ToolchainManager {
         'flutter_ota never falls back to a stock or global Flutter SDK.',
       );
     }
-    if (lockPath != null) recordProjectUse(lockPath, lock.toolchain);
+    if (lockPath != null && override == null) recordProjectUse(lockPath, lock.toolchain);
     return ResolvedToolchain(lock.toolchain, lock.toolchainId, dir);
+  }
+
+  /// The `FLUTTER_OTA_TOOLCHAIN_DIR` override (absolute), or null.
+  String? get toolchainDirOverride {
+    final v = ctx.environment[toolchainDirEnv];
+    if (v == null || v.isEmpty) return null;
+    return p.normalize(p.absolute(v));
   }
 
   /// Returns the recorded files that are missing or changed.

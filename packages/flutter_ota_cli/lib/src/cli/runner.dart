@@ -8,7 +8,12 @@ import 'package:path/path.dart' as p;
 
 import '../config/user_config.dart';
 import '../context.dart';
+import '../doctor/doctor_command.dart';
 import '../errors.dart';
+import '../features/commands.dart';
+import '../keys/keys_command.dart';
+import '../patch/commands.dart';
+import '../release/release_command.dart';
 import '../project/lockfile.dart';
 import '../project/project.dart';
 import '../toolchain/cache.dart';
@@ -30,7 +35,12 @@ Future<int> runCli(List<String> args, {CliContext? context}) async {
         ..addCommand(_InitCommand(ctx))
         ..addCommand(_ConfigCommand(ctx))
         ..addCommand(_ToolchainCommand(ctx))
-        ..addCommand(_UpgradeCommand(ctx));
+        ..addCommand(_UpgradeCommand(ctx))
+        ..addCommand(DoctorCommand(ctx))
+        ..addCommand(KeysCommand(ctx))
+        ..addCommand(ReleaseCommand(ctx))
+        ..addCommand(FeaturesCommand(ctx))
+        ..addCommand(PatchCommand(ctx));
   try {
     final parsed = runner.parse(args);
     if (parsed['version'] == true) {

@@ -21,8 +21,13 @@ const recordedSdkFiles = ['bin/flutter', 'bin/internal/engine.version', 'bin/cac
 /// Relative path of the Android arm64 release gen_snapshot inside a Flutter SDK.
 const genSnapshotSdkPath = 'bin/cache/artifacts/engine/android-arm64-release/linux-x64/gen_snapshot';
 
-/// The tool snapshots every toolchain ships (run with the SDK's `dartaotruntime`).
-const toolSnapshots = ['dart2bytecode', 'pkg_rename', 'patch_guard'];
+/// The tool snapshots every toolchain ships (run with the SDK's `dartaotruntime`). `bc_verify` is
+/// the reference bytecode verifier (prototypes/security_hardening/tools/bc_verify), which
+/// `patch android` runs on every module before it is signed.
+const toolSnapshots = ['dart2bytecode', 'pkg_rename', 'patch_guard', 'bc_verify'];
+
+/// Where an overlay puts the unchanged `dynamic_modules` package (relative to the toolchain root).
+const dynamicModulesToolchainDir = 'packages/dynamic_modules';
 
 /// Recomputes the content-hash id of a `toolchain.json` record: SHA-256 of the canonical JSON of
 /// every field except `id` (same rule as prototypes/security_hardening/tools/toolchain.py).

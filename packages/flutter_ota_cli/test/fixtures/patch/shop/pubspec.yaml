@@ -1,0 +1,17 @@
+# Copyright 2026 The Punit Authors
+# SPDX-License-Identifier: Apache-2.0
+name: shop
+version: 1.0.0
+environment:
+  sdk: ^3.8.0
+dependencies:
+  flutter_ota_system:
+    path: ../sdk/flutter_ota_system
+  core:
+    path: packages/core
+  products:
+    path: packages/products
+  cart:
+    path: packages/cart
+  legacy:
+    path: packages/legacy
