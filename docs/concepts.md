@@ -164,7 +164,7 @@ There is no automatic pause or promotion ([rollouts.md](rollouts.md)).
 
 Targeting is limited to what the update check already knows: **application, release, platform,
 architecture, channel and rollout percentage**. Targeting by country, device model, user id or
-custom attributes is **not implemented** ([roadmap Phase 7.5](roadmap/phase-07-rollout.md#75-targeting-optional-small)).
+custom attributes is **not implemented** ([roadmap](roadmap/README.md#planned--not-implemented)).
 
 ## Rollback
 

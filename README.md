@@ -218,8 +218,9 @@ Then:
 
 - open the admin page at <http://localhost:8000/admin> (key: `OTA_ADMIN_API_KEY` from `.env`);
 - open the API docs at <http://localhost:8000/docs>;
-- see the patch arrive on an Android phone with the example app, and try rollback, crash
-  protection and rollouts: [docs/installation.md](docs/installation.md).
+- see the patch arrive on an Android phone with the official demo app
+  ([`packages/ota_client/example`](packages/ota_client/example/README.md)), and try rollback,
+  crash protection and rollouts: [docs/installation.md](docs/installation.md).
 
 `./flutter-ota-system.sh setup` is safe to re-run: it never overwrites `.env`, the database or the
 signing key. Other commands:
@@ -299,6 +300,27 @@ Especially wanted:
 - **Not production-validated.** Independent security review, device-compatibility testing and
   scalability testing are still required. No load tests have been run, and no capacity is
   claimed.
+- **No store approval.** Neither Google Play nor Apple has reviewed or approved this project.
+- **Android is the only implemented client platform.** Testing evidence covers only the devices
+  and Flutter versions named in this README and in
+  [docs/platform-compatibility.md](docs/platform-compatibility.md).
+
+### Next patch engine (research, not in the SDK)
+
+The project is researching a **bytecode patch engine**: changed Dart packages are compiled to
+Dart bytecode and run by the Dart VM interpreter, instead of downloading native code. It is
+**research only**:
+
+- it uses **Dart dynamic modules**, an experimental upstream Dart feature;
+- it needs a **custom Flutter engine build** (from upstream source with an official build flag);
+- it was tested in [research prototypes](prototypes/README.md) on **one Android 13 arm64 phone**
+  with one pinned Flutter version (3.47.9);
+- **automatic local toolchain management**, the patch generator, signature checks before loading
+  and SDK/backend integration are **planned, not implemented**;
+- known unsafe cases (FFI in a module, malformed bytecode) abort the app process and must be
+  blocked before release.
+
+Summary and evidence: [docs/architecture/bytecode-architecture.md](docs/architecture/bytecode-architecture.md).
 
 ## Platform Support & Testing Status
 
@@ -351,6 +373,18 @@ Full breakdown: [docs/limitations.md](docs/limitations.md) · roadmap:
 | Client | Dart / Flutter package `flutter_ota_system` (in `packages/ota_client`; `crypto`, `pointycastle`, `http`, `path_provider`) + an Android part in Java 17 |
 | Tooling | Python CLI `ota` (`httpx`, `bsdiff4`), Bash scripts, Docker Compose, GitHub Actions |
 
+## Repository layout
+
+```
+backend/                     FastAPI control plane, migrations, tests, /admin page
+cli/                         `ota` admin CLI and Android code-patch tooling
+packages/ota_client/         Flutter SDK (pub.dev package `flutter_ota_system`)
+packages/ota_client/example/ The official demo app (the only demo app)
+scripts/, docker/, deploy/   Local setup, demo and verification scripts; nginx; single-server draft
+docs/                        Documentation (start at docs/index.md)
+prototypes/                  Research prototypes of the bytecode engine (not demos, not shipped)
+```
+
 ## Documentation
 
 Everything is indexed in [docs/index.md](docs/index.md):
@@ -360,7 +394,7 @@ Everything is indexed in [docs/index.md](docs/index.md):
 | Tutorial | [Installation](docs/installation.md) · [Testing guide](docs/community/testing-guide.md) |
 | How-to | [Flutter integration](docs/flutter-integration.md) · [Releases and patches](docs/releases-and-patches.md) · [Rollouts](docs/rollouts.md) · [Operations](docs/operations.md) · [Troubleshooting](docs/troubleshooting.md) |
 | Reference | [API](docs/api-reference.md) · [CLI](docs/cli-reference.md) · [Configuration](docs/configuration.md) |
-| Explanation | [Why Flutter OTA System?](docs/why-flutter-ota-system.md) · [Concepts](docs/concepts.md) · [Architecture](docs/architecture.md) · [Security](docs/security.md) · [Limitations](docs/limitations.md) · [Roadmap](docs/roadmap/README.md) |
+| Explanation | [Why Flutter OTA System?](docs/why-flutter-ota-system.md) · [Concepts](docs/concepts.md) · [Architecture](docs/architecture.md) · [Bytecode engine (research)](docs/architecture/bytecode-architecture.md) · [Security](docs/security.md) · [Limitations](docs/limitations.md) · [Roadmap](docs/roadmap/README.md) |
 | Security, privacy and policy | [Signing keys and trust model](docs/signing-key-management.md) · [Privacy and data handling](docs/privacy-and-data-handling.md) · [Platform compatibility](docs/platform-compatibility.md) · [Google Play](docs/policy/google-play.md) · [Apple App Store](docs/policy/apple-app-store.md) |
 
 ## Known limitations
@@ -385,7 +419,7 @@ Everything is indexed in [docs/index.md](docs/index.md):
 - Devices learn about patches, rollbacks and revocations only when the app checks.
 - No dashboards, alerts or automatic rollout pausing; no load tests.
 - The Flutter SDK's Android code uses the Java package `io.github.punitsoni22.flutter_ota_system`.
-  The demo app (`example_app`) still uses the application ID `dev.flutterota.ota_example`;
+  The demo app (`packages/ota_client/example`) still uses the application ID `dev.flutterota.ota_example`;
   ownership of `flutterota.dev` has **not** been confirmed. Use your own application ID in your
   apps.
 

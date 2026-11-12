@@ -42,11 +42,11 @@ for every user in that rollout. That is the main risk, and most controls below e
 | Production startup safety checks | ✅ Implemented | `config.py` |
 | Store-policy gate for public-store code patches | ✅ Implemented | `routers/admin.py` |
 | Secret scanning in CI (gitleaks) | ✅ Implemented | `.github/workflows/ci.yml` |
-| **RBAC**, users, SSO, MFA | 🔭 Planned | [roadmap Phase 8](roadmap/phase-08-admin-rbac.md) |
-| **Audit log** | 🔭 Planned | Phase 8 |
-| **Azure Key Vault / KMS / HSM signer** | 🔭 Planned | [roadmap Phase 6.4](roadmap/phase-06-signing.md#64-key-vault-signer) |
+| **RBAC**, users, SSO, MFA | 🔭 Planned | [roadmap](roadmap/README.md#planned--not-implemented) |
+| **Audit log** | 🔭 Planned | [roadmap](roadmap/README.md#planned--not-implemented) |
+| **Azure Key Vault / KMS / HSM signer** | 🔭 Planned | [roadmap](roadmap/README.md#planned--not-implemented), [signing-key-management.md](signing-key-management.md) |
 | **Short-lived signed download URLs** | 🔭 Planned | ADR-0008 (not written) |
-| Rate limiting on device endpoints | 🔭 Planned | [roadmap Phase 3.7](roadmap/phase-03-device-control-plane.md#37-rate-limiting-basic) |
+| Rate limiting on device endpoints | 🔭 Planned | [roadmap](roadmap/README.md#planned--not-implemented) |
 | Individual device-token revocation | ❌ Not available | — |
 | TLS | Your responsibility (the single-server compose uses Caddy) | `deploy/` |
 
