@@ -1,0 +1,7 @@
+[compat] START mode=home app=7c1d2e3f-4a5b-4c6d-8e7f-90a1b2c3d4e5 release=41322cab-cad4-45e2-bd14-586d7cc9ac33 pid=N
+[compat] host AppState token=1794484931389682
+[compat] LAST_EXIT USER_REQUESTED(status=0, stop io.github.punitsoni22.compat_host due to from pid N|J:0)
+[compat] NO_PATCH running baseline (AOT) code
+[compat] FIRST_FRAME main_to_first_frame_ms=164.7 boot_ms=133.6
+[compat] RESULT boot
+[compat] RESULT ui_1

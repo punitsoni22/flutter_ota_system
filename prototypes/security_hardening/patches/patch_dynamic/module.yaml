@@ -1,0 +1,9 @@
+# Copyright 2026 The Punit Authors
+# SPDX-License-Identifier: Apache-2.0
+# Part 6: feature_catalog reads a product title through a dynamic call. Refused by patch_guard
+# (and by the dart2bytecode validator).
+kind: patch
+number: 41
+suffix: dyn
+change:
+  - feature_catalog

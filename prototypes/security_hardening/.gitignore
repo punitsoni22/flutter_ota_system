@@ -1,0 +1,10 @@
+# Generated files; builds, keys, modules and raw results live in the lab directory.
+.dart_tool/
+build/
+pubspec.lock
+*.otp
+*.bc
+*.aot
+*.pem
+__pycache__/
+tools/patch_guard/bin/.mutant_*.dart

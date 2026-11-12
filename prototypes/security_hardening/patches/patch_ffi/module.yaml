@@ -1,0 +1,10 @@
+# Copyright 2026 The Punit Authors
+# SPDX-License-Identifier: Apache-2.0
+# Part 5: product_service gains an FFI call. patch_guard must refuse this before bytecode is
+# generated. Built with NOGUARD=1 only to test the device-side protection.
+kind: patch
+number: 40
+suffix: ffi
+change:
+  - feature_catalog
+  - product_service

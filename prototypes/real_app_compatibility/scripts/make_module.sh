@@ -46,6 +46,16 @@ snapshot "$HERE/tools/pkg_rename/bin/pkg_rename.dart" "$TOOLS/pkg_rename.aot"
   --out "$OUT" > "$OUT.rename.json" || { rc=$?; rm -f "$OUT.rename.json"; exit $rc; }
 (cd "$OUT/$MODPKG" && "$SDK/bin/flutter" pub get --offline --suppress-analytics >/dev/null)
 
+# Optional (Phase 3): GUARD=<patch_guard.dart> runs the security guard on the prepared sources
+# BEFORE any bytecode is generated. Exit code 4 = rejected (FFI, dynamic calls, mirrors, ...).
+if [[ -n ${GUARD:-} ]]; then
+  snapshot "$GUARD" "$TOOLS/patch_guard.aot"
+  read -r MODULE_PKGS ORIGINALS < <(python3 -I -c 'import json,sys; r=json.load(open(sys.argv[1])); print(",".join([r["module"], *r["renames"].values()]), ",".join(f"{v}={k}" for k, v in r["renames"].items()) or "-")' "$OUT.rename.json")
+  "$DART_AOT" "$TOOLS/patch_guard.aot" --root "$OUT" --package-config "$OUT/$MODPKG/.dart_tool/package_config.json" \
+    --module-packages "$MODULE_PKGS" --original-names "${ORIGINALS/#-/}" --sdk "$SDK/bin/cache/dart-sdk" \
+    --json "$OUT.guard.json" || exit $?
+fi
+
 START=$(date +%s%N)
 nice -n 10 "$DART_AOT" "$TOOLS/dart2bytecode.aot" \
   --target flutter --platform "$PLATFORM" --import-dill "$BASE/link.dill" \

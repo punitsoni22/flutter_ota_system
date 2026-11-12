@@ -1,0 +1,29 @@
+id	part	status	title	detail
+p3_01_signed_patch	12.1, 3.2	PASS	normal signed patch: verified, isolated load OK, activated	
+p3_02_cold_restart	12.13	PASS	repeated activation / cold restarts re-verify and load	
+p3_03_upgrade	13	PASS	newer patch v2 replaces v1	
+p3_neg_neg_tampered_module	12.2, 3.3	PASS	tampered patch (bytecode changed after signing): rejected safely	
+p3_neg_neg_wrong_key	12.3	PASS	wrong signature (trusted key id, other private key): rejected safely	
+p3_neg_neg_untrusted_key	3.3	PASS	signing key not trusted by this build: rejected safely	
+p3_neg_neg_wrong_baseline	12.4	PASS	built for another libapp.so (baseline): rejected safely	
+p3_neg_neg_wrong_engine	3.3	PASS	built for another engine revision: rejected safely	
+p3_neg_neg_expired	3.3	PASS	expired patch: rejected safely	
+p3_neg_neg_partial_download	8.12	FAIL	partially downloaded patch file: rejected safely	failed: rejected [truncated]
+p3_neg_v1	3.3, 11	PASS	replayed older patch (v1 while v2 active): rejected safely	
+p3_neg_malformed_signed	4, 12.7	PASS	validly signed MALFORMED bytecode (install path): rejected safely	
+p3_neg_ffi_unguarded_signed	5, 12.5	PASS	validly signed FFI module (guard bypassed): rejected safely	
+p3_neg_crash_throw_init	12.8	PASS	module throws during initialisation: rejected safely	
+p3_neg_crash_abort_in_entry	12.8	PASS	module aborts the process during initialisation: rejected safely	
+p3_neg_blacklisted_again	8.15	PASS	blacklisted patch delivered again	
+p3_revocation	3.3, 9	PASS	signed revocation list revokes the active patch v2	
+p3_revocation_replay	3.3	PASS	revocation list replayed	
+p3_kill_during_activation	8.10	PASS	process killed during activation	
+p3_kill_then_new_patch	8.10	PASS	a newer patch installs normally afterwards	
+p3_stored_torn	8.12	PASS	stored active patch truncated on disk	
+p3_rollback	12.11, 12.12	PASS	rollback, then cold restarts	
+p3_crash_abort_when_logged_in	12.9	PASS	crash before the first frame (state-dependent bug): passes verification, crash guard rolls back	
+p3_crash_abort_after_frame	12.10	PASS	crash after the first frame, before confirmation: passes verification, crash guard rolls back	
+p3_crash_throw_when_logged_in	8.7	PASS	exception in build() (state-dependent bug): passes verification, crash guard rolls back	
+p3_killed_before_confirm	12.5	PASS	app force-stopped before confirmation	
+p3_device_restart	8.11	NOT_TESTED	device restarts during activation	would reboot the owner's phone; covered by design: staging/attempt files are written with fsync + rename
+apk_unchanged	-	PASS	installed APK byte-identical to the baseline APK (patches never modify it)	b370340c35597692

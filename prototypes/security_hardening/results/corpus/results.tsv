@@ -1,0 +1,68 @@
+id	part	status	title	detail
+p3_corpus_main_alive	4, 10	PASS	main process survived all 65 corpus files (verify-only)	
+corpus:A00_control_valid	3	PASS	A00_control_valid: accepted	
+corpus:A01_untrusted_key	3.3	PASS	A01_untrusted_key: rejected before any load	
+corpus:A02_wrong_app	3.3	PASS	A02_wrong_app: rejected before any load	
+corpus:A03_wrong_baseline	3.3	PASS	A03_wrong_baseline: rejected before any load	
+corpus:A04_wrong_engine	3.3	PASS	A04_wrong_engine: rejected before any load	
+corpus:A05_expired	3.3	PASS	A05_expired: rejected before any load	
+corpus:A06_second_trusted_key	3	PASS	A06_second_trusted_key: accepted	
+corpus:A07_tampered_module	3.3	PASS	A07_tampered_module: rejected before any load	
+corpus:A08_tampered_manifest	3.3	PASS	A08_tampered_manifest: rejected before any load	
+corpus:A09_truncated_download	3.3	FAIL	A09_truncated_download: rejected before any load	failed: crypto rejected [truncated]
+corpus:A10_trusted_id_wrong_key	3.3	PASS	A10_trusted_id_wrong_key: rejected before any load	
+corpus:B01_truncated_half	4	PASS	B01_truncated_half: signed but malformed -> refused safely	isolated=CRASHED; verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otav
+corpus:B02_truncated_header	4	PASS	B02_truncated_header: signed but malformed -> refused safely	isolated=CRASHED; verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otav
+corpus:B03_truncated_magic_only	4	PASS	B03_truncated_magic_only: signed but malformed -> refused safely	isolated=CRASHED; verifier process died; exit={reason=5, status=11, description=crash|J:100, process=io.github.punitsoni22.compat_host:ota
+corpus:B04_truncated_last_byte	4	FAIL	B04_truncated_last_byte: signed but malformed -> refused safely	isolated=OK; catalog.version=catalog v2 (patch 1) / product_service v1; catalog.priceLabel=Product price: ₹499
+corpus:B05_truncated_at_codes	4	PASS	B05_truncated_at_codes: signed but malformed -> refused safely	isolated=CRASHED; verifier process died; exit={reason=5, status=11, description=crash|J:100, process=io.github.punitsoni22.compat_host:ota
+corpus:B06_bad_magic	4	PASS	B06_bad_magic: signed but malformed -> refused safely	isolated=CRASHED; verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otav
+corpus:B07_bad_version_next	4	PASS	B07_bad_version_next: signed but malformed -> refused safely	isolated=CRASHED; verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otav
+corpus:B08_bad_version_zero	4	PASS	B08_bad_version_zero: signed but malformed -> refused safely	isolated=CRASHED; verifier disconnected; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otav
+corpus:B09_strings_offset_past_end	4	PASS	B09_strings_offset_past_end: signed but malformed -> refused safely	isolated=CRASHED; verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otav
+corpus:B10_objects_offset_zero	4	PASS	B10_objects_offset_zero: signed but malformed -> refused safely	isolated=CRASHED; verifier disconnected; exit={reason=5, status=11, description=crash|J:100, process=io.github.punitsoni22.compat_host:ota
+corpus:B11_codes_offset_huge	4	PASS	B11_codes_offset_huge: signed but malformed -> refused safely	isolated=CRASHED; verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otav
+corpus:B12_libraries_count_huge	4	PASS	B12_libraries_count_huge: signed but malformed -> refused safely	isolated=CRASHED; verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otav
+corpus:B13_libraries_count_zero	4	PASS	B13_libraries_count_zero: signed but malformed -> refused safely	isolated=CRASHED; verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otav
+corpus:B14_main_offset_zero	4	PASS	B14_main_offset_zero: signed but malformed -> refused safely	isolated=REJECTED; entry point returned Null, not a contract-2 map
+corpus:B15_all_sections_empty	4	PASS	B15_all_sections_empty: signed but malformed -> refused safely	isolated=REJECTED; entry point returned Null, not a contract-2 map
+corpus:B16_unknown_host_library	4	PASS	B16_unknown_host_library: signed but malformed -> refused safely	isolated=CRASHED; verifier process died; exit={reason=2, status=9, description=, process=io.github.punitsoni22.compat_host:otaverify}
+corpus:B17_unknown_host_class	4	FAIL	B17_unknown_host_class: signed but malformed -> refused safely	isolated=OK; catalog.version=catalog v2 (patch 1) / product_service v1; catalog.priceLabel=Product price: ₹499
+corpus:B18_unknown_host_member	4	PASS	B18_unknown_host_member: signed but malformed -> refused safely	isolated=CRASHED; verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otav
+corpus:B19_module_library_collides	4	PASS	B19_module_library_collides: signed but malformed -> refused safely	isolated=CRASHED; verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otav
+corpus:B20_strings_garbled	4	PASS	B20_strings_garbled: signed but malformed -> refused safely	isolated=CRASHED; verifier process died; exit={reason=5, status=11, description=crash|J:100, process=io.github.punitsoni22.compat_host:ota
+corpus:B21_objects_flip_0	4	PASS	B21_objects_flip_0: signed but malformed -> refused safely	isolated=CRASHED; verifier disconnected; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otav
+corpus:B22_objects_flip_1	4	PASS	B22_objects_flip_1: signed but malformed -> refused safely	isolated=CRASHED; verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otav
+corpus:B23_objects_flip_2	4	PASS	B23_objects_flip_2: signed but malformed -> refused safely	isolated=CRASHED; verifier process died; exit={reason=5, status=11, description=crash|J:100, process=io.github.punitsoni22.compat_host:ota
+corpus:B24_codes_opcode_0	4	PASS	B24_codes_opcode_0: signed but malformed -> refused safely	isolated=CRASHED; verifier process died; exit={reason=5, status=11, description=crash|J:100, process=io.github.punitsoni22.compat_host:ota
+corpus:B25_codes_opcode_1	4	FAIL	B25_codes_opcode_1: signed but malformed -> refused safely	isolated=OK; catalog.version=catalog v2 (patch 1) / product_service v1; catalog.priceLabel=Product price: ₹499
+corpus:B26_codes_opcode_2	4	PASS	B26_codes_opcode_2: signed but malformed -> refused safely	isolated=CRASHED; verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otav
+corpus:B27_codes_opcode_3	4	FAIL	B27_codes_opcode_3: signed but malformed -> refused safely	isolated=OK; catalog.version=catalog v2 (patch 1) / product_service v1; catalog.priceLabel=Product price: ₹499
+corpus:B28_codes_all_ff	4	PASS	B28_codes_all_ff: signed but malformed -> refused safely	isolated=CRASHED; verifier disconnected; exit={reason=5, status=11, description=crash|J:100, process=io.github.punitsoni22.compat_host:ota
+corpus:B29_libraries_garbled	4	PASS	B29_libraries_garbled: signed but malformed -> refused safely	isolated=CRASHED; verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otav
+corpus:B30_classes_garbled	4	PASS	B30_classes_garbled: signed but malformed -> refused safely	isolated=CRASHED; verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otav
+corpus:B31_members_garbled	4	PASS	B31_members_garbled: signed but malformed -> refused safely	isolated=CRASHED; verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otav
+corpus:B32_appended_garbage	4	FAIL	B32_appended_garbage: signed but malformed -> refused safely	isolated=OK; catalog.version=catalog v2 (patch 1) / product_service v1; catalog.priceLabel=Product price: ₹499
+corpus:B33_duplicated_module	4	FAIL	B33_duplicated_module: signed but malformed -> refused safely	isolated=OK; catalog.version=catalog v2 (patch 1) / product_service v1; catalog.priceLabel=Product price: ₹499
+corpus:B34_random_00_flip	4	PASS	B34_random_00_flip: signed but malformed -> refused safely	isolated=CRASHED; verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otav
+corpus:B35_random_01_insert	4	PASS	B35_random_01_insert: signed but malformed -> refused safely	isolated=CRASHED; verifier disconnected; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otav
+corpus:B36_random_02_delete	4	PASS	B36_random_02_delete: signed but malformed -> refused safely	isolated=CRASHED; verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otav
+corpus:B37_random_03_flip	4	PASS	B37_random_03_flip: signed but malformed -> refused safely	isolated=CRASHED; verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otav
+corpus:B38_random_04_flip	4	PASS	B38_random_04_flip: signed but malformed -> refused safely	isolated=CRASHED; verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otav
+corpus:B39_random_05_flip	4	PASS	B39_random_05_flip: signed but malformed -> refused safely	isolated=CRASHED; verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otav
+corpus:B40_random_06_delete	4	PASS	B40_random_06_delete: signed but malformed -> refused safely	isolated=CRASHED; verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otav
+corpus:B41_random_07_insert	4	PASS	B41_random_07_insert: signed but malformed -> refused safely	isolated=CRASHED; verifier disconnected; exit={reason=5, status=11, description=crash|J:100, process=io.github.punitsoni22.compat_host:ota
+corpus:B42_random_08_flip	4	PASS	B42_random_08_flip: signed but malformed -> refused safely	isolated=CRASHED; verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otav
+corpus:B43_random_09_insert	4	PASS	B43_random_09_insert: signed but malformed -> refused safely	isolated=CRASHED; verifier disconnected; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otav
+corpus:B44_random_10_flip	4	PASS	B44_random_10_flip: signed but malformed -> refused safely	isolated=CRASHED; verifier process died; exit={reason=5, status=11, description=crash|J:100, process=io.github.punitsoni22.compat_host:ota
+corpus:B45_random_11_flip	4	PASS	B45_random_11_flip: signed but malformed -> refused safely	isolated=CRASHED; verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otav
+corpus:B46_random_12_flip	4	PASS	B46_random_12_flip: signed but malformed -> refused safely	isolated=CRASHED; verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otav
+corpus:B47_random_13_delete	4	PASS	B47_random_13_delete: signed but malformed -> refused safely	isolated=CRASHED; verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otav
+corpus:B48_random_14_delete	4	PASS	B48_random_14_delete: signed but malformed -> refused safely	isolated=CRASHED; verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otav
+corpus:B49_random_15_overwrite	4	PASS	B49_random_15_overwrite: signed but malformed -> refused safely	isolated=CRASHED; verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otav
+corpus:B50_random_16_flip	4	PASS	B50_random_16_flip: signed but malformed -> refused safely	isolated=CRASHED; verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otav
+corpus:B51_random_17_insert	4	PASS	B51_random_17_insert: signed but malformed -> refused safely	isolated=CRASHED; verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otav
+corpus:B52_random_18_overwrite	4	PASS	B52_random_18_overwrite: signed but malformed -> refused safely	isolated=CRASHED; verifier disconnected; exit={reason=5, status=11, description=crash|J:100, process=io.github.punitsoni22.compat_host:ota
+corpus:B53_random_19_overwrite	4	PASS	B53_random_19_overwrite: signed but malformed -> refused safely	isolated=CRASHED; verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otav
+corpus:C01_signed_ffi_module	4	PASS	C01_signed_ffi_module: signed but malformed -> refused safely	isolated=CRASHED; verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otav
+apk_unchanged	-	PASS	installed APK byte-identical to the baseline APK (patches never modify it)	b370340c35597692

@@ -1,0 +1,377 @@
+{
+  "base_size": 5527,
+  "seed": 20261112,
+  "cases": [
+    {
+      "file": "01_truncated_half.bc",
+      "name": "truncated_half",
+      "category": "truncated",
+      "size": 2763,
+      "note": "first half only"
+    },
+    {
+      "file": "02_truncated_header.bc",
+      "name": "truncated_header",
+      "category": "truncated",
+      "size": 60,
+      "note": "inside the section table"
+    },
+    {
+      "file": "03_truncated_magic_only.bc",
+      "name": "truncated_magic_only",
+      "category": "truncated",
+      "size": 8,
+      "note": "magic + version only"
+    },
+    {
+      "file": "04_truncated_last_byte.bc",
+      "name": "truncated_last_byte",
+      "category": "truncated",
+      "size": 5526,
+      "note": "last byte missing"
+    },
+    {
+      "file": "05_truncated_at_codes.bc",
+      "name": "truncated_at_codes",
+      "category": "truncated",
+      "size": 3531,
+      "note": "ends where the codes section starts"
+    },
+    {
+      "file": "06_bad_magic.bc",
+      "name": "bad_magic",
+      "category": "header",
+      "size": 5527,
+      "note": "magic DBC2"
+    },
+    {
+      "file": "07_bad_version_next.bc",
+      "name": "bad_version_next",
+      "category": "header",
+      "size": 5527,
+      "note": "version 4"
+    },
+    {
+      "file": "08_bad_version_zero.bc",
+      "name": "bad_version_zero",
+      "category": "header",
+      "size": 5527,
+      "note": "version 0"
+    },
+    {
+      "file": "09_strings_offset_past_end.bc",
+      "name": "strings_offset_past_end",
+      "category": "section_table",
+      "size": 5527,
+      "note": "string table offset beyond EOF"
+    },
+    {
+      "file": "10_objects_offset_zero.bc",
+      "name": "objects_offset_zero",
+      "category": "section_table",
+      "size": 5527,
+      "note": "object table points at the header"
+    },
+    {
+      "file": "11_codes_offset_huge.bc",
+      "name": "codes_offset_huge",
+      "category": "section_table",
+      "size": 5527,
+      "note": "codes offset 2 GB"
+    },
+    {
+      "file": "12_libraries_count_huge.bc",
+      "name": "libraries_count_huge",
+      "category": "section_table",
+      "size": 5527,
+      "note": "65535 libraries declared"
+    },
+    {
+      "file": "13_libraries_count_zero.bc",
+      "name": "libraries_count_zero",
+      "category": "section_table",
+      "size": 5527,
+      "note": "no libraries"
+    },
+    {
+      "file": "14_main_offset_zero.bc",
+      "name": "main_offset_zero",
+      "category": "missing_metadata",
+      "size": 5527,
+      "note": "no entry point"
+    },
+    {
+      "file": "15_all_sections_empty.bc",
+      "name": "all_sections_empty",
+      "category": "missing_metadata",
+      "size": 5527,
+      "note": "every section count/offset zero"
+    },
+    {
+      "file": "16_unknown_host_library.bc",
+      "name": "unknown_host_library",
+      "category": "references",
+      "size": 5527,
+      "note": "host library URI changed"
+    },
+    {
+      "file": "17_unknown_host_class.bc",
+      "name": "unknown_host_class",
+      "category": "interface_metadata",
+      "size": 5527,
+      "note": "host interface class renamed"
+    },
+    {
+      "file": "18_unknown_host_member.bc",
+      "name": "unknown_host_member",
+      "category": "interface_metadata",
+      "size": 5527,
+      "note": "overridden host member renamed"
+    },
+    {
+      "file": "19_module_library_collides.bc",
+      "name": "module_library_collides",
+      "category": "references",
+      "size": 5528,
+      "note": "module library URI rewritten to a host package"
+    },
+    {
+      "file": "20_strings_garbled.bc",
+      "name": "strings_garbled",
+      "category": "corrupted_section",
+      "size": 5527,
+      "note": "first 64 bytes of the string table XOR 0x5A"
+    },
+    {
+      "file": "21_objects_flip_0.bc",
+      "name": "objects_flip_0",
+      "category": "constant_pool",
+      "size": 5527,
+      "note": "object table byte at 2783 inverted"
+    },
+    {
+      "file": "22_objects_flip_1.bc",
+      "name": "objects_flip_1",
+      "category": "constant_pool",
+      "size": 5527,
+      "note": "object table byte at 2950 inverted"
+    },
+    {
+      "file": "23_objects_flip_2.bc",
+      "name": "objects_flip_2",
+      "category": "constant_pool",
+      "size": 5527,
+      "note": "object table byte at 3117 inverted"
+    },
+    {
+      "file": "24_codes_opcode_0.bc",
+      "name": "codes_opcode_0",
+      "category": "instructions",
+      "size": 5527,
+      "note": "code byte at 3629 changed"
+    },
+    {
+      "file": "25_codes_opcode_1.bc",
+      "name": "codes_opcode_1",
+      "category": "instructions",
+      "size": 5527,
+      "note": "code byte at 4122 changed"
+    },
+    {
+      "file": "26_codes_opcode_2.bc",
+      "name": "codes_opcode_2",
+      "category": "instructions",
+      "size": 5527,
+      "note": "code byte at 4714 changed"
+    },
+    {
+      "file": "27_codes_opcode_3.bc",
+      "name": "codes_opcode_3",
+      "category": "instructions",
+      "size": 5527,
+      "note": "code byte at 5405 changed"
+    },
+    {
+      "file": "28_codes_all_ff.bc",
+      "name": "codes_all_ff",
+      "category": "instructions",
+      "size": 5527,
+      "note": "whole codes section 0xFF"
+    },
+    {
+      "file": "29_libraries_garbled.bc",
+      "name": "libraries_garbled",
+      "category": "corrupted_section",
+      "size": 5527,
+      "note": "first 16 bytes of libraries XOR 0xA5"
+    },
+    {
+      "file": "30_classes_garbled.bc",
+      "name": "classes_garbled",
+      "category": "corrupted_section",
+      "size": 5527,
+      "note": "first 16 bytes of classes XOR 0xA5"
+    },
+    {
+      "file": "31_members_garbled.bc",
+      "name": "members_garbled",
+      "category": "corrupted_section",
+      "size": 5527,
+      "note": "first 16 bytes of members XOR 0xA5"
+    },
+    {
+      "file": "32_appended_garbage.bc",
+      "name": "appended_garbage",
+      "category": "size",
+      "size": 6551,
+      "note": "1 KB appended"
+    },
+    {
+      "file": "33_duplicated_module.bc",
+      "name": "duplicated_module",
+      "category": "size",
+      "size": 11054,
+      "note": "module repeated twice"
+    },
+    {
+      "file": "34_random_00_flip.bc",
+      "name": "random_00_flip",
+      "category": "random",
+      "size": 5527,
+      "note": "seed 20261112, case 0"
+    },
+    {
+      "file": "35_random_01_insert.bc",
+      "name": "random_01_insert",
+      "category": "random",
+      "size": 5534,
+      "note": "seed 20261112, case 1"
+    },
+    {
+      "file": "36_random_02_delete.bc",
+      "name": "random_02_delete",
+      "category": "random",
+      "size": 5523,
+      "note": "seed 20261112, case 2"
+    },
+    {
+      "file": "37_random_03_flip.bc",
+      "name": "random_03_flip",
+      "category": "random",
+      "size": 5527,
+      "note": "seed 20261112, case 3"
+    },
+    {
+      "file": "38_random_04_flip.bc",
+      "name": "random_04_flip",
+      "category": "random",
+      "size": 5527,
+      "note": "seed 20261112, case 4"
+    },
+    {
+      "file": "39_random_05_flip.bc",
+      "name": "random_05_flip",
+      "category": "random",
+      "size": 5527,
+      "note": "seed 20261112, case 5"
+    },
+    {
+      "file": "40_random_06_delete.bc",
+      "name": "random_06_delete",
+      "category": "random",
+      "size": 5512,
+      "note": "seed 20261112, case 6"
+    },
+    {
+      "file": "41_random_07_insert.bc",
+      "name": "random_07_insert",
+      "category": "random",
+      "size": 5529,
+      "note": "seed 20261112, case 7"
+    },
+    {
+      "file": "42_random_08_flip.bc",
+      "name": "random_08_flip",
+      "category": "random",
+      "size": 5527,
+      "note": "seed 20261112, case 8"
+    },
+    {
+      "file": "43_random_09_insert.bc",
+      "name": "random_09_insert",
+      "category": "random",
+      "size": 5535,
+      "note": "seed 20261112, case 9"
+    },
+    {
+      "file": "44_random_10_flip.bc",
+      "name": "random_10_flip",
+      "category": "random",
+      "size": 5527,
+      "note": "seed 20261112, case 10"
+    },
+    {
+      "file": "45_random_11_flip.bc",
+      "name": "random_11_flip",
+      "category": "random",
+      "size": 5527,
+      "note": "seed 20261112, case 11"
+    },
+    {
+      "file": "46_random_12_flip.bc",
+      "name": "random_12_flip",
+      "category": "random",
+      "size": 5527,
+      "note": "seed 20261112, case 12"
+    },
+    {
+      "file": "47_random_13_delete.bc",
+      "name": "random_13_delete",
+      "category": "random",
+      "size": 5517,
+      "note": "seed 20261112, case 13"
+    },
+    {
+      "file": "48_random_14_delete.bc",
+      "name": "random_14_delete",
+      "category": "random",
+      "size": 5525,
+      "note": "seed 20261112, case 14"
+    },
+    {
+      "file": "49_random_15_overwrite.bc",
+      "name": "random_15_overwrite",
+      "category": "random",
+      "size": 5527,
+      "note": "seed 20261112, case 15"
+    },
+    {
+      "file": "50_random_16_flip.bc",
+      "name": "random_16_flip",
+      "category": "random",
+      "size": 5527,
+      "note": "seed 20261112, case 16"
+    },
+    {
+      "file": "51_random_17_insert.bc",
+      "name": "random_17_insert",
+      "category": "random",
+      "size": 5528,
+      "note": "seed 20261112, case 17"
+    },
+    {
+      "file": "52_random_18_overwrite.bc",
+      "name": "random_18_overwrite",
+      "category": "random",
+      "size": 5527,
+      "note": "seed 20261112, case 18"
+    },
+    {
+      "file": "53_random_19_overwrite.bc",
+      "name": "random_19_overwrite",
+      "category": "random",
+      "size": 5527,
+      "note": "seed 20261112, case 19"
+    }
+  ]
+}

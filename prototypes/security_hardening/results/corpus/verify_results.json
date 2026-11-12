@@ -1,0 +1,405 @@
+{
+  "pid": 616,
+  "results": {
+    "A00_control_valid": {
+      "crypto": "OK",
+      "status": "OK",
+      "detail": "catalog.version=catalog v2 (patch 1) / product_service v1; catalog.priceLabel=Product price: \u20b9499",
+      "verifier_ms": 2.15,
+      "ms": 213
+    },
+    "A01_untrusted_key": {
+      "crypto": "REJECTED",
+      "code": "unknown_key",
+      "detail": "signing key p3-rogue is not trusted by this build",
+      "status": "NOT_RUN"
+    },
+    "A02_wrong_app": {
+      "crypto": "REJECTED",
+      "code": "wrong_app",
+      "detail": "patch is for another application",
+      "status": "NOT_RUN"
+    },
+    "A03_wrong_baseline": {
+      "crypto": "REJECTED",
+      "code": "wrong_baseline",
+      "detail": "patch was built for another libapp.so",
+      "status": "NOT_RUN"
+    },
+    "A04_wrong_engine": {
+      "crypto": "REJECTED",
+      "code": "wrong_runtime",
+      "detail": "runtime engine 00000000 != 89c39edf",
+      "status": "NOT_RUN"
+    },
+    "A05_expired": {
+      "crypto": "REJECTED",
+      "code": "expired",
+      "detail": "patch expired at 2026-01-01T00:00:00Z",
+      "status": "NOT_RUN"
+    },
+    "A06_second_trusted_key": {
+      "crypto": "OK",
+      "status": "OK",
+      "detail": "catalog.version=catalog v2 (patch 1) / product_service v1; catalog.priceLabel=Product price: \u20b9499",
+      "verifier_ms": 2.136,
+      "ms": 77
+    },
+    "A07_tampered_module": {
+      "crypto": "REJECTED",
+      "code": "bad_hash",
+      "detail": "module SHA-256 mismatch",
+      "status": "NOT_RUN"
+    },
+    "A08_tampered_manifest": {
+      "crypto": "REJECTED",
+      "code": "bad_signature",
+      "detail": "manifest signature does not verify",
+      "status": "NOT_RUN"
+    },
+    "A09_truncated_download": {
+      "crypto": "REJECTED",
+      "code": "wrong_size",
+      "detail": "module size 2629 != 5527",
+      "status": "NOT_RUN"
+    },
+    "A10_trusted_id_wrong_key": {
+      "crypto": "REJECTED",
+      "code": "bad_signature",
+      "detail": "manifest signature does not verify",
+      "status": "NOT_RUN"
+    },
+    "B01_truncated_half": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify}",
+      "ms": 1271
+    },
+    "B02_truncated_header": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify}",
+      "ms": 1309
+    },
+    "B03_truncated_magic_only": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier process died; exit={reason=5, status=11, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify}",
+      "ms": 1248
+    },
+    "B04_truncated_last_byte": {
+      "crypto": "OK",
+      "status": "OK",
+      "detail": "catalog.version=catalog v2 (patch 1) / product_service v1; catalog.priceLabel=Product price: \u20b9499",
+      "verifier_ms": 2.179,
+      "ms": 197
+    },
+    "B05_truncated_at_codes": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier process died; exit={reason=5, status=11, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify}",
+      "ms": 1106
+    },
+    "B06_bad_magic": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify}",
+      "ms": 1299
+    },
+    "B07_bad_version_next": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify}",
+      "ms": 1167
+    },
+    "B08_bad_version_zero": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier disconnected; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify}",
+      "ms": 1263
+    },
+    "B09_strings_offset_past_end": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify}",
+      "ms": 1307
+    },
+    "B10_objects_offset_zero": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier disconnected; exit={reason=5, status=11, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify}",
+      "ms": 1352
+    },
+    "B11_codes_offset_huge": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify}",
+      "ms": 1294
+    },
+    "B12_libraries_count_huge": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify}",
+      "ms": 1299
+    },
+    "B13_libraries_count_zero": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify}",
+      "ms": 1342
+    },
+    "B14_main_offset_zero": {
+      "crypto": "OK",
+      "status": "REJECTED",
+      "detail": "entry point returned Null, not a contract-2 map",
+      "verifier_ms": 1.83,
+      "ms": 231
+    },
+    "B15_all_sections_empty": {
+      "crypto": "OK",
+      "status": "REJECTED",
+      "detail": "entry point returned Null, not a contract-2 map",
+      "verifier_ms": 1.038,
+      "ms": 95
+    },
+    "B16_unknown_host_library": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier process died; exit={reason=2, status=9, description=, process=io.github.punitsoni22.compat_host:otaverify}",
+      "ms": 754
+    },
+    "B17_unknown_host_class": {
+      "crypto": "OK",
+      "status": "OK",
+      "detail": "catalog.version=catalog v2 (patch 1) / product_service v1; catalog.priceLabel=Product price: \u20b9499",
+      "verifier_ms": 2.216,
+      "ms": 268
+    },
+    "B18_unknown_host_member": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify}",
+      "ms": 1246
+    },
+    "B19_module_library_collides": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify}",
+      "ms": 1421
+    },
+    "B20_strings_garbled": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier process died; exit={reason=5, status=11, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify}",
+      "ms": 1279
+    },
+    "B21_objects_flip_0": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier disconnected; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify}",
+      "ms": 1313
+    },
+    "B22_objects_flip_1": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify}",
+      "ms": 1368
+    },
+    "B23_objects_flip_2": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier process died; exit={reason=5, status=11, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify}",
+      "ms": 1309
+    },
+    "B24_codes_opcode_0": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier process died; exit={reason=5, status=11, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify}",
+      "ms": 1350
+    },
+    "B25_codes_opcode_1": {
+      "crypto": "OK",
+      "status": "OK",
+      "detail": "catalog.version=catalog v2 (patch 1) / product_service v1; catalog.priceLabel=Product price: \u20b9499",
+      "verifier_ms": 2.0,
+      "ms": 225
+    },
+    "B26_codes_opcode_2": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify}",
+      "ms": 1188
+    },
+    "B27_codes_opcode_3": {
+      "crypto": "OK",
+      "status": "OK",
+      "detail": "catalog.version=catalog v2 (patch 1) / product_service v1; catalog.priceLabel=Product price: \u20b9499",
+      "verifier_ms": 2.098,
+      "ms": 199
+    },
+    "B28_codes_all_ff": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier disconnected; exit={reason=5, status=11, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify}",
+      "ms": 1274
+    },
+    "B29_libraries_garbled": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify}",
+      "ms": 1247
+    },
+    "B30_classes_garbled": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify}",
+      "ms": 1370
+    },
+    "B31_members_garbled": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify}",
+      "ms": 1303
+    },
+    "B32_appended_garbage": {
+      "crypto": "OK",
+      "status": "OK",
+      "detail": "catalog.version=catalog v2 (patch 1) / product_service v1; catalog.priceLabel=Product price: \u20b9499",
+      "verifier_ms": 1.899,
+      "ms": 254
+    },
+    "B33_duplicated_module": {
+      "crypto": "OK",
+      "status": "OK",
+      "detail": "catalog.version=catalog v2 (patch 1) / product_service v1; catalog.priceLabel=Product price: \u20b9499",
+      "verifier_ms": 1.783,
+      "ms": 76
+    },
+    "B34_random_00_flip": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify}",
+      "ms": 1282
+    },
+    "B35_random_01_insert": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier disconnected; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify}",
+      "ms": 1318
+    },
+    "B36_random_02_delete": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify}",
+      "ms": 1348
+    },
+    "B37_random_03_flip": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify}",
+      "ms": 1301
+    },
+    "B38_random_04_flip": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify}",
+      "ms": 1320
+    },
+    "B39_random_05_flip": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify}",
+      "ms": 1262
+    },
+    "B40_random_06_delete": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify}",
+      "ms": 1324
+    },
+    "B41_random_07_insert": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier disconnected; exit={reason=5, status=11, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify}",
+      "ms": 1278
+    },
+    "B42_random_08_flip": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify}",
+      "ms": 1271
+    },
+    "B43_random_09_insert": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier disconnected; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify}",
+      "ms": 1279
+    },
+    "B44_random_10_flip": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier process died; exit={reason=5, status=11, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify}",
+      "ms": 1290
+    },
+    "B45_random_11_flip": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify}",
+      "ms": 1305
+    },
+    "B46_random_12_flip": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify}",
+      "ms": 1259
+    },
+    "B47_random_13_delete": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify}",
+      "ms": 1304
+    },
+    "B48_random_14_delete": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify}",
+      "ms": 1310
+    },
+    "B49_random_15_overwrite": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify}",
+      "ms": 1207
+    },
+    "B50_random_16_flip": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify}",
+      "ms": 1291
+    },
+    "B51_random_17_insert": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify}",
+      "ms": 1267
+    },
+    "B52_random_18_overwrite": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier disconnected; exit={reason=5, status=11, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify}",
+      "ms": 1274
+    },
+    "B53_random_19_overwrite": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify}",
+      "ms": 1294
+    },
+    "C01_signed_ffi_module": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify}",
+      "ms": 1323
+    }
+  }
+}

@@ -1,0 +1,21 @@
+mutant	target	disabled check	tests	result
+m01	patch_security	ES256 signature check	-4: Some tests failed	KILLED
+m02	patch_security	module SHA-256 check	-1: Some tests failed	KILLED
+m03	patch_security	module size check	-2: Some tests failed	KILLED
+m04	patch_security	application id check	-1: Some tests failed	KILLED
+m05	patch_security	store release check	-1: Some tests failed	KILLED
+m06	patch_security	libapp.so baseline check	-1: Some tests failed	KILLED
+m07	patch_security	replay (sequence) check	-2: Some tests failed	KILLED
+m08	patch_security	expiry check	-1: Some tests failed	KILLED
+m09	patch_security	revoked key check	-1: Some tests failed	KILLED
+m10	patch_security	blacklist check	-1: Some tests failed	KILLED
+m11	patch_security	runtime compatibility check	-1: Some tests failed	KILLED
+m12	patch_security	host-owned package check	-1: Some tests failed	KILLED
+m13	patch_security	canonical form check	-2: Some tests failed (re-run with a corrected mutation; the first mutation left half of the check active)	KILLED
+m14	patch_security	unknown-field check	-1: Some tests failed	KILLED
+m15	patch_security	manifest bounds check	-1: Some tests failed	KILLED
+g01	patch_guard	FFI import (graph) check	1 fixture cases failed	KILLED
+g02	patch_guard	FFI element (resolved AST) check	1 fixture cases failed	KILLED
+g03	patch_guard	dynamic method call check	1 fixture cases failed	KILLED
+g04	patch_guard	conditional-import configurations	1 fixture cases failed	KILLED
+g05	patch_guard	noSuchMethod check	1 fixture cases failed	KILLED

@@ -1,0 +1,19 @@
+artifact	exit	expected	result	detail
+v1	0	0	PASS	{"patch_id": "99ab73c5-d8bc-4dba-8c93-c5b86520c357", "sequence": 1, "otp_size": 7245, "module_size": 5527}
+v2	0	0	PASS	{"patch_id": "3840a36d-4a59-4073-81da-f3c25102f6e4", "sequence": 2, "otp_size": 17352, "module_size": 15461}
+crash_ok	0	0	PASS	{"patch_id": "001413ec-e420-4fc2-b95c-c68b38268096", "sequence": 10, "otp_size": 5029, "module_size": 3395}
+crash_throw_init	0	0	PASS	{"patch_id": "4e6c400b-1e85-4522-bd12-8a3cec08da01", "sequence": 11, "otp_size": 2212, "module_size": 579}
+crash_abort_in_entry	0	0	PASS	{"patch_id": "20353d20-48d9-478a-bb00-aaacd20ddec9", "sequence": 12, "otp_size": 4984, "module_size": 3350}
+crash_abort_when_logged_in	0	0	PASS	{"patch_id": "2e6c70b6-d060-4966-a2b8-ead68c1108ea", "sequence": 13, "otp_size": 5108, "module_size": 3474}
+crash_abort_after_frame	0	0	PASS	{"patch_id": "750590e4-e54c-4f4b-a337-b6a32e1fa98c", "sequence": 14, "otp_size": 5096, "module_size": 3462}
+crash_throw_when_logged_in	0	0	PASS	{"patch_id": "3c10ae8d-fc3f-472b-987a-c458abf14a42", "sequence": 15, "otp_size": 5108, "module_size": 3474}
+ffi_guarded	4	4	PASS	Reason: Unsupported FFI dependency detected.
+dynamic_guarded	4	4	PASS	Reason: Dynamic invocation detected (dynamic calls are disabled in modules).
+ffi_unguarded_signed	0	0	PASS	{"patch_id": "23163740-83ae-423e-8a1f-e204bcdeec44", "sequence": 22, "otp_size": 8310, "module_size": 6511}
+v3_for_kill	0	0	PASS	{"patch_id": "64e6a985-1c16-4bad-91c7-8bc174b6be85", "sequence": 3, "otp_size": 7251, "module_size": 5533}
+v4_after_kill	0	0	PASS	{"patch_id": "6494959b-3c7a-455d-b4c0-e1a26f8f3d6e", "sequence": 4, "otp_size": 7255, "module_size": 5537}
+neg_wrong_key	0	0	PASS	-
+neg_untrusted_key	0	0	PASS	-
+neg_wrong_baseline	0	0	PASS	-
+neg_wrong_engine	0	0	PASS	-
+neg_expired	0	0	PASS	-

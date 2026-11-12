@@ -1,0 +1,14 @@
+# Copyright 2026 The Punit Authors
+# SPDX-License-Identifier: Apache-2.0
+name: patch_dynamic
+publish_to: none
+version: 1.0.0
+environment:
+  sdk: ^3.13.0
+dependencies:
+  flutter:
+    sdk: flutter
+  app_core:
+    path: ../../../real_app_compatibility/packages/app_core
+  feature_catalog:
+    path: ../../../real_app_compatibility/packages/feature_catalog

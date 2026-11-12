@@ -103,9 +103,9 @@ same source compiled AOT in the host** (differential test).
 
 | Restricted or unsupported | Status | Observed |
 |---|---|---|
-| Dynamic calls (`dynamic x; x.foo()`, `jsonDecode(s)['id']`) | Unsupported (compile error by default) | The validator rejects them. With the opt-in flag `--allow-dynamic-calls-in-dynamic-modules` and a selector allow-list: calls on module classes worked; `jsonDecode(s)['id']` threw `NoSuchMethodError`; a host member listed as `dynamically-callable` worked; **a host getter not listed returned a different wrong integer on every call** (3 runs) instead of failing. Production rule: dynamic calls stay forbidden |
+| Dynamic calls (`dynamic x; x.foo()`, `jsonDecode(s)['id']`) | Unsupported (compile error by default) | The validator rejects them. With the opt-in flag `--allow-dynamic-calls-in-dynamic-modules` and a selector allow-list: calls on module classes worked; `jsonDecode(s)['id']` threw `NoSuchMethodError`; a host member listed as `dynamically-callable` worked; **a host getter not listed returned a different wrong integer on every call** (3 runs) instead of failing. Production rule: dynamic calls stay forbidden *Phase 3:* also rejected by `patch_guard`, together with `noSuchMethod` overrides |
 | `dart:mirrors` | Unsupported | Not available in Flutter at all |
-| `dart:ffi` | Unsupported, **unsafe** | Compiles and passes validation, then the VM **aborts the process** (`runtime_entry.cc: unreachable code`). The generator must reject `dart:ffi` itself |
+| `dart:ffi` | Unsupported, **unsafe** | Compiles and passes validation, then the VM **aborts the process** (`runtime_entry.cc: unreachable code`). The generator must reject `dart:ffi` itself. *Phase 3:* rejected before bytecode generation by `patch_guard` (direct, transitive, conditional, re-exported, generated); a signed FFI module crashes only the isolated verifier ([phase-3-security-report.md](phase-3-security-report.md)) |
 
 ## 6. Flutter framework and UI (Part 8)
 
