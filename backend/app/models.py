@@ -16,11 +16,13 @@ import uuid
 from datetime import datetime, timezone
 
 from sqlalchemy import (
+    BigInteger,
     Boolean,
     CheckConstraint,
     DateTime,
     ForeignKey,
     Integer,
+    LargeBinary,
     String,
     Text,
     UniqueConstraint,
@@ -41,8 +43,10 @@ class Base(DeclarativeBase):
 
 
 PLATFORMS = ("android", "ios")
-ARTIFACT_FORMATS = ("mock-v1", "aot-bidiff-android-v1", "evc-v1")  # ADR-0003
+ARTIFACT_FORMATS = ("mock-v1", "aot-bidiff-android-v1", "evc-v1", "dbc-v1")  # ADR-0003
 AOT_FORMATS = ("aot-bidiff-android-v1",)
+# Phase 4: developer-signed bytecode containers. The server verifies them and never signs them.
+DEVELOPER_SIGNED_FORMATS = ("dbc-v1",)
 DEFAULT_CHANNELS = ("dev", "staging", "production")
 
 
@@ -121,6 +125,14 @@ class Release(Base):
     # must NOT change (engine, native libraries, Java/Kotlin, manifest, assets). The CLI compares
     # a patch build against it and refuses changes that need a store release.
     fingerprint: Mapped[str] = mapped_column(Text, default="{}", server_default="{}")
+    # Baseline identity of a bytecode-patchable build (Phase 4, dbc-v1). All optional: when set, an
+    # uploaded dbc-v1 manifest must match them. The manifest's release_id is this release's id.
+    toolchain_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    dart_revision: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    bytecode_format: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    interface_sha256: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    # The certificate environment the build trusts (null = "production").
+    trust_environment: Mapped[str | None] = mapped_column(String(64), nullable=True)
     created_at: Mapped[datetime] = mapped_column(default=utc_now)
 
     application: Mapped[Application] = relationship()
@@ -179,8 +191,18 @@ class PatchArtifact(Base):
     result_sha256: Mapped[str] = mapped_column(String(64))
     size_bytes: Mapped[int] = mapped_column(Integer)
     storage_key: Mapped[str] = mapped_column(String(200))
-    signature: Mapped[str] = mapped_column(String(200))
-    key_id: Mapped[str] = mapped_column(String(64))
+    # Server signature (mock-v1 / aot-bidiff). Null for dbc-v1: the developer signed the container.
+    signature: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    key_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    # dbc-v1 only. The stored file (storage_key) is the whole container, unchanged;
+    # payload_sha256/size_bytes describe it and result_sha256 is the module's SHA-256.
+    manifest: Mapped[str | None] = mapped_column(Text, nullable=True)
+    manifest_sha256: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    manifest_patch_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
+    sequence: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    signer_key_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    cert_serial: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    expires_at: Mapped[datetime | None] = mapped_column(nullable=True)
 
     patch: Mapped[Patch] = relationship(back_populates="artifacts")
 
@@ -233,3 +255,54 @@ class PatchEventCount(Base):
     patch_id: Mapped[str] = mapped_column(ForeignKey("patches.id"), index=True)
     event_type: Mapped[str] = mapped_column(String(64))
     count: Mapped[int] = mapped_column(Integer, default=0)
+
+
+# ---- Phase 4: developer signing trust (dbc-v1) --------------------------------------------
+
+
+class TrustRoot(Base):
+    """An application root public key. Its private key stays offline with the developer."""
+
+    __tablename__ = "trust_roots"
+    __table_args__ = (UniqueConstraint("application_id", "key_id"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    application_id: Mapped[str] = mapped_column(ForeignKey("applications.id"), index=True)
+    key_id: Mapped[str] = mapped_column(String(64))
+    # Base64 uncompressed P-256 point, as apps embed it.
+    public_key: Mapped[str] = mapped_column(String(120))
+    created_at: Mapped[datetime] = mapped_column(default=utc_now)
+    revoked_at: Mapped[datetime | None] = mapped_column(nullable=True)
+
+
+class KeyCertificateRecord(Base):
+    """A root-signed certificate for a signer/approver key, uploaded as-is (never created here)."""
+
+    __tablename__ = "key_certificates"
+    __table_args__ = (UniqueConstraint("application_id", "serial"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    application_id: Mapped[str] = mapped_column(ForeignKey("applications.id"), index=True)
+    serial: Mapped[int] = mapped_column(BigInteger)
+    key_id: Mapped[str] = mapped_column(String(64))
+    roles: Mapped[str] = mapped_column(String(64))  # comma-separated, sorted
+    environment: Mapped[str] = mapped_column(String(64))
+    not_before: Mapped[datetime] = mapped_column()
+    not_after: Mapped[datetime] = mapped_column()
+    root_key_id: Mapped[str] = mapped_column(String(64))
+    certificate: Mapped[str] = mapped_column(Text)  # canonical JSON {body, root_key_id, sig}
+    created_at: Mapped[datetime] = mapped_column(default=utc_now)
+
+
+class RevocationListRecord(Base):
+    """A root-signed revocation list, stored byte for byte. Sequence only grows, per app."""
+
+    __tablename__ = "revocation_lists"
+    __table_args__ = (UniqueConstraint("application_id", "sequence"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    application_id: Mapped[str] = mapped_column(ForeignKey("applications.id"), index=True)
+    release_id: Mapped[str | None] = mapped_column(ForeignKey("releases.id"), nullable=True, index=True)
+    sequence: Mapped[int] = mapped_column(BigInteger)
+    data: Mapped[bytes] = mapped_column(LargeBinary)
+    created_at: Mapped[datetime] = mapped_column(default=utc_now)

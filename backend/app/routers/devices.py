@@ -6,6 +6,7 @@
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import JSONResponse
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -35,8 +36,17 @@ def register_device(
     db: Session = Depends(get_db),
     settings: Settings = Depends(get_settings),
 ):
-    """Idempotent: the same installation_id always maps to the same device."""
-    app = db.scalar(select(Application).where(Application.slug == body.app))
+    """Idempotent: the same installation_id always maps to the same device.
+
+    The app is named by its slug (`app`) or, since Phase 4, by its id (`application_id`).
+    """
+    app = None
+    if body.application_id is not None:
+        app = db.get(Application, body.application_id)
+        if app is not None and body.app is not None and app.slug != body.app:
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "app and application_id name different applications")
+    else:
+        app = db.scalar(select(Application).where(Application.slug == body.app))
     if app is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Unknown application")
 
@@ -93,7 +103,7 @@ def update_check(
     settings: Settings = Depends(get_settings),
     storage: Storage = Depends(get_storage),
 ):
-    return check_for_update(
+    result = check_for_update(
         db,
         settings,
         storage,
@@ -106,6 +116,24 @@ def update_check(
         supported_formats={f.strip() for f in supported_formats.split(",") if f.strip()},
         failed_patch_ids={p.strip() for p in failed_patch_ids.split(",") if p.strip()},
     )
+    return JSONResponse(_without_unused_fields(result.model_dump(mode="json")))
+
+
+# Fields added for dbc-v1. Left out when empty, so older clients get byte-identical responses.
+_OPTIONAL_TOP = ("revocations",)
+_OPTIONAL_PATCH = ("sha256", "patch_id", "sequence", "expires_at")
+
+
+def _without_unused_fields(data: dict) -> dict:
+    for key in _OPTIONAL_TOP:
+        if data.get(key) is None:
+            data.pop(key, None)
+    patch = data.get("patch")
+    if patch is not None:
+        for key in _OPTIONAL_PATCH:
+            if patch.get(key) is None:
+                patch.pop(key, None)
+    return data
 
 
 @router.post("/events/batch", status_code=202)

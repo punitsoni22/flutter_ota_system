@@ -9,7 +9,7 @@ import re
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from fastapi.responses import StreamingResponse
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
@@ -21,6 +21,7 @@ from app.deps import get_signer, get_storage
 from app.models import (
     AOT_FORMATS,
     DEFAULT_CHANNELS,
+    DEVELOPER_SIGNED_FORMATS,
     Application,
     Channel,
     Device,
@@ -31,6 +32,7 @@ from app.models import (
     PolicyApprovalRecord,
     Release,
     ReleaseArtifact,
+    RevocationListRecord,
 )
 from app.schemas import (
     ARCH,
@@ -49,6 +51,7 @@ from app.schemas import (
 )
 from app.signing import Signer, public_key_info
 from app.storage import Storage
+from app.trust import store_dbc_artifact
 
 router = APIRouter(prefix="/v1/admin", tags=["admin"], dependencies=[Depends(require_admin)])
 
@@ -223,6 +226,8 @@ def create_release(
     app = _app_by_slug(db, slug)
     fields = body.model_dump()
     replace = fields.pop("replace")
+    if fields["id"] is None:
+        fields.pop("id")  # the server picks the id
     fields["fingerprint"] = json.dumps(fields["fingerprint"], sort_keys=True)
     exists = db.scalar(
         select(func.count()).select_from(Release).where(
@@ -325,6 +330,10 @@ def delete_release(release_id: str, db: Session = Depends(get_db)):
         db.execute(delete(model).where(model.patch_id.in_(patch_ids)))
     db.execute(delete(Patch).where(Patch.release_id == release.id))
     db.execute(delete(ReleaseArtifact).where(ReleaseArtifact.release_id == release.id))
+    # Signed revocation lists are kept (their sequence history matters); they lose the link.
+    db.execute(
+        update(RevocationListRecord).where(RevocationListRecord.release_id == release.id).values(release_id=None)
+    )
     db.delete(release)
     db.commit()
     # Stored files stay: they are content-addressed and may be shared with other releases.
@@ -343,6 +352,8 @@ def create_patch(
     release = _release(db, release_id)
     if body.artifact_format == "aot-bidiff-android-v1" and release.platform != "android":
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "AOT patches are Android-only")
+    if body.artifact_format in DEVELOPER_SIGNED_FORMATS and release.platform != "android":
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "dbc-v1 patches are Android-only")
     for _ in range(3):  # Retry if two creators race for the same number.
         number = (
             db.scalar(select(func.max(Patch.number)).where(Patch.release_id == release.id)) or 0
@@ -385,12 +396,19 @@ def upload_patch_artifact(
     storage: Storage = Depends(get_storage),
     signer: Signer = Depends(get_signer),
 ):
-    """Store the patch file, then sign the canonical message (ADR-0002) for this arch."""
+    """Store the patch file, then sign the canonical message (ADR-0002) for this arch.
+
+    dbc-v1: the file is a developer-signed OTAPRT02 container. It is verified and stored
+    unchanged; the server does not sign it (see app/trust.py).
+    """
     patch = _patch(db, patch_id)
     if patch.status != "draft":
         raise HTTPException(status.HTTP_409_CONFLICT, "Artifacts can only be added to a draft patch")
     if any(a.arch == arch for a in patch.artifacts):
         raise HTTPException(status.HTTP_409_CONFLICT, f"Patch already has a {arch} artifact")
+    if patch.artifact_format in DEVELOPER_SIGNED_FORMATS:
+        store_dbc_artifact(db, storage, patch, arch, file)
+        return _patch_out(db, _patch(db, patch.id), storage)
 
     release = patch.release
     base = next((a for a in _release(db, release.id).artifacts if a.arch == arch), None)

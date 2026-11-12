@@ -14,7 +14,7 @@ from app import migrate
 from app.config import get_settings
 from app.db import get_engine
 from app.deps import get_signer, get_storage
-from app.routers import admin, devices
+from app.routers import admin, devices, trust
 
 log = logging.getLogger("ota")
 
@@ -45,6 +45,7 @@ def create_app() -> FastAPI:
     app = FastAPI(title="Flutter OTA System", version="0.1.0-alpha.1", lifespan=lifespan, **docs)
     app.include_router(devices.router)
     app.include_router(admin.router)
+    app.include_router(trust.router)
 
     @app.get("/health/live", tags=["health"])
     def live():
