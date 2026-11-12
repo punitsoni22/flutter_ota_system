@@ -6,6 +6,7 @@
 Order matters: compatibility first (release, platform, arch, format), rollout bucket last.
 """
 
+import base64
 from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import select
@@ -14,9 +15,10 @@ from sqlalchemy.orm import Session, selectinload
 from app.auth import DeviceIdentity
 from app.bucket import is_in_rollout, rollout_bucket
 from app.config import Settings
-from app.models import Channel, Device, Patch, Release
-from app.schemas import UpdateCheckOut, UpdatePatch
+from app.models import DEVELOPER_SIGNED_FORMATS, Channel, Device, Patch, Release
+from app.schemas import RevocationsOut, UpdateCheckOut, UpdatePatch
 from app.storage import Storage
+from app.trust import aware, latest_revocation_list, revoked_state
 
 LAST_SEEN_RESOLUTION = timedelta(hours=1)
 
@@ -70,6 +72,11 @@ def check_for_update(
     rolled_back = sorted(p.number for p in patches if p.status == "rolled_back")
     revoked = sorted(p.number for p in patches if p.status == "revoked")
 
+    # dbc-v1 (developer-signed) patches: skip ones the device would refuse anyway.
+    wants_dbc = any(f in supported_formats for f in DEVELOPER_SIGNED_FORMATS)
+    trust_revoked = revoked_state(db, app_id) if wants_dbc else None
+    now = datetime.now(timezone.utc)
+
     best: tuple[Patch, object] | None = None
     if channel_row is not None:
         for patch in patches:
@@ -82,6 +89,13 @@ def check_for_update(
                 continue
             artifact = next((a for a in patch.artifacts if a.arch == arch), None)
             if artifact is None:
+                continue
+            if patch.artifact_format in DEVELOPER_SIGNED_FORMATS and (
+                (artifact.expires_at is not None and aware(artifact.expires_at) <= now)
+                or artifact.manifest_patch_id in trust_revoked.patch_ids
+                or artifact.signer_key_id in trust_revoked.key_ids
+                or artifact.cert_serial in trust_revoked.cert_serials
+            ):
                 continue
             bucket = rollout_bucket(
                 settings.rollout_hmac_secret, app_id, identity.installation_id, patch.id
@@ -97,6 +111,14 @@ def check_for_update(
     )
     if current_is_bad:
         result.rollback_to_patch_number = best[0].number if best else 0
+    if wants_dbc:
+        latest = latest_revocation_list(db, app_id, release.id)
+        if latest is not None:
+            result.revocations = RevocationsOut(
+                sequence=latest.sequence,
+                release_id=release.id,
+                data_base64=base64.b64encode(latest.data).decode(),
+            )
 
     if best is None:
         return result
@@ -122,6 +144,11 @@ def check_for_update(
         signature=artifact.signature,
         key_id=artifact.key_id,
     )
+    if patch.artifact_format in DEVELOPER_SIGNED_FORMATS:
+        result.patch.sha256 = artifact.payload_sha256  # of the whole container
+        result.patch.patch_id = artifact.manifest_patch_id
+        result.patch.sequence = artifact.sequence
+        result.patch.expires_at = aware(artifact.expires_at)
     return result
 
 

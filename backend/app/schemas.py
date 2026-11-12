@@ -5,12 +5,16 @@ import json
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 Platform = Literal["android", "ios"]
-ArtifactFormat = Literal["mock-v1", "aot-bidiff-android-v1", "evc-v1"]
+ArtifactFormat = Literal["mock-v1", "aot-bidiff-android-v1", "evc-v1", "dbc-v1"]
 SLUG = r"^[a-z0-9][a-z0-9-]{1,98}[a-z0-9]$"
 ARCH = r"^[a-z0-9_-]{2,32}$"
+# Lowercase UUID as written in dbc-v1 manifests (versions 1-8).
+UUID_PATTERN = r"^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+SHA256_PATTERN = r"^[0-9a-f]{64}$"
+KEY_ID_PATTERN = r"^[A-Za-z0-9._-]{1,64}$"
 
 
 class ORM(BaseModel):
@@ -59,6 +63,14 @@ class ReleaseCreate(BaseModel):
     fingerprint: dict = Field(default_factory=dict)
     # Register a version again although devices still report it from a deleted release (KI-1).
     replace: bool = False
+    # Phase 4 (dbc-v1), all optional. `id` lets the developer CLI choose the release id before the
+    # build, because it is compiled into the app and written into manifests as release_id.
+    id: str | None = Field(default=None, pattern=UUID_PATTERN)
+    toolchain_id: str | None = Field(default=None, pattern=SHA256_PATTERN)
+    dart_revision: str | None = Field(default=None, pattern=r"^[0-9A-Za-z.+-]{1,64}$")
+    bytecode_format: int | None = Field(default=None, ge=1, le=1000)
+    interface_sha256: str | None = Field(default=None, pattern=SHA256_PATTERN)
+    trust_environment: str | None = Field(default=None, pattern=KEY_ID_PATTERN)
 
     @field_validator("fingerprint")
     @classmethod
@@ -84,6 +96,11 @@ class ReleaseOut(ORM):
     engine_revision: str
     runtime_abi: str
     fingerprint: dict = {}
+    toolchain_id: str | None = None
+    dart_revision: str | None = None
+    bytecode_format: int | None = None
+    interface_sha256: str | None = None
+    trust_environment: str | None = None
     created_at: datetime
     artifacts: list[ReleaseArtifactOut] = []
 
@@ -104,9 +121,16 @@ class PatchArtifactOut(ORM):
     payload_sha256: str
     result_sha256: str
     size_bytes: int
-    signature: str
-    key_id: str
+    # Null for dbc-v1 (developer-signed; the signature is inside the container).
+    signature: str | None
+    key_id: str | None
     url: str = ""
+    # dbc-v1 only.
+    manifest_patch_id: str | None = None
+    sequence: int | None = None
+    signer_key_id: str | None = None
+    cert_serial: int | None = None
+    expires_at: datetime | None = None
 
 
 class DeploymentOut(BaseModel):
@@ -141,12 +165,20 @@ class RolloutRequest(BaseModel):
 
 
 class DeviceRegister(BaseModel):
-    app: str = Field(pattern=SLUG, description="Application slug")
+    # One of the two is required. If both are sent they must name the same application.
+    app: str | None = Field(default=None, pattern=SLUG, description="Application slug")
+    application_id: str | None = Field(default=None, pattern=UUID_PATTERN, description="Application id (UUID)")
     installation_id: str = Field(min_length=8, max_length=128)
     platform: Platform
     arch: str = Field(pattern=ARCH)
     release_version: str = Field(min_length=1, max_length=64)
     channel: str = Field(default="production", max_length=64)
+
+    @model_validator(mode="after")
+    def _app_or_id(self):
+        if self.app is None and self.application_id is None:
+            raise ValueError("send app (slug) or application_id (UUID)")
+        return self
 
 
 class DeviceRegisterOut(BaseModel):
@@ -166,8 +198,22 @@ class UpdatePatch(BaseModel):
     payload_sha256: str
     result_sha256: str
     size_bytes: int
-    signature: str
-    key_id: str
+    # Null for dbc-v1: the device verifies the developer signature inside the container.
+    signature: str | None
+    key_id: str | None
+    # dbc-v1 only (left out of the JSON for other formats).
+    sha256: str | None = None
+    patch_id: str | None = None
+    sequence: int | None = None
+    expires_at: datetime | None = None
+
+
+class RevocationsOut(BaseModel):
+    """The newest root-signed revocation list for the device's release, byte for byte."""
+
+    sequence: int
+    release_id: str
+    data_base64: str
 
 
 class UpdateCheckOut(BaseModel):
@@ -182,6 +228,8 @@ class UpdateCheckOut(BaseModel):
     rolled_back_patch_numbers: list[int] = []
     revoked_patch_numbers: list[int] = []
     next_check_after_seconds: int
+    # Only for devices that list dbc-v1 in supported_formats (left out of the JSON otherwise).
+    revocations: RevocationsOut | None = None
 
 
 class DeviceEvent(BaseModel):
@@ -199,3 +247,46 @@ class DeviceEvent(BaseModel):
 
 class EventBatch(BaseModel):
     events: list[DeviceEvent] = Field(max_length=100)
+
+
+# ---- developer signing trust (dbc-v1) ----------------------------------------------------
+
+
+class TrustRootCreate(BaseModel):
+    key_id: str = Field(pattern=KEY_ID_PATTERN)
+    public_key: str = Field(min_length=80, max_length=120, description="Base64 uncompressed P-256 point")
+
+
+class TrustRootOut(ORM):
+    key_id: str
+    public_key: str
+    created_at: datetime
+    revoked_at: datetime | None = None
+
+
+class CertificateOut(BaseModel):
+    serial: int
+    key_id: str
+    roles: list[str]
+    environment: str
+    not_before: datetime
+    not_after: datetime
+    root_key_id: str
+    certificate: dict
+
+
+class RevocationListOut(BaseModel):
+    sequence: int
+    release_id: str | None
+    root_key_id: str
+    revoked_patch_ids: list[str]
+    revoked_key_ids: list[str]
+    revoked_cert_serials: list[int]
+    created_at: datetime
+
+
+class TrustStateOut(BaseModel):
+    application_id: str
+    roots: list[TrustRootOut]
+    certificates: list[CertificateOut]
+    revocation_lists: list[RevocationListOut]
