@@ -15,7 +15,6 @@ secrets
 **/.dart_tool
 **/build
 demo_video
-example_app
 packages
 docs
 backups

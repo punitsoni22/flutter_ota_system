@@ -72,6 +72,8 @@ jobs:
           done
 
   flutter:
+    # The job name is a required status check in the branch ruleset: keep it unchanged. The
+    # example app now lives in packages/ota_client/example.
     name: Flutter (ota_client + example_app)
     runs-on: ubuntu-latest
     steps:
@@ -82,8 +84,8 @@ jobs:
       - name: ota_client analyze + test
         working-directory: packages/ota_client
         run: flutter pub get && flutter analyze && flutter test
-      - name: example_app analyze
-        working-directory: example_app
+      - name: example app analyze
+        working-directory: packages/ota_client/example
         run: flutter pub get && flutter analyze
 
   e2e:

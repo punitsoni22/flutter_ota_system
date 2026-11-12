@@ -99,7 +99,7 @@ i = json.load(urllib.request.urlopen(r, timeout=5))
 print(i["key_id"] + ":" + i["uncompressed_point_base64"])' 2>/dev/null
 }
 
-# Server id of the demo application (OTA_APPLICATION_ID for example_app); empty if not seeded.
+# Server id of the demo application (OTA_APPLICATION_ID for the example app); empty if not seeded.
 demo_app_id() {
   compose exec -T api python -c '
 import json, os, urllib.request

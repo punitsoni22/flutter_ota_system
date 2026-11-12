@@ -43,7 +43,7 @@ careful fixes are the most useful contributions right now.
 | Git, Bash, curl | recent | everything |
 | Python | 3.13 (what CI and the image use) | backend, CLI |
 | Docker + Compose v2 | Docker 24+ | local stack, end-to-end test |
-| Flutter | stable ≥ 3.27, Dart ≥ 3.12 (maintainers use 3.44) | `ota_client`, `example_app` |
+| Flutter | stable ≥ 3.44.9, Dart ≥ 3.12.2 (the SDK's minimum; maintainers use 3.44.9) | `ota_client` and its example app |
 | shellcheck | any | shell scripts |
 
 ```bash
@@ -59,7 +59,8 @@ Repository layout:
 backend/            FastAPI control plane, Alembic migrations, tests, /admin page
 cli/                `ota` admin CLI and Android code-patch tooling
 packages/ota_client Flutter client package (Dart + Android Java)
-example_app/        Example Flutter app (mock-v1 patches)
+  example/          The official demo app (mock-v1 patches)
+prototypes/         Research prototypes of the bytecode patch engine (not demos; see prototypes/README.md)
 docker/, deploy/    nginx config; single-server compose (Caddy)
 scripts/            Local setup, demo, verification and pre-publish scripts
 docs/               Documentation (start at docs/index.md)
@@ -84,8 +85,8 @@ The tests use SQLite and a temporary directory, so they need no Docker. S3 stora
 ### Flutter client and example app
 
 ```bash
-cd packages/ota_client && flutter pub get && flutter analyze && flutter test   # 19 tests
-cd ../../example_app && flutter pub get && flutter analyze
+cd packages/ota_client && flutter pub get && flutter analyze && flutter test   # expect: All tests passed!
+cd example && flutter pub get && flutter analyze
 ```
 
 ### CLI

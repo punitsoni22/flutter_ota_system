@@ -17,7 +17,7 @@ updates:
 
   # Dart: the ota_client package and the example app
   - package-ecosystem: "pub"
-    directories: ["/packages/ota_client", "/example_app"]
+    directories: ["/packages/ota_client", "/packages/ota_client/example"]
     schedule: { interval: "weekly", day: "monday" }
     open-pull-requests-limit: 5
     commit-message: { prefix: "deps(pub)" }
