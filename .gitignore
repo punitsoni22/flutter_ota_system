@@ -12,6 +12,8 @@ deploy/backups/
 *.jks
 *.keystore
 keys/
+# Source code folder of the flutter_ota CLI (key management code, never key files).
+!packages/flutter_ota_cli/lib/src/keys/
 .local/
 secrets/
 # ./flutter-ota-system.sh backup output (contains the signing key and .env) and setup temp files

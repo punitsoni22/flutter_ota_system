@@ -1,0 +1,7 @@
+# Copyright 2026 The Punit Authors
+# SPDX-License-Identifier: Apache-2.0
+# Fixture projects for the patch and feature tests; their package configs are written by the
+# tests into temporary copies, so they are not analysed here.
+analyzer:
+  exclude:
+    - "**"

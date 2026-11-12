@@ -1,0 +1,261 @@
+// Copyright 2026 The Punit Authors
+// SPDX-License-Identifier: Apache-2.0
+
+// Helpers for the feature and patch tests: temporary copies of the fixture projects in
+// test/fixtures/patch, with a package config written the way `pub get` would.
+
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:crypto/crypto.dart';
+import 'package:flutter_ota_cli/flutter_ota_cli.dart';
+import 'package:flutter_ota_cli/src/keys/key_store.dart';
+import 'package:flutter_ota_cli/src/patch/process.dart';
+import 'package:path/path.dart' as p;
+
+final fixturesDir = p.join(Directory.current.path, 'test', 'fixtures', 'patch');
+
+/// A temporary copy of test/fixtures/patch (shop app + SDK stub).
+class FixtureProject {
+  FixtureProject._(this.root);
+
+  final String root;
+
+  String get app => p.join(root, 'shop');
+  String get sdk => p.join(root, 'sdk', 'flutter_ota_system');
+  String pkg(String name) => p.join(app, 'packages', name);
+
+  static FixtureProject create({Map<String, String> extraConfigPackages = const {}}) {
+    final root = Directory.systemTemp.createTempSync('flutter_ota_features_test').path;
+    copyTree(fixturesDir, root);
+    final f = FixtureProject._(p.join(root));
+    f.writePackageConfig(extra: extraConfigPackages);
+    return f;
+  }
+
+  void dispose() => Directory(root).deleteSync(recursive: true);
+
+  /// Writes shop/.dart_tool/package_config.json: the app, the SDK stub, every local package and
+  /// [extra] (name -> absolute dir).
+  void writePackageConfig({Map<String, String> extra = const {}}) {
+    final pkgs = <String, String>{
+      'shop': app,
+      'flutter_ota_system': sdk,
+      for (final d in Directory(p.join(app, 'packages')).listSync().whereType<Directory>()) p.basename(d.path): d.path,
+      ...extra,
+    };
+    final cfgDir = p.join(app, '.dart_tool');
+    Directory(cfgDir).createSync(recursive: true);
+    File(p.join(cfgDir, 'package_config.json')).writeAsStringSync(
+      const JsonEncoder.withIndent('  ').convert({
+        'configVersion': 2,
+        'packages': [
+          for (final e in (pkgs.entries.toList()..sort((a, b) => a.key.compareTo(b.key))))
+            {
+              'name': e.key,
+              'rootUri': p.relative(e.value, from: cfgDir),
+              'packageUri': 'lib/',
+              'languageVersion': '3.8',
+            },
+        ],
+      }),
+    );
+  }
+
+  void write(String relToApp, String content) {
+    final f = File(p.join(app, relToApp));
+    f.parent.createSync(recursive: true);
+    f.writeAsStringSync(content);
+  }
+
+  void edit(String relToApp, String Function(String) change) {
+    final f = File(p.join(app, relToApp));
+    f.writeAsStringSync(change(f.readAsStringSync()));
+  }
+}
+
+void copyTree(String from, String to) {
+  for (final e in Directory(from).listSync(recursive: true, followLinks: false)) {
+    final rel = p.relative(e.path, from: from);
+    if (e is File) {
+      final t = File(p.join(to, rel));
+      t.parent.createSync(recursive: true);
+      e.copySync(t.path);
+    }
+  }
+}
+
+/// One recorded tool call.
+class Call {
+  Call(this.executable, this.args, this.cwd);
+  final String executable;
+  final List<String> args;
+  final String? cwd;
+
+  /// For `dartaotruntime <snapshot> ...`: the snapshot's base name, else the executable's.
+  String get tool => p.basenameWithoutExtension(executable.endsWith('dartaotruntime') ? args.first : executable);
+  String? opt(String name) {
+    final i = args.indexOf(name);
+    return i < 0 || i + 1 >= args.length ? null : args[i + 1];
+  }
+}
+
+/// A fake runner that records every call and lets the test decide the result.
+class FakeTools {
+  final calls = <Call>[];
+  final handlers = <String, ToolResult Function(Call)>{};
+
+  Future<ToolResult> call(
+    String executable,
+    List<String> arguments, {
+    String? workingDirectory,
+    Map<String, String>? environment,
+  }) async {
+    final c = Call(executable, arguments, workingDirectory);
+    calls.add(c);
+    final h = handlers[c.tool];
+    return h == null ? ToolResult(0, '', '') : h(c);
+  }
+
+  List<String> get toolNames => calls.map((c) => c.tool).toList();
+}
+
+const testAppId = '7c1d2e3f-4a5b-4c6d-8e7f-90a1b2c3d4e5';
+const testReleaseId = '98657508-43bd-4e97-a7f1-f9057b50cd23';
+
+/// The lab toolchain record (public build metadata) and its id.
+Map<String, Object?> testToolchainRecord() {
+  final fields = <String, Object?>{
+    'flutter': '3.47.9',
+    'dart': '3.13.7',
+    'engine': '89c39edf',
+    'dart_revision': '416e33b0',
+    'engine_patch_sha256': '5de36e0658651529ead9cb96130bd5a2334a9a8ccff0252ebbd225b27c3313d4',
+    'compiler_sha256': '09fe796cb95bc7e12b659d9ab2520e51ef17d68dae2cd46d4410b45475ae0699',
+    'generator_sha256': 'bf40838ffffdf5368b0ba4ea4150a7092f1630d3687225e3207c7fcc2a9c8b8d',
+    'bytecode_format': 3,
+    'build_config_sha256': '6c12946ffaa660317bac91637e4751d940e6b66b371b9f9171d4379904b66490',
+  };
+  return {...fields, 'id': computeToolchainId(fields)};
+}
+
+const testRuntime = {
+  'abi': 'android-arm64',
+  'dart': '3.13.7',
+  'engine': '89c39edf',
+  'flutter': '3.47.9',
+  'runtime_id': 'dbc-test',
+};
+
+/// Writes a local release baseline like `flutter_ota release android` does. Returns its dir.
+String writeTestRelease(
+  String projectDir, {
+  required Map<String, String> rootKeys,
+  required Set<String> hostPackages,
+  String environment = 'production',
+  String? canonicalRoot,
+  bool registered = true,
+  String interface = 'callable: []\n',
+  String linkDill = 'fake kernel',
+}) {
+  final dir = p.join(projectDir, '.flutter_ota', 'releases', testReleaseId);
+  Directory(dir).createSync(recursive: true);
+  File(p.join(dir, 'dynamic_interface.yaml')).writeAsStringSync(interface);
+  File(p.join(dir, 'link.dill')).writeAsStringSync(linkDill);
+  final all = hostPackages.toList()..sort();
+  File(p.join(dir, 'host_packages.json')).writeAsStringSync(jsonEncode({'internal': <String>[], 'all': all}));
+  final lock = File(p.join(projectDir, 'pubspec.lock'));
+  if (lock.existsSync()) lock.copySync(p.join(dir, 'pubspec.lock'));
+  final tc = testToolchainRecord();
+  File(p.join(dir, 'release.json')).writeAsStringSync(
+    jsonEncode({
+      'format': 1,
+      'app_id': testAppId,
+      'release_id': testReleaseId,
+      'platform': 'android',
+      'version': '1.0.0',
+      'environment': environment,
+      'arch': 'arm64-v8a',
+      'libapp_sha256': 'ab' * 32,
+      'toolchain_id': tc['id'],
+      'toolchain_record': tc,
+      'runtime': testRuntime,
+      'interface_sha256': sha256.convert(utf8.encode(interface)).toString(),
+      'host_packages': all,
+      'root_keys': rootKeys,
+      'entry_contract': 3,
+      'link_dill_sha256': sha256.convert(utf8.encode(linkDill)).toString(),
+      'canonical_build_root': ?canonicalRoot,
+      'server_url': 'http://127.0.0.1:8000',
+      'registered': registered
+          ? {'server_url': 'http://127.0.0.1:8000', 'app_slug': 'shop', 'arch': 'arm64-v8a'}
+          : null,
+      'created_at': '2026-11-12T10:00:00.000Z',
+    }),
+  );
+  return dir;
+}
+
+/// Creates a root key and a certified signer key in the key store of [env].
+({String rootKeyId, Map<String, String> roots, SignerKey signer}) createTestKeys(
+  Map<String, String> env, {
+  String environment = 'production',
+  DateTime? now,
+}) {
+  final store = AppKeyStore.forApp(env, testAppId);
+  final rootId = store.createRoot();
+  final signer = store.createSigner(
+    rootKeyId: rootId,
+    environment: environment,
+    validity: const Duration(days: 365),
+    now: now,
+  );
+  return (rootKeyId: rootId, roots: store.rootPublicKeys(), signer: signer);
+}
+
+/// Runs patch_security's verifyPatch (the reference device verifier) on [files] in a separate
+/// process. Returns its output lines, or null when the harness cannot run (no pub cache).
+Future<List<String>?> verifyWithPatchSecurity(Map<String, Object?> hostJson, List<String> files) async {
+  final dart = labDart;
+  if (dart == null) return null;
+  final ps = p.normalize(
+    p.join(Directory.current.path, '..', '..', 'prototypes', 'security_hardening', 'packages', 'patch_security'),
+  );
+  final tmp = Directory.systemTemp.createTempSync('flutter_ota_interop');
+  try {
+    copyTree(p.join(fixturesDir, 'interop'), tmp.path);
+    final pub = File(p.join(tmp.path, 'pubspec.yaml'));
+    pub.writeAsStringSync(pub.readAsStringSync().replaceAll('PATCH_SECURITY_PATH', ps));
+    final get = await Process.run(dart, ['pub', 'get', '--offline'], workingDirectory: tmp.path);
+    if (get.exitCode != 0) {
+      stderr.writeln('interop harness: pub get --offline failed:\n${get.stderr}');
+      return null;
+    }
+    final host = File(p.join(tmp.path, 'host.json'))..writeAsStringSync(jsonEncode(hostJson));
+    final r = await Process.run(dart, ['run', 'bin/verify.dart', host.path, ...files], workingDirectory: tmp.path);
+    if (r.exitCode != 0) throw StateError('interop harness failed: ${r.stderr}');
+    return (r.stdout as String).trim().split('\n');
+  } finally {
+    tmp.deleteSync(recursive: true);
+  }
+}
+
+/// A Dart SDK >= 3.13 to run the interop harness: DART_FOR_TESTS, else the lab SDK, else the
+/// running VM.
+String? get labDart {
+  final env = Platform.environment['DART_FOR_TESTS'];
+  if (env != null && File(env).existsSync()) return env;
+  final lab = p.join(
+    Platform.environment['HOME'] ?? '',
+    '.cache',
+    'flutter-ota-lab',
+    'flutter',
+    'bin',
+    'cache',
+    'dart-sdk',
+    'bin',
+    'dart',
+  );
+  if (File(lab).existsSync()) return lab;
+  return Platform.resolvedExecutable;
+}

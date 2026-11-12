@@ -1,0 +1,12 @@
+# Copyright 2026 The Punit Authors
+# SPDX-License-Identifier: Apache-2.0
+# Interop harness: verifies containers signed by the CLI with the reference verifier
+# (prototypes/security_hardening/packages/patch_security). The test copies this folder to a
+# temporary directory and points PATCH_SECURITY_PATH at the real package.
+name: interop_verify
+publish_to: none
+environment:
+  sdk: ^3.13.0
+dependencies:
+  patch_security:
+    path: PATCH_SECURITY_PATH

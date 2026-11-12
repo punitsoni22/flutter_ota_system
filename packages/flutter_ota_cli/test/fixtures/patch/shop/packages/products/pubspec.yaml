@@ -1,0 +1,18 @@
+# Copyright 2026 The Punit Authors
+# SPDX-License-Identifier: Apache-2.0
+name: products
+version: 1.2.0
+environment:
+  sdk: ^3.8.0
+dependencies:
+  flutter_ota_system:
+    path: ../../../sdk/flutter_ota_system
+  core:
+    path: ../core
+  analytics:
+    path: ../analytics
+  products_data:
+    path: ../products_data
+  collection: ^1.19.0
+dev_dependencies:
+  build_runner: ^2.16.0

@@ -27,7 +27,12 @@ Bytecode patches need a Flutter engine with the Dart bytecode interpreter compil
   - our `gen_snapshot` (android-arm64-release, linux-x64 host), which replaces the stock one;
   - a local **Maven mirror** with our `libflutter.so` (inside the `arm64_v8a_release` jar), its POM,
     and the unmodified official embedding jar and POM;
-  - three tool snapshots: `dart2bytecode`, `pkg_rename` and `patch_guard`;
+  - four tool snapshots: `dart2bytecode`, `pkg_rename`, `patch_guard` and `bc_verify` (the
+    reference bytecode verifier that `flutter_ota patch android` runs on every module);
+  - the unchanged `dynamic_modules` package (`packages/dynamic_modules/`, from
+    `prototypes/real_app_compatibility/packages/dynamic_modules`). Only a package with this name
+    may call the Dart VM's module loader, so `flutter_ota release android` copies it into the app
+    (see [releasing-with-flutter-ota.md](releasing-with-flutter-ota.md));
   - `toolchain.json`, the content-hash record of the toolchain (its `id` is the `toolchain_id`);
   - licence notices (Flutter and Dart are BSD-3-Clause; our tools are Apache-2.0).
 
@@ -141,7 +146,8 @@ Default `~/.cache/flutter_ota` (or `$XDG_CACHE_HOME/flutter_ota`; tests use `FLU
 toolchains/<id>/         installed toolchain
   flutter/               stock SDK with our gen_snapshot
   mirror/                Maven mirror (download.flutter.io/…)
-  tools/*.aot            tool snapshots
+  tools/*.aot            tool snapshots (dart2bytecode, pkg_rename, patch_guard, bc_verify)
+  packages/dynamic_modules/  the module-loader package (copied into apps by release android)
   toolchain.json, overlay.json, NOTICES/
   install.json           written last: SHA-256 of every overlay file and key SDK files
   gradle-home/           isolated Gradle home (created by builds)
@@ -226,13 +232,14 @@ JOBS=4 ./scripts/build_engine.sh
 # 3. Install our gen_snapshot into the lab SDK and create the Maven mirror.
 ./scripts/prepare_toolchain.sh
 
-# 4. Tool snapshots (dart2bytecode, pkg_rename, patch_guard).
+# 4. Tool snapshots (dart2bytecode, pkg_rename, patch_guard, bc_verify).
 DART=$LAB/flutter/bin/cache/dart-sdk/bin/dart
 DART_SRC=$LAB/engine/engine/src/flutter/third_party/dart
 mkdir -p $LAB/work/tools
 for pair in "$DART_SRC/pkg/dart2bytecode/bin/dart2bytecode.dart:dart2bytecode" \
             "../real_app_compatibility/tools/pkg_rename/bin/pkg_rename.dart:pkg_rename" \
-            "../security_hardening/tools/patch_guard/bin/patch_guard.dart:patch_guard"; do
+            "../security_hardening/tools/patch_guard/bin/patch_guard.dart:patch_guard" \
+            "../security_hardening/tools/bc_verify/bin/bc_verify.dart:bc_verify"; do
   nice $DART compile aot-snapshot --packages="$DART_SRC/.dart_tool/package_config.json" \
     -o "$LAB/work/tools/${pair##*:}.aot" "${pair%:*}"
 done
