@@ -198,7 +198,36 @@ class CodegenChecker {
     final f = File(from);
     if (!f.existsSync()) return;
     Directory(p.dirname(to)).createSync(recursive: true);
-    f.copySync(to);
+    final name = p.basename(from);
+    if (name == 'pubspec.yaml' || name == 'pubspec.lock' || name == 'package_config.json') {
+      // Path dependencies that point OUTSIDE the project (for example a local SDK checkout)
+      // would break in the copy, because the copy lives elsewhere. Make them absolute. Only the
+      // copy is changed; the developer's files are never touched.
+      File(to).writeAsStringSync(_absolutiseOutsidePaths(f.readAsStringSync(), p.dirname(from), name));
+    } else {
+      f.copySync(to);
+    }
     File(to).setLastModifiedSync(f.lastModifiedSync());
+  }
+
+  String _absolutiseOutsidePaths(String text, String fileDir, String fileName) {
+    final root = p.normalize(p.absolute(project.projectDir));
+    bool outside(String abs) => !p.isWithin(root, abs) && !p.equals(root, abs);
+    if (fileName == 'package_config.json') {
+      // rootUri values are relative to the .dart_tool directory.
+      return text.replaceAllMapped(RegExp(r'"rootUri":\s*"([^"]+)"'), (m) {
+        final uri = m[1]!;
+        if (uri.contains(':')) return m[0]!; // already absolute (file:///...)
+        final abs = p.normalize(p.join(fileDir, Uri.decodeFull(uri)));
+        return outside(abs) ? '"rootUri": "${Uri.file(abs)}"' : m[0]!;
+      });
+    }
+    // pubspec.yaml / pubspec.lock: `path: <value>` entries (relative to the file's directory).
+    return text.replaceAllMapped(RegExp(r'^(\s*path:\s*)"?([^"\n]+?)"?\s*$', multiLine: true), (m) {
+      final value = m[2]!;
+      if (p.isAbsolute(value)) return m[0]!;
+      final abs = p.normalize(p.join(fileDir, value));
+      return outside(abs) ? '${m[1]}"$abs"' : m[0]!;
+    });
   }
 }

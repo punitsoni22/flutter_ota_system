@@ -9,3 +9,5 @@ undeclared_clean	case_undeclared_clean	host_packages.json	reject	undeclared_depe
 host_list_clean	case_host_list_clean,clean_dep	host_packages.json	accept	ffi_in_host
 declared_ffi_dep	case_undeclared_ffi,undeclared_native	host_packages.json	reject	ffi,ffi_in_host
 legacy_mode_hole	case_undeclared_ffi	-	accept	ffi_in_host
+host_only_conditional	case_host_cond	host_packages_cond.json	accept	-
+host_cond_direct_import	case_host_cond_direct	host_packages_cond.json	reject	dynamic_call,undeclared_dependency
