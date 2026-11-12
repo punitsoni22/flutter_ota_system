@@ -1,0 +1,8 @@
+# Copyright 2026 The Punit Authors
+# SPDX-License-Identifier: Apache-2.0
+name: dynamic_modules
+description: Minimal wrapper around the Dart VM's experimental dynamic-module loader.
+publish_to: none
+version: 0.0.1
+environment:
+  sdk: ^3.13.0

@@ -1,0 +1,15 @@
+# Copyright 2026 The Punit Authors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Dynamic interface of the prototype host: what a bytecode module may call, use as a type or
+# extend. It is used twice: when the HOST is compiled (so the AOT compiler keeps these members)
+# and when a MODULE is validated (dart2bytecode --validate). Format: Dart SDK
+# pkg/front_end/lib/src/kernel/dynamic_module_validator.dart.
+#
+# Verified in Phase 1: dart:core is NOT implicitly available to modules in this build; using
+# String, Object or @pragma without listing dart:core here fails validation.
+callable:
+  - library: 'dart:core'
+
+can-be-used-as-type:
+  - library: 'dart:core'
