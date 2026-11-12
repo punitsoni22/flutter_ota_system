@@ -1,0 +1,10 @@
+[compat] START mode=home app=7c1d2e3f-4a5b-4c6d-8e7f-90a1b2c3d4e5 baseline=6a2a62a6-34c8-426a-9f57-4d99e02c3760
+[compat] host AppState token=1794480317653383 createdAt=2026-11-12 16:15:17.653385
+[compat] LAST_EXIT CRASH_NATIVE(status=6, crash|J:0)
+[compat] UNCONFIRMED_START patch=94f10121693c previous exit: CRASH_NATIVE(status=6, crash|J:0)
+[compat] FAILURE_COUNT patch=94f10121693c count=2/2 reason="start not confirmed (CRASH_NATIVE)"
+[compat] ROLLED_BACK patch=94f10121693c blacklisted after 2 failed starts; baseline will run
+[compat] NO_PATCH running baseline (AOT) code
+[compat] FIRST_FRAME main_to_first_frame_ms=152.6 boot_ms=121.3 module_load_ms=-
+[compat] RESULT boot
+[compat] RESULT ui_1

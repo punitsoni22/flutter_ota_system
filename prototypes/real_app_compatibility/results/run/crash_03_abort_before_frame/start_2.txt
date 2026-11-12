@@ -1,0 +1,7 @@
+[compat] START mode=home app=7c1d2e3f-4a5b-4c6d-8e7f-90a1b2c3d4e5 baseline=6a2a62a6-34c8-426a-9f57-4d99e02c3760
+[compat] host AppState token=1794480275508900 createdAt=2026-11-12 16:14:35.508902
+[compat] LAST_EXIT CRASH_NATIVE(status=6, crash|J:0)
+[compat] UNCONFIRMED_START patch=d405e5bd98b9 previous exit: CRASH_NATIVE(status=6, crash|J:0)
+[compat] FAILURE_COUNT patch=d405e5bd98b9 count=1/2 reason="start not confirmed (CRASH_NATIVE)"
+[compat] TEST_CRASH aborting process (before first frame)
+F/libc    (25575): Fatal signal 6 (SIGABRT), code 0 (SI_USER) in tid 25575 (i22.compat_host), pid N (i22.compat_host)

@@ -1,0 +1,12 @@
+# Copyright 2026 The Punit Authors
+# SPDX-License-Identifier: Apache-2.0
+# Scenario B: two interdependent packages change together (feature_catalog uses product_service),
+# plus feature_profile. Part 8 UI change: "Product price: ₹499" -> "Product price: ₹399" comes
+# from the patched ProductService (Dart code), not from configuration.
+kind: patch
+number: 2
+suffix: patch2
+change:
+  - feature_catalog
+  - product_service
+  - feature_profile

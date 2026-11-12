@@ -1,0 +1,8 @@
+# Copyright 2026 The Punit Authors
+# SPDX-License-Identifier: Apache-2.0
+# Scenario F: a second module that contains a library with the SAME URI as module A (package:patchable_utils_multi/...).
+kind: probe
+number: 110
+suffix: multi
+change:
+  - patchable_utils

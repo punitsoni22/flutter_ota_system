@@ -1,0 +1,23 @@
+{
+  "file": "08_probe_multi_b",
+  "name": "probe_multi_b",
+  "module_bytes": 2260,
+  "load_ms": 0.279,
+  "result": {
+    "registry names visible to B": [
+      "a.greeter",
+      "a.counter",
+      "a.fn"
+    ],
+    "call A through a HOST interface (Greeter)": "module A greets B, price ₹399",
+    "call A closure through a function type": "A:HI",
+    "runtimeType of A-only class": "ACounter"
+  },
+  "status": "RAN",
+  "memory_after": {
+    "VmRSS_kb": 222136,
+    "VmHWM_kb": 222136,
+    "dart_current_rss": 232079360,
+    "dart_max_rss": 232079360
+  }
+}

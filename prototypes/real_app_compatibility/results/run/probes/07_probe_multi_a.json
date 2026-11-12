@@ -1,0 +1,13 @@
+{
+  "file": "07_probe_multi_a",
+  "name": "probe_multi_a",
+  "module_bytes": 3257,
+  "status": "LOAD_ERROR",
+  "error": "StateError: Bad state: Unable to load dynamic module: library 'package:probe_multi_a/entry.dart' is already loaded",
+  "memory_after": {
+    "VmRSS_kb": 222136,
+    "VmHWM_kb": 222136,
+    "dart_current_rss": 227467264,
+    "dart_max_rss": 227467264
+  }
+}

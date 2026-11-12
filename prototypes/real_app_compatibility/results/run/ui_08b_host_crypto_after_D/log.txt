@@ -1,0 +1,10 @@
+[compat] START mode=home app=7c1d2e3f-4a5b-4c6d-8e7f-90a1b2c3d4e5 baseline=6a2a62a6-34c8-426a-9f57-4d99e02c3760
+[compat] host AppState token=1794480104988131 createdAt=2026-11-12 16:11:44.988133
+[compat] LAST_EXIT USER_REQUESTED(status=0, stop io.github.punitsoni22.compat_host due to from pid N|J:0)
+[compat] NOTE module sha256("abc")=ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad
+[compat] LOADED patch #4 patch_v4 in 4.1 ms (26944 bytes bytecode)
+[compat] APPLIED catalog
+[compat] FIRST_FRAME main_to_first_frame_ms=156.4 boot_ms=125.7 module_load_ms=4.1
+[compat] RESULT boot
+[compat] CONFIRMED patch=741fee14d851 start confirmed
+[compat] RESULT ui_1

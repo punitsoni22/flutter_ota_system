@@ -1,0 +1,309 @@
+{
+  "file": "01_probe_lang",
+  "name": "probe_lang",
+  "module_bytes": 25826,
+  "load_ms": 3.349,
+  "result": {
+    "class + inheritance": {
+      "interpreted": "Rect:6.0,Circle:3.1",
+      "aot": "Rect:6.0,Circle:3.1",
+      "executes": true,
+      "matches_aot": true
+    },
+    "abstract class": {
+      "interpreted": "1.0",
+      "aot": "1.0",
+      "executes": true,
+      "matches_aot": true
+    },
+    "interface (implements)": {
+      "interpreted": "loud",
+      "aot": "loud",
+      "executes": true,
+      "matches_aot": true
+    },
+    "mixin": {
+      "interpreted": "LOUDRECT:4.0",
+      "aot": "LOUDRECT:4.0",
+      "executes": true,
+      "matches_aot": true
+    },
+    "extension method (unnamed)": {
+      "interpreted": "42",
+      "aot": "42",
+      "executes": true,
+      "matches_aot": true
+    },
+    "extension method (named)": {
+      "interpreted": "cba",
+      "aot": "cba",
+      "executes": true,
+      "matches_aot": true
+    },
+    "generics (bounded)": {
+      "interpreted": "9 z",
+      "aot": "9 z",
+      "executes": true,
+      "matches_aot": true
+    },
+    "generics (reified)": {
+      "interpreted": "true false Box<int>",
+      "aot": "true false Box<int>",
+      "executes": true,
+      "matches_aot": true
+    },
+    "enhanced enum": {
+      "interpreted": "low:1:false,high:10:true",
+      "aot": "low:1:false,high:10:true",
+      "executes": true,
+      "matches_aot": true
+    },
+    "sealed class + switch patterns": {
+      "interpreted": "ok 3,big ok 30,err x",
+      "aot": "ok 3,big ok 30,err x",
+      "executes": true,
+      "matches_aot": true
+    },
+    "records": {
+      "interpreted": "5 five 3 true",
+      "aot": "5 five 3 true",
+      "executes": true,
+      "matches_aot": true
+    },
+    "destructuring (map/list patterns)": {
+      "interpreted": "p1 7",
+      "aot": "p1 7",
+      "executes": true,
+      "matches_aot": true
+    },
+    "default constructor": {
+      "interpreted": "2.0",
+      "aot": "2.0",
+      "executes": true,
+      "matches_aot": true
+    },
+    "named constructor": {
+      "interpreted": "9.0",
+      "aot": "9.0",
+      "executes": true,
+      "matches_aot": true
+    },
+    "const constructor + canonicalisation": {
+      "interpreted": "true Money(0)",
+      "aot": "true Money(0)",
+      "executes": true,
+      "matches_aot": true
+    },
+    "factory constructor (cache)": {
+      "interpreted": "true Money(10)",
+      "aot": "true Money(10)",
+      "executes": true,
+      "matches_aot": true
+    },
+    "factory constructor (subtype)": {
+      "interpreted": "woof meow",
+      "aot": "woof meow",
+      "executes": true,
+      "matches_aot": true
+    },
+    "redirecting factory": {
+      "interpreted": "Money(4)",
+      "aot": "Money(4)",
+      "executes": true,
+      "matches_aot": true
+    },
+    "operator overloading": {
+      "interpreted": "Money(5)",
+      "aot": "Money(5)",
+      "executes": true,
+      "matches_aot": true
+    },
+    "top-level function": {
+      "interpreted": "42",
+      "aot": "42",
+      "executes": true,
+      "matches_aot": true
+    },
+    "static method + static field": {
+      "interpreted": "2",
+      "aot": "2",
+      "executes": true,
+      "matches_aot": true
+    },
+    "instance method": {
+      "interpreted": "2",
+      "aot": "2",
+      "executes": true,
+      "matches_aot": true
+    },
+    "closures (captured state)": {
+      "interpreted": "2",
+      "aot": "2",
+      "executes": true,
+      "matches_aot": true
+    },
+    "higher-order functions": {
+      "interpreted": "60",
+      "aot": "60",
+      "executes": true,
+      "matches_aot": true
+    },
+    "tear-offs + generic function": {
+      "interpreted": "3 [2, 3]",
+      "aot": "3 [2, 3]",
+      "executes": true,
+      "matches_aot": true
+    },
+    "late top-level (lazy)": {
+      "interpreted": "computed computed inits=1",
+      "aot": "computed computed inits=1",
+      "executes": true,
+      "matches_aot": true
+    },
+    "late final field (lazy)": {
+      "interpreted": "100 100 computed=1",
+      "aot": "100 100 computed=1",
+      "executes": true,
+      "matches_aot": true
+    },
+    "sync* generator": {
+      "interpreted": "0,2,4,6",
+      "aot": "0,2,4,6",
+      "executes": true,
+      "matches_aot": true
+    },
+    "Future + async/await": {
+      "interpreted": "5",
+      "aot": "5",
+      "executes": true,
+      "matches_aot": true
+    },
+    "Future.wait": {
+      "interpreted": "[2, 4]",
+      "aot": "[2, 4]",
+      "executes": true,
+      "matches_aot": true
+    },
+    "async* stream": {
+      "interpreted": "[1, 2, 3, 4]",
+      "aot": "[1, 2, 3, 4]",
+      "executes": true,
+      "matches_aot": true
+    },
+    "StreamController (broadcast)": {
+      "interpreted": "ab",
+      "aot": "ab",
+      "executes": true,
+      "matches_aot": true
+    },
+    "error propagation (async)": {
+      "interpreted": "caught MyError(7)",
+      "aot": "caught MyError(7)",
+      "executes": true,
+      "matches_aot": true
+    },
+    "try/finally + rethrow": {
+      "interpreted": "finally,x",
+      "aot": "finally,x",
+      "executes": true,
+      "matches_aot": true
+    },
+    "Timer": {
+      "interpreted": "fired",
+      "aot": "fired",
+      "executes": true,
+      "matches_aot": true
+    },
+    "Timer.periodic": {
+      "interpreted": "ticks=3",
+      "aot": "ticks=3",
+      "executes": true,
+      "matches_aot": true
+    },
+    "microtask ordering": {
+      "interpreted": "123",
+      "aot": "123",
+      "executes": true,
+      "matches_aot": true
+    },
+    "zones": {
+      "interpreted": "zoned",
+      "aot": "zoned",
+      "executes": true,
+      "matches_aot": true
+    },
+    "part file": {
+      "interpreted": "from part file",
+      "aot": "from part file",
+      "executes": true,
+      "matches_aot": true
+    },
+    "annotations (metadata)": {
+      "interpreted": "1",
+      "aot": "1",
+      "executes": true,
+      "matches_aot": true
+    },
+    "extension type": {
+      "interpreted": "true false",
+      "aot": "true false",
+      "executes": true,
+      "matches_aot": true
+    },
+    "JSON serialization (toJson/fromJson)": {
+      "interpreted": "u9 Ravi true",
+      "aot": "u9 Ravi true",
+      "executes": true,
+      "matches_aot": true
+    },
+    "host model enum + sealed (app_models)": {
+      "interpreted": "books done r1",
+      "aot": "books done r1",
+      "executes": true,
+      "matches_aot": true
+    },
+    "runtimeType / toString (no mirrors)": {
+      "interpreted": "Rect Money",
+      "aot": "Rect Money",
+      "executes": true,
+      "matches_aot": true
+    },
+    "Function.apply": {
+      "interpreted": "2",
+      "aot": "2",
+      "executes": true,
+      "matches_aot": true
+    },
+    "string interpolation + unicode": {
+      "interpreted": "₹499 6 1",
+      "aot": "₹499 6 1",
+      "executes": true,
+      "matches_aot": true
+    },
+    "int/double arithmetic": {
+      "interpreted": "1099511627776 3 2 0.30000000000000004 true",
+      "aot": "1099511627776 3 2 0.30000000000000004 true",
+      "executes": true,
+      "matches_aot": true
+    },
+    "BigInt": {
+      "interpreted": "1267650600228229401496703205376",
+      "aot": "1267650600228229401496703205376",
+      "executes": true,
+      "matches_aot": true
+    },
+    "Isolate.run (closure)": {
+      "interpreted": "42",
+      "aot": "42",
+      "executes": true,
+      "matches_aot": true
+    }
+  },
+  "status": "RAN",
+  "memory_after": {
+    "VmRSS_kb": 217036,
+    "VmHWM_kb": 218744,
+    "dart_current_rss": 222244864,
+    "dart_max_rss": 223993856
+  }
+}

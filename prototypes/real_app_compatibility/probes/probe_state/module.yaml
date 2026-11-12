@@ -1,0 +1,14 @@
+# Copyright 2026 The Punit Authors
+# SPDX-License-Identifier: Apache-2.0
+# Part 6: shared state and class identity. The probe uses the HOST's app_models/shared_state/
+# app_core/user_service (kept references) and, deliberately, renamed COPIES of app_models and
+# shared_state, to measure what a copy does to identity and state. Experiment flags are needed
+# because the policy forbids copying host-owned packages.
+kind: probe
+number: 103
+suffix: state
+allow_host_owned: true
+allow_stale: true
+change:
+  - app_models
+  - shared_state

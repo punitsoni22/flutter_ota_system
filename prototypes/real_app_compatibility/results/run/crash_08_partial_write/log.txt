@@ -1,0 +1,9 @@
+[compat] START mode=home app=7c1d2e3f-4a5b-4c6d-8e7f-90a1b2c3d4e5 baseline=6a2a62a6-34c8-426a-9f57-4d99e02c3760
+[compat] host AppState token=1794480369733463 createdAt=2026-11-12 16:16:09.733465
+[compat] LAST_EXIT USER_REQUESTED(status=0, stop io.github.punitsoni22.compat_host due to from pid N|J:0)
+[compat] TEST_HOOK private patch store wiped
+[compat] REJECTED incoming patch: module size mismatch (truncated or padded) (current state kept)
+[compat] NO_PATCH running baseline (AOT) code
+[compat] FIRST_FRAME main_to_first_frame_ms=144.3 boot_ms=114.8 module_load_ms=-
+[compat] RESULT boot
+[compat] RESULT ui_1

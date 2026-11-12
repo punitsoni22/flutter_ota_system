@@ -1,0 +1,16 @@
+# Copyright 2026 The Punit Authors
+# SPDX-License-Identifier: Apache-2.0
+# Packages the host owns: contracts, shared models and shared state. Copying one into a module
+# creates new class identities and duplicate state (verified in Phase 2), so a change to any of
+# them needs a full store release.
+host_owned:
+  - app_core
+  - app_models
+  - shared_state
+# SDK packages: part of the engine/framework build. A change = new Flutter version = new baseline.
+sdk_packages:
+  - flutter
+  - sky_engine
+# The patch runtime itself (module loader). Part of the host build.
+host_runtime:
+  - dynamic_modules

@@ -1,0 +1,46 @@
+# Copyright 2026 The Punit Authors
+# SPDX-License-Identifier: Apache-2.0
+name: compat_host
+description: Phase 2 compatibility host app (multi-package) for the Flutter OTA System bytecode engine.
+publish_to: none
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.13.0
+  flutter: 3.47.9
+
+dependencies:
+  flutter:
+    sdk: flutter
+  # Third-party pure-Dart (pinned so a patch can carry a different version: Scenario D).
+  crypto: 3.0.6
+  # Flutter plugin with native Android code (Part 9).
+  shared_preferences: 2.5.5
+  app_models:
+    path: ../packages/app_models
+  app_core:
+    path: ../packages/app_core
+  shared_state:
+    path: ../packages/shared_state
+  patchable_utils:
+    path: ../packages/patchable_utils
+  product_service:
+    path: ../packages/product_service
+  user_service:
+    path: ../packages/user_service
+  feature_catalog:
+    path: ../packages/feature_catalog
+  feature_profile:
+    path: ../packages/feature_profile
+  # Test fixtures (language suite, benchmark kernels, boundary helpers).
+  compat_suites:
+    path: ../packages/compat_suites
+  dynamic_modules:
+    path: ../packages/dynamic_modules
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/config.json
+    - assets/strings_en.json
+    - assets/logo.png

@@ -1,0 +1,9 @@
+# Copyright 2026 The Punit Authors
+# SPDX-License-Identifier: Apache-2.0
+# Part 7: the language suite runs as an interpreted COPY (compat_suites_lang) and as the host's AOT
+# original; results are compared feature by feature.
+kind: probe
+number: 101
+suffix: lang
+change:
+  - compat_suites

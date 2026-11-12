@@ -1,0 +1,6 @@
+[compat] START mode=home app=7c1d2e3f-4a5b-4c6d-8e7f-90a1b2c3d4e5 baseline=6a2a62a6-34c8-426a-9f57-4d99e02c3760
+[compat] host AppState token=1794480398375195 createdAt=2026-11-12 16:16:38.375197
+[compat] LAST_EXIT USER_REQUESTED(status=0, stop io.github.punitsoni22.compat_host due to from pid N|J:0)
+[compat] TEST_HOOK private patch store wiped
+[compat] INSTALLED patch #2 patch_v2 (8061 bytes)
+F/libc    (27172): Fatal signal 6 (SIGABRT), code -1 (SI_QUEUE) in tid 27172 (i22.compat_host), pid N (i22.compat_host)

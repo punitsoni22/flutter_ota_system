@@ -1,0 +1,6 @@
+# Copyright 2026 The Punit Authors
+# SPDX-License-Identifier: Apache-2.0
+# Scenario F (module B): compiled separately; uses module A's objects through host types only.
+kind: probe
+number: 109
+suffix: multib

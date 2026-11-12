@@ -1,0 +1,10 @@
+# Copyright 2026 The Punit Authors
+# SPDX-License-Identifier: Apache-2.0
+# Experiment for Scenario E: ONLY patchable_utils is copied. pkg_rename refuses this by default
+# (stale dependency); allow_stale forces the build to measure what happens at runtime.
+kind: patch
+number: 31
+suffix: patch3s
+allow_stale: true
+change:
+  - patchable_utils

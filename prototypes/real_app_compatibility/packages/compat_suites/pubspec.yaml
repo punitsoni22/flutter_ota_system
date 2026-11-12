@@ -1,0 +1,14 @@
+# Copyright 2026 The Punit Authors
+# SPDX-License-Identifier: Apache-2.0
+# Test fixtures, not business code: the same sources run AOT in the host and, as a renamed copy,
+# interpreted inside a probe module, so results can be compared one to one.
+name: compat_suites
+publish_to: none
+version: 1.0.0
+environment:
+  sdk: ^3.13.0
+dependencies:
+  flutter:
+    sdk: flutter
+  app_models:
+    path: ../app_models

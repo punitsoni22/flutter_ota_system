@@ -1,0 +1,17 @@
+# Copyright 2026 The Punit Authors
+# SPDX-License-Identifier: Apache-2.0
+name: feature_profile
+description: Profile feature (widgets, form validation).
+publish_to: none
+version: 1.0.0
+environment:
+  sdk: ^3.13.0
+dependencies:
+  flutter:
+    sdk: flutter
+  app_core:
+    path: ../app_core
+  app_models:
+    path: ../app_models
+  user_service:
+    path: ../user_service

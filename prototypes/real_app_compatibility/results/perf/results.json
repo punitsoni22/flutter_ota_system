@@ -1,0 +1,51 @@
+[
+  {
+    "id": "perf:startup_no_patch",
+    "part": "11",
+    "title": "cold start x10 (startup_no_patch)",
+    "status": "PASS",
+    "detail": "am start TotalTime median 434.5 ms; PSS 117202 kB"
+  },
+  {
+    "id": "perf:startup_patch_v2",
+    "part": "11",
+    "title": "cold start x10 (startup_patch_v2)",
+    "status": "PASS",
+    "detail": "am start TotalTime median 454.0 ms; PSS 117443 kB"
+  },
+  {
+    "id": "perf:startup_after_rollback",
+    "part": "11",
+    "title": "cold start x10 after rollback",
+    "status": "PASS",
+    "detail": "median 442.5 ms"
+  },
+  {
+    "id": "perf:frames_no_patch",
+    "part": "11",
+    "title": "scrolling frame timings (frames_no_patch)",
+    "status": "PASS",
+    "detail": "{\"frames\": 1056, \"missed_budget_frames\": 1, \"refresh_hz\": 60.000003814697266}"
+  },
+  {
+    "id": "perf:frames_patch_v2",
+    "part": "11",
+    "title": "scrolling frame timings (frames_patch_v2)",
+    "status": "PASS",
+    "detail": "{\"frames\": 1089, \"missed_budget_frames\": 0, \"refresh_hz\": 60.000003814697266}"
+  },
+  {
+    "id": "perf:bench",
+    "part": "11",
+    "title": "execution benchmarks AOT vs interpreted",
+    "status": "PASS",
+    "detail": ""
+  },
+  {
+    "id": "apk_unchanged",
+    "part": "-",
+    "title": "installed APK is byte-identical to the baseline APK after all tests (patches never modify it)",
+    "status": "PASS",
+    "detail": "6b70abd8600a33367314a5b46ae431ad5e2d4015af5b02a2a73e1165f09fbba3"
+  }
+]

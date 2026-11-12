@@ -1,0 +1,13 @@
+# Copyright 2026 The Punit Authors
+# SPDX-License-Identifier: Apache-2.0
+name: app_core
+description: Host contracts, feature slots, service locator, logger.
+publish_to: none
+version: 1.0.0
+environment:
+  sdk: ^3.13.0
+dependencies:
+  flutter:
+    sdk: flutter
+  app_models:
+    path: ../app_models

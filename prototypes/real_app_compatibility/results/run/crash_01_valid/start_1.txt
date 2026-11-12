@@ -1,0 +1,11 @@
+[compat] START mode=home app=7c1d2e3f-4a5b-4c6d-8e7f-90a1b2c3d4e5 baseline=6a2a62a6-34c8-426a-9f57-4d99e02c3760
+[compat] host AppState token=1794480211976236 createdAt=2026-11-12 16:13:31.976238
+[compat] LAST_EXIT CRASH_NATIVE(status=6, crash|J:0)
+[compat] TEST_HOOK private patch store wiped
+[compat] INSTALLED patch #20 crash_ok (3366 bytes)
+[compat] LOADED patch #20 crash_ok in 0.8 ms (3034 bytes bytecode)
+[compat] APPLIED catalog
+[compat] FIRST_FRAME main_to_first_frame_ms=163.5 boot_ms=129.1 module_load_ms=0.8
+[compat] RESULT boot
+[compat] CONFIRMED patch=59900ccd6d47 start confirmed
+[compat] RESULT ui_1

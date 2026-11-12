@@ -1,0 +1,12 @@
+# Copyright 2026 The Punit Authors
+# SPDX-License-Identifier: Apache-2.0
+# Scenario D: the pure-Dart third-party dependency crypto changes 3.0.6 -> 3.0.8. The new version is
+# copied from the pub cache as crypto_patch4 and only the patched feature_catalog uses it; the
+# host (including the patch loader's SHA-256) keeps crypto 3.0.6.
+kind: patch
+number: 4
+suffix: patch4
+change:
+  - feature_catalog
+external:
+  crypto: 3.0.8

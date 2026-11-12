@@ -1,0 +1,12 @@
+# Copyright 2026 The Punit Authors
+# SPDX-License-Identifier: Apache-2.0
+# Part 13.7 experiment: the PUBLIC API of the host contract package app_core changes. pkg_rename
+# refuses (host-owned, REQUIRES_FULL_RELEASE); allow_host_owned forces the build to observe the
+# runtime effect: the copy's CatalogFeature is a different type from the host's.
+kind: patch
+number: 5
+suffix: patch5
+allow_host_owned: true
+change:
+  - app_core
+  - feature_catalog

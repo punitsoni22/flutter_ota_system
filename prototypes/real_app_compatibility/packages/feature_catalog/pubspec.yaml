@@ -1,0 +1,20 @@
+# Copyright 2026 The Punit Authors
+# SPDX-License-Identifier: Apache-2.0
+name: feature_catalog
+description: Catalogue feature (widgets).
+publish_to: none
+version: 1.0.0
+environment:
+  sdk: ^3.13.0
+dependencies:
+  crypto: 3.0.6
+  flutter:
+    sdk: flutter
+  app_core:
+    path: ../app_core
+  app_models:
+    path: ../app_models
+  shared_state:
+    path: ../shared_state
+  product_service:
+    path: ../product_service

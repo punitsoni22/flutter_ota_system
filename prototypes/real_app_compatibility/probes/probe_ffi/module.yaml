@@ -1,0 +1,6 @@
+# Copyright 2026 The Punit Authors
+# SPDX-License-Identifier: Apache-2.0
+# Part 9: FFI from bytecode (expected to be unsupported).
+kind: probe
+number: 106
+suffix: ffi

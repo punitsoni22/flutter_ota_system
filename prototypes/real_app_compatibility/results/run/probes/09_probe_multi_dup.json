@@ -1,0 +1,13 @@
+{
+  "file": "09_probe_multi_dup",
+  "name": "probe_multi_dup",
+  "module_bytes": 2454,
+  "status": "LOAD_ERROR",
+  "error": "StateError: Bad state: Unable to load dynamic module: library 'package:patchable_utils_multi/patchable_utils.dart' is already loaded",
+  "memory_after": {
+    "VmRSS_kb": 226640,
+    "VmHWM_kb": 226640,
+    "dart_current_rss": 232079360,
+    "dart_max_rss": 232079360
+  }
+}

@@ -1,0 +1,7 @@
+# Copyright 2026 The Punit Authors
+# SPDX-License-Identifier: Apache-2.0
+# Part 12: controlled, test-only failures. Built several times with ENTRY=lib/entry_<variant>.dart
+# and NUMBER=<n>. No package changes: each variant wraps the host's catalogue feature.
+kind: patch
+number: 20
+suffix: crash

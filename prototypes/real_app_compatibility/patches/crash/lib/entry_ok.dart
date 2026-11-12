@@ -1,0 +1,8 @@
+// Copyright 2026 The Punit Authors
+// SPDX-License-Identifier: Apache-2.0
+
+import 'crash_catalog.dart';
+
+// Control: same module shape, no failure.
+@pragma('dyn-module:entry-point')
+Object? otaPatchEntry() => <String, Object?>{'contract': 2, 'catalog': CrashCatalog(Failure.none)};

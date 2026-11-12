@@ -1,0 +1,13 @@
+# Copyright 2026 The Punit Authors
+# SPDX-License-Identifier: Apache-2.0
+# Scenario E: the TRANSITIVE dependency patchable_utils changes (formatPrice shows paise).
+# feature_catalog -> product_service -> patchable_utils: both dependents must be in the patch,
+# otherwise the host's unchanged product_service keeps calling the old formatPrice (pkg_rename
+# refuses; see patch_v3_stale for the measured effect).
+kind: patch
+number: 3
+suffix: patch3
+change:
+  - patchable_utils
+  - product_service
+  - feature_catalog

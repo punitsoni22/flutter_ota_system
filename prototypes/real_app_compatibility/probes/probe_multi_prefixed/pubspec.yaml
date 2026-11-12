@@ -1,0 +1,12 @@
+# Copyright 2026 The Punit Authors
+# SPDX-License-Identifier: Apache-2.0
+name: probe_multi_prefixed
+publish_to: none
+version: 1.0.0
+environment:
+  sdk: ^3.13.0
+dependencies:
+  flutter:
+    sdk: flutter
+  patchable_utils:
+    path: ../../packages/patchable_utils

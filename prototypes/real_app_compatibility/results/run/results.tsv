@@ -1,0 +1,42 @@
+id	part	status	title	detail
+ui_01_baseline	3/8	PASS	baseline app, no patch (AOT)	
+ui_02_scenario_A_C	4 A/C, 8	PASS	only feature_catalog patched; host app_models/shared_state/product_service reused	
+ui_02b_restart_still_patched	4	PASS	cold restart keeps patch v1	
+ui_03_scenario_B_price	4 B, 8, 10	PASS	two interdependent packages patched together; ₹499 -> ₹399; asset overlay	
+ui_04_patched_screen_nav	8	PASS	patched StatefulWidget: FutureBuilder, StreamBuilder, animation, navigation	
+ui_05_form_validation	8	PASS	patched form validation	
+ui_06_scenario_E	4 E	PASS	transitive change (patchable_utils) with its dependents	
+ui_07_scenario_E_stale	4 E	PASS	experiment: transitive change WITHOUT dependents stays invisible (stale)	
+ui_08_scenario_D	4 D	PASS	third-party dependency crypto 3.0.6 -> 3.0.8 (renamed copy in module)	
+ui_08b_host_crypto_after_D	4 D	PASS	host's own crypto 3.0.6 (patch SHA-256 check) still works	
+ui_09_contract_change	13.7	PASS	experiment: host contract (app_core) public API changed in a copy	
+seq_13_patch_sequence	13.1-13.3	PASS	v1 -> v2 (replaces, cumulative) -> v1 -> rollback -> restart	
+probe:01_probe_lang	-	PASS	probe 01_probe_lang ran	
+probe:02_probe_state	-	PASS	probe 02_probe_state ran	
+probe:03_probe_ui	-	PASS	probe 03_probe_ui ran	
+probe:04_probe_plugins	-	PASS	probe 04_probe_plugins ran	
+probe:05_probe_assets	-	PASS	probe 05_probe_assets ran	
+probe:06_probe_multi_a	-	PASS	probe 06_probe_multi_a ran	
+probe:07_probe_multi_a	4 F	PASS	07_probe_multi_a: duplicate library refused safely (expected)	LOAD_ERROR: StateError: Bad state: Unable to load dynamic module: library 'package:probe_multi_a/entry.dart' is already loaded
+probe:08_probe_multi_b	-	PASS	probe 08_probe_multi_b ran	
+probe:09_probe_multi_dup	4 F	PASS	09_probe_multi_dup: duplicate library refused safely (expected)	LOAD_ERROR: StateError: Bad state: Unable to load dynamic module: library 'package:patchable_utils_multi/patchable_utils.dart' is already loaded
+probe:10_probe_multi_prefixed	-	PASS	probe 10_probe_multi_prefixed ran	
+probe:11_probe_dynamic	-	PASS	probe 11_probe_dynamic ran	
+probe:ffi	9	FAIL	FFI call from a bytecode module (process must survive)	null
+crash_01_valid	12.1	PASS	valid patch starts and is confirmed	
+crash_02_throw_init	12.2, 12.8	PASS	module throws during initialisation	
+crash_03_abort_before_frame	12.3, 12.10	PASS	process dies before first frame, repeatedly	
+crash_03b_exit_reasons	12	PASS	Android exit reasons seen (ApplicationExitInfo)	CRASH_NATIVE(status=6,, USER_REQUESTED(status=0,
+crash_04_abort_after_frame	12.4	PASS	process dies after first frame, before confirmation	
+crash_05_build_error	12.4	PASS	exception in build() of patched code	
+crash_06_killed_before_confirm	12.5	PASS	app force-stopped before confirmation	
+crash_07_device_restart	12.6	NOT_TESTED	device restarts during activation	not run: would reboot the owner's personal phone; covered by design (attempt marker is fsync'ed)
+crash_08_partial_write	12.7	PASS	damaged/incompatible patch: partial_write	
+crash_08_corrupt_manifest	12.9	PASS	damaged/incompatible patch: corrupt_manifest	
+crash_08_other_runtime	13.9	PASS	damaged/incompatible patch: other_runtime	
+crash_08_other_baseline	13.10	PASS	damaged/incompatible patch: other_baseline	
+crash_09a_unloadable_module_caught	12.8	FAIL	malformed bytecode (valid manifest): VM load error is catchable	failed: VM load failure caught in Dart (no process abort)
+crash_09b_unloadable_module_recovered	12.8	PASS	malformed bytecode: crash guard recovers without a loop	
+crash_10_stored_patch_torn	12.7	PASS	stored patch truncated (torn write)	
+crash_11_rollback_restarts	12.11	PASS	rollback then 3 cold starts	
+apk_unchanged	-	PASS	installed APK is byte-identical to the baseline APK after all tests (patches never modify it)	6b70abd8600a33367314a5b46ae431ad5e2d4015af5b02a2a73e1165f09fbba3

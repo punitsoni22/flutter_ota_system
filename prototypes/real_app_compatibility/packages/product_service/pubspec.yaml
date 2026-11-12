@@ -1,0 +1,14 @@
+# Copyright 2026 The Punit Authors
+# SPDX-License-Identifier: Apache-2.0
+name: product_service
+description: Product catalogue business logic.
+publish_to: none
+version: 1.0.0
+environment:
+  sdk: ^3.13.0
+dependencies:
+  app_models:
+    path: ../app_models
+  patchable_utils:
+    path: ../patchable_utils
+  collection: any
