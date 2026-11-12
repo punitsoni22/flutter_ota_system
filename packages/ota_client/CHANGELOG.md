@@ -20,5 +20,7 @@ System server and platform.
   `http://localhost` and `http://10.0.2.2`; redirects are checked hop by hop, never downgraded to
   HTTP, and do not forward the device token to another host; connect, request and download
   timeouts.
+* Android: Java package and namespace `io.github.punitsoni22.flutter_ota_system`
+  (previously `dev.flutterota.ota_client`); the plugin registers itself, no app changes needed.
 * Public API: `OtaClient`, `OtaConfig`, `PatchRuntime`, `MockPatchRuntime`, `AotPatchRuntime`,
   `PatchRecord`, `UpdateResult`, `UpdateStatus`. Protocol and native-boot details are internal.

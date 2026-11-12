@@ -18,7 +18,7 @@ import 'package:flutter_ota_system/src/test_overrides.dart';
 import 'package:flutter_ota_system/src/patch_id.dart';
 import 'package:flutter_ota_system/src/transport.dart';
 
-const _javaPaths = 'android/src/main/java/dev/flutterota/ota_client/OtaPaths.java';
+const _javaPaths = 'android/src/main/java/io/github/punitsoni22/flutter_ota_system/OtaPaths.java';
 
 // Golden values produced by backend/app/signing.py with a fixed test key (same as ota_client_test.dart).
 const _point =

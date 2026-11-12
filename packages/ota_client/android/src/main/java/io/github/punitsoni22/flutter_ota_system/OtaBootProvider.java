@@ -1,7 +1,7 @@
 // Copyright 2026 The Punit Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package dev.flutterota.ota_client;
+package io.github.punitsoni22.flutter_ota_system;
 
 import android.content.ContentProvider;
 import android.content.ContentValues;

@@ -116,7 +116,7 @@ already has: the engine can load the app's compiled Dart code (`libapp.so`) from
 1. The plugin's manifest registers a content provider, `OtaBootProvider`, which Android starts
    when the app process starts, **before** `Application.onCreate` and before any Flutter engine.
 2. It calls `OtaBoot.prepare()`
-   ([`OtaBoot.java`](../packages/ota_client/android/src/main/java/dev/flutterota/ota_client/OtaBoot.java)).
+   ([`OtaBoot.java`](../packages/ota_client/android/src/main/java/io/github/punitsoni22/flutter_ota_system/OtaBoot.java)).
    In a **release** build (debug builds run Dart in JIT mode and are skipped), it reads
    `boot.json`, which the Dart side wrote. That file names the `next` patch to try and the last
    `good` one.
