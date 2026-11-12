@@ -12,6 +12,8 @@ import '../doctor/doctor_command.dart';
 import '../errors.dart';
 import '../features/commands.dart';
 import '../keys/keys_command.dart';
+import '../ops/rollback_command.dart';
+import '../ops/status_command.dart';
 import '../patch/commands.dart';
 import '../release/release_command.dart';
 import '../project/lockfile.dart';
@@ -40,7 +42,9 @@ Future<int> runCli(List<String> args, {CliContext? context}) async {
         ..addCommand(KeysCommand(ctx))
         ..addCommand(ReleaseCommand(ctx))
         ..addCommand(FeaturesCommand(ctx))
-        ..addCommand(PatchCommand(ctx));
+        ..addCommand(PatchCommand(ctx))
+        ..addCommand(StatusCommand(ctx))
+        ..addCommand(RollbackCommand(ctx));
   try {
     final parsed = runner.parse(args);
     if (parsed['version'] == true) {

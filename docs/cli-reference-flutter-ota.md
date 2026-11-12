@@ -10,8 +10,8 @@ for **Linux x64** machines building **Android arm64** apps.
 The Python `ota` tool ([cli-reference.md](cli-reference.md)) stays the tool for server
 administration (apps, channels, rollouts). The two do different jobs.
 
-Milestone 4B has these commands: `init`, `config`, `toolchain`, `upgrade`. Release and patch
-commands come in later milestones.
+Milestone 4B added `init`, `config`, `toolchain` and `upgrade`. Milestone 4H added `status` and
+`rollback` (described below).
 
 ## Install
 
@@ -103,6 +103,72 @@ flutter_ota upgrade --yes        # CI: no question
 It shows the current and the new toolchain and asks for confirmation. Only after a yes does it
 install the new toolchain and rewrite `flutter_ota.lock`. Without a terminal and without `--yes`,
 it stops and changes nothing.
+
+## `flutter_ota status`
+
+```bash
+flutter_ota status                      # newest local release
+flutter_ota status --release <uuid>     # a specific local release
+flutter_ota status --json               # machine-readable output (for scripts and CI)
+```
+
+It reads `app_id` from `flutter_ota.yaml` and the newest local release from
+`.flutter_ota/releases/`, then asks the server (it needs `FLUTTER_OTA_ADMIN_KEY`) and shows:
+
+- the app (slug and UUID);
+- the release (id, version, environment, and whether it is registered on the server);
+- the release's patches: number, status, format, channels with rollout percent, and patch id;
+- the device summary for that release version (how many devices run which patch, from their last
+  update check).
+
+It changes nothing. If the server has no patches for the release yet, it says so. Example:
+
+```text
+Server:   https://ota.example.com
+App:      shop  (id 7c1d2e3f-4a5b-4c6d-8e7f-90a1b2c3d4e5)
+Release:  98657508-43bd-4e97-a7f1-f9057b50cd23
+          version 1.0.0, environment production, registered on the server
+
+Patches (2):
+  NO  STATUS       FORMAT   CHANNELS (ROLLOUT)       PATCH ID
+  1   rolled_back  dbc-v1   stable 100%              <patch uuid>
+  2   published    dbc-v1   stable 100%, beta 12.5%  <patch uuid>
+  published = devices can download it; draft = uploaded, not published yet;
+  rolled_back = devices stopped using it; revoked = it must never run again.
+
+Devices (from their last update check, version 1.0.0):
+  android, channel stable: patch 2 - 3 devices
+  android, channel stable: store code (no patch) - 1 device
+```
+
+With `--json`, the output is one JSON object with the keys `server_url`, `app`, `release`,
+`patches` (each with `number`, `id`, `format`, `status`, `channels`, `note`, `created_at`),
+`patches_problem`, `devices` (every row of the server's device summary for the app, all versions)
+and `devices_problem`. `patches` is `null` when the patches could not be listed (for example, the
+release is not registered); `patches_problem` then says why.
+
+## `flutter_ota rollback`
+
+```bash
+flutter_ota rollback                         # highest-numbered published patch of the newest release; asks [y/N]
+flutter_ota rollback --patch 2               # a specific patch number
+flutter_ota rollback --release <uuid>        # a specific local release
+flutter_ota rollback --reason "crash on start" --yes   # CI: no question
+```
+
+It rolls a **published** patch back with the server's `POST /v1/admin/patches/{id}/rollback`.
+Before it asks, it shows the patch, its channels and what will happen:
+
+- the server marks the patch `rolled_back`; nothing is deleted;
+- devices that run it go back to the newest other published patch for their channel, or to the
+  store code (no patch), at their next start;
+- the patch can be published again later (`ota patch publish <patch_id> --channel <channel>`).
+
+Without a terminal and without `--yes`, it stops and changes nothing. It refuses a patch that is
+not published (already rolled back, a draft, or revoked) and changes nothing. `--reason` is only
+printed with the summary: the server's rollback API has no reason field, so the reason is not
+stored. To stop a patch for good, use `ota patch revoke` (the Python tool); `flutter_ota` has no
+revoke command.
 
 ## Exit codes
 
