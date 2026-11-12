@@ -1,1 +1,9 @@
 include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  exclude:
+    # Replacement files for the demo patch. They are copied into packages/products and checked
+    # there (see docs/demo-walkthrough.md); on their own they have no generated part files.
+    - demo_patch_v2/**
+    - build/**
+    - android/**

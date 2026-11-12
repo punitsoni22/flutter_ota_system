@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Copyright 2026 The Punit Authors -->
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<!--
+  Plain http:// is refused everywhere except on this device's own loopback address. That is
+  where the demo's product API (and a local test server) appear after
+  `adb reverse tcp:8090 tcp:8090`. Everything else must use https://.
+  The OTA SDK itself also refuses http:// server URLs in release builds.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false" />
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">127.0.0.1</domain>
+        <domain includeSubdomains="false">localhost</domain>
+    </domain-config>
+</network-security-config>

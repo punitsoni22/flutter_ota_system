@@ -4,16 +4,29 @@ publish_to: none
 version: 1.0.0+1
 
 environment:
-  sdk: ^3.12.2
-  flutter: ">=3.44.9"
+  # Dart 3.13 is the pinned OTA toolchain (Flutter 3.47.9). freezed 4 (used by the products
+  # feature) needs it too.
+  sdk: ^3.13.0
+  flutter: ">=3.47.9"
 
 dependencies:
   flutter:
     sdk: flutter
   flutter_ota_system:
     path: ../
-  # Reads this build's version and build number, which must match the registered release.
-  package_info_plus: ^10.2.2
+
+  # Shared, host-owned package: part of the store build, never changed by a patch.
+  core:
+    path: packages/core
+  # Feature package: patchable. The app reaches it only through lib/flutter_ota_features.g.dart.
+  products:
+    path: packages/products
+
+  # Host-owned annotation packages. The app depends on them directly so they are part of the
+  # store build (and of its dynamic interface). A patch then uses them instead of carrying its
+  # own copy. See docs/architecture/phase-4-spike-freezed.md.
+  freezed_annotation: ^3.1.0
+  json_annotation: ^4.12.0
 
 dev_dependencies:
   flutter_lints: ^6.0.0

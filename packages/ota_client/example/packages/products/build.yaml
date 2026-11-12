@@ -1,0 +1,11 @@
+# Copyright 2026 The Punit Authors
+# SPDX-License-Identifier: Apache-2.0
+#
+# explicit_to_json: nested objects are converted by generated, typed code, not by a dynamic
+# toJson() call inside jsonEncode. Recommended for patchable code.
+targets:
+  $default:
+    builders:
+      json_serializable:
+        options:
+          explicit_to_json: true

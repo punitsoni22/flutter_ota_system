@@ -1,0 +1,7 @@
+{
+  "products": [
+    {"id": 1, "name": "Coffee mug", "price": 12.5, "rating": 4.6},
+    {"id": 2, "name": "Notebook", "price": 4.99, "rating": 4.1},
+    {"id": 3, "name": "Desk lamp", "price": 29.0, "rating": 3.8}
+  ]
+}
