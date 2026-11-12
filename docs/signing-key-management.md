@@ -113,7 +113,7 @@ self-hosted deployment could:
 This would keep the key out of server memory, files and backups. It would **not** remove the
 other limitations above: whoever can call the signer through the API can still get patches
 signed, so admin authentication, approvals and audit logging remain necessary. The design is
-tracked in [roadmap Phase 6.4](roadmap/phase-06-signing.md#64-key-vault-signer).
+listed as planned in the [roadmap](roadmap/README.md#planned--not-implemented).
 
 ## Related
 

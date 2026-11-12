@@ -4,12 +4,9 @@ For maintainers of `punitsoni22/flutter_ota_system`. These settings live in GitH
 repository, so they must be changed by an admin in the web interface. GitHub occasionally renames
 menus. Where a name differs, the older name is given in brackets.
 
-Status from the pre-publication audit ([PRE_PUBLICATION_AUDIT.md](../PRE_PUBLICATION_AUDIT.md),
-2026-11-11):
-
-- private vulnerability reporting **off**;
-- `main` **not protected**;
-- everything else not verifiable without admin access.
+The internal pre-publication audit (2026-11-11) found private vulnerability reporting **off** and
+`main` **not protected**. Since then, `main` has been protected by a ruleset that requires a pull
+request. Other settings could not be checked without admin access.
 
 Do not treat a setting as enabled until you have checked it with the **Verify** step.
 

@@ -24,3 +24,9 @@ reference.
 
 All ADRs are currently *Proposed*. See the [roadmap](../roadmap/README.md) for what is
 implemented, partial or planned.
+
+**Second ADR series.** Decisions about the proposed bytecode patch engine (research, not in the
+SDK) are numbered separately in [docs/architecture/adr/](../architecture/adr/0001-bytecode-engine-and-developer-experience.md).
+Its ADR 0001 is unrelated to ADR 0001 above. That engine would need a custom Flutter engine build
+(see [bytecode-architecture.md](../architecture/bytecode-architecture.md)), which ADR 0012 would
+then have to cover.

@@ -73,7 +73,7 @@ What each app platform can do:
 |---|---|
 | Android code patches | 🟡 Release builds only. Requires the exact registered APK/AAB and the same Flutter version |
 | Android `mock-v1` | ✅ |
-| iOS code patches | ❌ Apple forbids running downloaded native code. An interpreter-based approach is research only ([roadmap](roadmap/runtime-ios-research.md)) |
+| iOS code patches | ❌ Apple forbids running downloaded native code. No iOS work is planned ([Apple App Store](policy/apple-app-store.md)) |
 | iOS `mock-v1` | ❌ Not tested. The plugin declares only Android |
 | Web, desktop | ❌ Not supported |
 

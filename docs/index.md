@@ -16,7 +16,7 @@ the [README](../README.md) for an overview. The pages below are grouped by what 
 
 | Page | You will |
 |---|---|
-| [installation.md](installation.md) | Run the server locally with Docker, publish a test patch and see it in the example app |
+| [installation.md](installation.md) | Run the server locally with Docker, publish a test patch and see it in the official demo app ([`packages/ota_client/example`](../packages/ota_client/example/README.md)) |
 | [community/testing-guide.md](community/testing-guide.md) | Test Flutter OTA System on your machine and devices, and report the results |
 
 ## Do a task (how-to guides)
@@ -52,8 +52,17 @@ the [README](../README.md) for an overview. The pages below are grouped by what 
 | [policy/apple-app-store.md](policy/apple-app-store.md) | Apple App Store considerations (Guideline 2.5.2); no iOS support |
 | [limitations.md](limitations.md) | What is tested, experimental, planned or unsupported |
 | [known-issues.md](known-issues.md) | Known bugs, with priority and proposed fixes |
-| [roadmap/](roadmap/README.md) | Implemented, partial and planned work by phase |
-| [adr/](adr/README.md) | Architecture decision records |
+| [roadmap/](roadmap/README.md) | Implemented, experimental, planned and unsupported work |
+| [adr/](adr/README.md) | Architecture decision records for the current system |
+
+## Bytecode patch engine (research, not in the SDK)
+
+| Page | Contents |
+|---|---|
+| [architecture/bytecode-architecture.md](architecture/bytecode-architecture.md) | Short summary: what the bytecode engine is, what was measured, what does not exist yet |
+| [architecture/bytecode-compatibility-matrix.md](architecture/bytecode-compatibility-matrix.md) | What a bytecode patch can and cannot change (one test phone) |
+| [architecture/adr/](architecture/adr/0001-bytecode-engine-and-developer-experience.md) | Decision record for the bytecode engine (separate ADR series, status: Proposed) |
+| [architecture/phase-1-prototype-report.md](architecture/phase-1-prototype-report.md), [phase-2-compatibility-report.md](architecture/phase-2-compatibility-report.md) | Detailed engineering reports of the research prototypes |
 
 ## Project
 
@@ -62,8 +71,8 @@ the [README](../README.md) for an overview. The pages below are grouped by what 
 | [CONTRIBUTING.md](../CONTRIBUTING.md) | Development setup, tests, pull requests |
 | [SECURITY.md](../SECURITY.md) | Reporting vulnerabilities privately |
 | [CODE_OF_CONDUCT.md](../CODE_OF_CONDUCT.md) | Community rules |
-| [release/](release/v0.1.0-alpha.1.md) | Release notes and pre-publish checklists |
-| [community/launch-announcement.md](community/launch-announcement.md) | Launch announcement drafts for community channels |
+| [release/v0.1.0-alpha.1.md](release/v0.1.0-alpha.1.md) | Release notes of the first public alpha |
+| [release/](release/PREPUBLISH_CHECKLIST.md) | Maintainers only: pre-publish checklists and GitHub settings |
 
 All documentation describes **v0.1.0-alpha.1**. Where a page and the code disagree, the code is
 correct; please open an issue.

@@ -39,6 +39,12 @@ build/
 pubspec.lock
 android/key.properties
 **/android/local.properties
+**/android/.gradle/
+**/android/.cxx/
+# Build outputs: never commit APKs/AABs
+*.apk
+*.aab
+*.idsig
 
 # ---- Editors / OS / logs ------------------------------------------------------------------
 .DS_Store

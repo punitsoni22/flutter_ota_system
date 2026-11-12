@@ -6,6 +6,19 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Repository and documentation
+
+- One official demo app: the root `example_app/` was merged into the package example
+  `packages/ota_client/example/`, which now has the full demo (local stack defaults,
+  `--dart-define` settings, crash-protection test hook) and keeps its Android project in Git. The
+  unused iOS template folder of `example_app/` was removed (iOS is not supported). CI, Dependabot,
+  scripts and docs point to the new path.
+- Internal planning documents (the original phase-by-phase build plans), the internal
+  pre-publication audit, launch-announcement drafts and the alternative patch engine research
+  were removed from the public tree. `docs/roadmap/README.md` is now a short public roadmap.
+- New public summaries: `docs/architecture/bytecode-architecture.md` (bytecode engine research,
+  what exists and what does not) and `prototypes/README.md` (research prototypes are not demos).
+
 ### Security
 
 - `ota_client`: patch ids from the server are not covered by the signature but name files and
