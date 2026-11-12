@@ -135,7 +135,10 @@ List<(String, File)> graphPass(List<(String, File)> entries) {
     final key = file.absolute.path;
     if (!file.existsSync()) continue;
     final unit = parseString(content: file.readAsStringSync(), path: key, throwIfDiagnostics: false).unit;
-    final inModule = isModulePackage(pkg);
+    // Module code = a module package reached THROUGH module code. A non-host package reached
+    // only through host libraries (e.g. a browser-only conditional import inside a host
+    // package) is not compiled into the module: the host's libraries come from link.dill.
+    final inModule = isModulePackage(pkg) && viaHost[key] != true;
     if (inModule) reachableModule.add((pkg, file));
     final uris = <(String, int, bool)>[];
     for (final d in unit.directives) {
@@ -173,10 +176,13 @@ List<(String, File)> graphPass(List<(String, File)> entries) {
       // Only module code and the host libraries it reaches are walked; the Flutter SDK is host
       // code compiled AOT and is not walked (it contains desktop FFI back-ends).
       if (r.pkg == 'flutter' || r.pkg == 'sky_engine') continue;
-      if (!parent.containsKey(next)) {
+      final nextViaHost = !inModule;
+      // First visit, or a revisit that upgrades a host-only path to a module path.
+      if (!parent.containsKey(next) || (viaHost[next] == true && !nextViaHost)) {
         conditionalVia[next] = conditional || conditionalVia[key] == true;
         parent[next] = key;
         pkgOf[next] = r.pkg!;
+        viaHost[next] = nextViaHost;
         queue.add((r.pkg!, r.file!));
       }
     }
@@ -185,6 +191,9 @@ List<(String, File)> graphPass(List<(String, File)> entries) {
 }
 
 final conditionalVia = <String, bool>{};
+
+/// True when a file was reached only through host libraries (see graphPass).
+final viaHost = <String, bool>{};
 
 /// Pass 2: resolved AST of module code.
 class Checker extends RecursiveAstVisitor<void> {

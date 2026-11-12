@@ -1,0 +1,11 @@
+# Copyright 2026 The Punit Authors
+# SPDX-License-Identifier: Apache-2.0
+name: case_host_cond_direct
+publish_to: none
+environment:
+  sdk: ^3.13.0
+dependencies:
+  host_cond:
+    path: ../host_cond
+  undeclared_dyn:
+    path: ../undeclared_dyn

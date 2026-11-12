@@ -291,9 +291,14 @@ class ModuleBuilder {
     Directory(p.dirname(configPath)).createSync(recursive: true);
     File(configPath).writeAsStringSync(canonicalPackageConfig(entries, spec.mapping));
     String canon(String real) => spec.mapping.map(_real(real)) ?? real;
+    // Packages the module resolves from the store build: only those that ARE in the store build
+    // (host_packages.json "all"). Other entries of the package config (dev dependencies,
+    // platform-only packages such as web/ffi/path_provider_windows) are never compiled for
+    // Android and must not be claimed in the manifest, or the device refuses the patch.
+    final storeBuild = _storeBuildPackages(spec.hostPackagesJson);
     final hostPkgs = [
       for (final b in base)
-        if (!renames.containsKey(b.name)) b.name,
+        if (!renames.containsKey(b.name) && storeBuild.contains(b.name)) b.name,
     ]..sort();
 
     // 4. Guard.
@@ -405,5 +410,13 @@ class ModuleBuilder {
   static String _real(String path) {
     final d = Directory(path);
     return d.existsSync() ? d.resolveSymbolicLinksSync() : p.normalize(p.absolute(path));
+  }
+
+  /// The packages of the store build: `all` of the release's host_packages.json.
+  static Set<String> _storeBuildPackages(String hostPackagesJson) {
+    final j = jsonDecode(File(hostPackagesJson).readAsStringSync());
+    final all = j is Map ? j['all'] : j;
+    if (all is! List) throw CliException('$hostPackagesJson: expected {"all": [...]}');
+    return all.cast<String>().toSet();
   }
 }
