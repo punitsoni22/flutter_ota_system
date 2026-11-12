@@ -344,7 +344,23 @@ exactly as for a normal install. It is not a way to use a stock SDK.
 `FLUTTER_OTA_DYNAMIC_MODULES_DIR=<dir>` does the same for the `dynamic_modules` package, for
 toolchains built before milestone 4D that do not ship it yet.
 
-## 7. Known limits
+## 7. After a patch: `flutter_ota status` and `flutter_ota rollback`
+
+`flutter_ota status` shows the newest release, its patches on the server (status, channels,
+rollout) and how many devices run which patch. It changes nothing.
+
+If a patch causes problems, roll it back:
+
+```bash
+flutter_ota rollback              # the highest-numbered published patch; asks [y/N]
+flutter_ota rollback --patch 2    # a specific patch
+```
+
+Devices that run the patch go back to the newest other published patch, or to the store code, at
+their next start. Nothing is deleted. See [cli-reference-flutter-ota.md](cli-reference-flutter-ota.md)
+for all options.
+
+## 8. Known limits
 
 - Linux x64 hosts and Android arm64 only. Other ABIs in the APK are not patched.
 - `lib/main.dart` is the only app entry point; `--target` is not supported yet.

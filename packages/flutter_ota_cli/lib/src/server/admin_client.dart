@@ -156,6 +156,20 @@ class AdminClient {
   Future<Map<String, Object?>> createRelease(String slug, Map<String, Object?> body) async =>
       (await _send('POST', '/v1/admin/apps/$slug/releases', json: body)) as Map<String, Object?>;
 
+  /// Patches of a release, lowest number first (`GET /v1/admin/releases/{id}/patches`).
+  Future<List<Map<String, Object?>>> listPatches(String releaseId) async =>
+      ((await _send('GET', '/v1/admin/releases/$releaseId/patches')) as List).cast<Map<String, Object?>>();
+
+  /// Rolls a published patch back (`POST /v1/admin/patches/{id}/rollback`, no request body).
+  /// The server answers 409 when the patch is not published.
+  Future<Map<String, Object?>> rollbackPatch(String patchId) async =>
+      (await _send('POST', '/v1/admin/patches/$patchId/rollback')) as Map<String, Object?>;
+
+  /// Device counts by platform, release version, channel and patch number, from each device's
+  /// last check (`GET /v1/admin/apps/{slug}/devices/summary`).
+  Future<List<Map<String, Object?>>> deviceSummary(String slug) async =>
+      ((await _send('GET', '/v1/admin/apps/$slug/devices/summary')) as List).cast<Map<String, Object?>>();
+
   /// Uploads the release's base file for one ABI (multipart `arch` + `file`).
   Future<Map<String, Object?>> uploadReleaseArtifact(String releaseId, String arch, Uint8List bytes) async {
     final path = '/v1/admin/releases/$releaseId/artifacts';
