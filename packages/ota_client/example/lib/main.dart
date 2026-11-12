@@ -6,7 +6,7 @@
 
 import 'dart:async';
 
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_ota_system/flutter_ota_system.dart';
 
 final ota = OtaClient(
@@ -54,26 +54,42 @@ class _ExampleAppState extends State<ExampleApp> {
     );
   }
 
+  // Plain widgets only (no Material dependency): this example is about the OTA calls, not UI.
   @override
-  Widget build(BuildContext context) => MaterialApp(
-    home: Scaffold(
-      appBar: AppBar(title: const Text('flutter_ota_system example')),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Running: ${ota.activePatch == null ? 'store build' : 'patch #${ota.activePatchNumber}'}',
+  Widget build(BuildContext context) => Directionality(
+    textDirection: TextDirection.ltr,
+    child: DefaultTextStyle(
+      style: const TextStyle(fontSize: 16, color: Color(0xFF000000)),
+      child: ColoredBox(
+        color: const Color(0xFFFFFFFF),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Running: ${ota.activePatch == null ? 'store build' : 'patch #${ota.activePatchNumber}'}',
+                ),
+                const SizedBox(height: 8),
+                Text(_status),
+                const SizedBox(height: 16),
+                GestureDetector(
+                  onTap: _check,
+                  child: const ColoredBox(
+                    color: Color(0xFF1565C0),
+                    child: Padding(
+                      padding: EdgeInsets.all(12),
+                      child: Text(
+                        'Check for update',
+                        style: TextStyle(color: Color(0xFFFFFFFF)),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 8),
-            Text(_status),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _check,
-              child: const Text('Check for update'),
-            ),
-          ],
+          ),
         ),
       ),
     ),
