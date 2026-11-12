@@ -316,26 +316,41 @@ Then register and ship the build as described in
 
 ## Store policy
 
-Google Play forbids apps from downloading executable code "such as dex, JAR, .so files", except
-"code that runs in a virtual machine or an interpreter". A Flutter OTA System code patch replaces Dart AOT
-code that the Dart VM inside Flutter runs; no Java, Kotlin or native code is downloaded. Google
-has not ruled on this publicly. **Whether this is allowed for your app is your decision and your
-responsibility.**
+> [!WARNING]
+> Flutter OTA System's experimental AotPatchRuntime modifies executable application code through
+> an OTA patching mechanism. Its use in applications distributed through Google Play presents a
+> significant policy risk under Google Play's Device and Network Abuse policy. Do not assume that
+> the runtime is permitted for Play-distributed applications. Independently review the current
+> policy and obtain appropriate guidance before using it in a distributed application.
+
+A code patch is downloaded as a binary diff and turned into a new `libapp.so` (the app's compiled
+Dart code, which is **native machine code**) that the app loads at the next start. Google Play's
+policy forbids downloading executable code "such as dex, JAR, .so files" from a source other than
+Google Play, with an exception for code that runs in a virtual machine or interpreter; AOT code
+does not obviously fit that exception. Details, quotes and sources:
+[policy/google-play.md](policy/google-play.md). **The compliance decision and responsibility are
+yours** as the developer of the app.
 
 To make that decision explicit, the server refuses to publish code patches for a `public_store`
-app until someone records an approval:
+app until someone records an approval. This switch records a decision; it is not a policy review:
 
 ```bash
-ota app approve-policy shop-app --reason "Dart-only code patches; reviewed by <name>"
+ota app approve-policy shop-app --reason "<who reviewed what, and when>"
 ```
 
-Apple forbids downloading new native code on iOS. Flutter OTA System has no iOS code-patch support, and iOS
-has not been tested.
+iOS is not supported: there is no iOS implementation and nothing has been tested there; see
+[policy/apple-app-store.md](policy/apple-app-store.md). The SDK's data handling, for privacy
+disclosures such as Google Play Data safety, is described in
+[privacy-and-data-handling.md](privacy-and-data-handling.md).
+
+This documentation is provided for technical guidance and is not legal advice.
 
 ## Checklist
 
-- [ ] `ota_client` dependency added; `flutter pub get` done
-- [ ] App created on the server with the right `distribution`
+- [ ] `flutter_ota_system` dependency added; `flutter pub get` done
+- [ ] App created on the server with the right `distribution`; `applicationId` set to its server id
+- [ ] Store-policy review done for your distribution channel ([policy/google-play.md](policy/google-play.md))
+- [ ] Privacy disclosures cover the SDK's data ([privacy-and-data-handling.md](privacy-and-data-handling.md))
 - [ ] Production public key (not a dev key) passed as `OTA_PUBLIC_KEY`
 - [ ] `releaseVersion` built from the full version (`version+buildNumber`)
 - [ ] `markBootSuccessful` reached only once the app is really usable

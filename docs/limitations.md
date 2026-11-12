@@ -8,7 +8,7 @@ has **not** had an independent security audit, and has **no** published load tes
 
 | Mark | Meaning |
 |---|---|
-| ✅ Tested | Implemented and covered by automated tests (backend: 24, `ota_client`: 20) and/or `scripts/verify_demo.sh` (32 checks), which also run in CI |
+| ✅ Tested | Implemented and covered by automated tests (backend: 24, Flutter SDK `flutter_ota_system`: 84) and/or `scripts/verify_demo.sh` (32 checks), which also run in CI |
 | 🟢 Implemented | In the code, used internally, without dedicated automated tests |
 | 🟡 Experimental | Works in internal testing on a small number of devices; expect problems |
 | 🔭 Planned | Not implemented ([roadmap](roadmap/README.md)) |
@@ -64,7 +64,8 @@ were tested internally (same table as the
 | Windows | Not tested |
 
 Android testing does not establish compatibility with every Android device, OS version, CPU
-architecture (ABI) or Flutter version.
+architecture (ABI) or Flutter version. Full matrix, tested versions and the Flutter internals the
+code-patch runtime depends on: [platform-compatibility.md](platform-compatibility.md).
 
 What each app platform can do:
 
@@ -78,7 +79,8 @@ What each app platform can do:
 
 ## Flutter version compatibility
 
-- Requirements of `ota_client`: Dart ≥ 3.12, Flutter ≥ 3.27.
+- Requirements of `flutter_ota_system`: Dart `^3.12.2`, Flutter `>=3.44.9`. Devices were tested
+  only with Flutter 3.44.9.
 - Analysis and unit tests ran with Flutter 3.44 stable (CI uses the current stable).
 - Android code patches depend on Flutter's internal loader option
   (`--aot-shared-library-name`). They were tested only with the Flutter versions the maintainers
@@ -97,8 +99,12 @@ What each app platform can do:
 - Crashes after a patch was confirmed, or in native code before the boot hook, are not detected
   automatically.
 - Debug builds ignore code patches.
-- Google Play's policy on this approach has not been ruled on publicly. The store-policy decision
-  is yours ([flutter-integration.md](flutter-integration.md#store-policy)).
+- Google Play's Device and Network Abuse policy forbids downloading executable code "such as dex,
+  JAR, .so files" outside Google Play; code patches produce and load a new `libapp.so`. This is a
+  significant policy risk, and the decision is yours ([policy/google-play.md](policy/google-play.md)).
+  iOS is not supported ([policy/apple-app-store.md](policy/apple-app-store.md)).
+- Android code patches were last tested on a device before the PR #17/#18 changes and have not
+  been independently validated end to end ([platform-compatibility.md](platform-compatibility.md#what-has-been-tested)).
 
 ## Operational limitations
 
@@ -125,6 +131,9 @@ All known bugs, with priorities: [known-issues.md](known-issues.md).
   tooling.
 - No short-lived signed download URLs; patch files are public by hash.
 - Open device registration, no rate limiting, no per-token revocation.
+- `boot.json` is not signed and native start does not repeat the signature check; patch ids,
+  download URLs and rollback instructions are not signed (protocol v1)
+  ([signing-key-management.md](signing-key-management.md#known-limitations-verified-in-the-code)).
 
 Details: [security.md](security.md).
 

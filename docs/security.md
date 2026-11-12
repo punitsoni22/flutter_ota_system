@@ -5,6 +5,22 @@
 > that the implementation is free of flaws. Validate it yourself before users depend on it. Report
 > vulnerabilities privately as described in [SECURITY.md](../SECURITY.md).
 
+> [!WARNING]
+> Flutter OTA System is an experimental, self-hosted OTA platform. Its Android AotPatchRuntime
+> modifies executable application code and presents significant platform-policy and security
+> considerations. It has not been independently security-audited or validated for production use.
+> Developers must evaluate applicable app-store policies and deployment risks before integrating it
+> into distributed applications.
+
+This documentation is provided for technical guidance and is not legal advice. Platform policies
+can change. Developers are responsible for independently reviewing the policies applicable to
+their applications and distribution channels.
+
+Related pages: [signing keys and trust model](signing-key-management.md) ·
+[privacy and data handling](privacy-and-data-handling.md) ·
+[platform compatibility](platform-compatibility.md) · store policies:
+[Google Play](policy/google-play.md), [Apple App Store](policy/apple-app-store.md).
+
 ## What is being protected
 
 Flutter OTA System delivers files that installed apps load: configuration (`mock-v1`) or **compiled Dart code**
@@ -35,6 +51,14 @@ for every user in that rollout. That is the main risk, and most controls below e
 | TLS | Your responsibility (the single-server compose uses Caddy) | `deploy/` |
 
 ## Device authentication
+
+| Identifier | What it identifies | Secret? |
+|---|---|---|
+| App slug (`OtaConfig.appSlug`) | The application on the server, by name; used to register | No: it is in every app build |
+| Application id (`OtaConfig.applicationId`) | The application's server UUID; bound into every patch signature and checked on every response | No: it only scopes and pins; it grants nothing |
+| Installation id | One installation (random, created on first launch) | No |
+| Device token | Permission to call the update-check and events endpoints as one device of one app | Yes: sent only in the `Authorization` header over HTTPS (release builds) |
+
 
 - A device registers with `POST /v1/devices/register` and gets an **HS256 JWT** signed with
   `OTA_DEVICE_JWT_SECRET`. Claims: device id, application id, installation id, `typ: device`,
@@ -143,44 +167,14 @@ a substituted hash and a different key are all rejected.
 
 ## Key management
 
-### Local development
+The private signing key is an EC P-256 PEM key held by the server (`LocalSigner`: environment
+variable or a file in the `…_keys` volume); apps trust only the public keys compiled into them.
+There is no Key Vault, KMS or HSM signer, and no rotation tooling. The full trust model, its
+verified limitations, rotation, loss and compromise, operator practices and the possible future
+Azure Key Vault signer are in **[signing-key-management.md](signing-key-management.md)**.
 
-`./flutter-ota-system.sh setup` (through `./scripts/generate_dev_signing_key.sh`) creates the key once inside
-the Docker volume `flutter-ota-system_keys` (key id `local-dev-1`, file mode 600, owned by the API's non-root
-user). It never touches the working tree or the image, and restarts never replace it;
-`./flutter-ota-system.sh reset` (or `cleanup_local.sh`) deletes it. `./flutter-ota-system.sh backup` copies it, together
-with `.env`, into `backups/` (git-ignored): keep those folders private.
-`OTA_AUTO_GENERATE_SIGNING_KEY=false` stops the API from creating keys silently. `setup` also
-writes random local values for the admin key and server secrets into a new `.env`; they are still
-development values. **Never ship an app that trusts a development key.**
-
-### Production (what exists today)
-
-The private key is a **local PEM file or an environment variable**, held in the API process
-memory. Recommended handling:
-
-1. Generate the key once, offline: `python -m app.keygen --pem` prints a one-line
-   `OTA_SIGNING_KEY_PEM` and the public key. Or run `python -m app.keygen` on the server to write
-   the key file (0600).
-2. Store it in a secret manager; keep an encrypted offline backup. `deploy/backup.sh` also copies
-   the key file, so protect those backups.
-3. Set `OTA_ENV=production` and `OTA_AUTO_GENERATE_SIGNING_KEY=false`.
-4. Limit who can read the secret and who can deploy the API.
-
-### Trusted keys in apps and rotation
-
-Apps embed a **set** `{key_id: public_key}`. Only those key ids are trusted, and a patch with an
-unknown `key_id` is refused before download. Rotating the key therefore needs **new store
-builds**. Prepare for it: ship builds that trust both the current key and a pre-generated backup
-key. There is no server-side rotation tooling yet, and the server signs with one key at a time.
-
-### Azure Key Vault (planned, not implemented)
-
-The planned design: an EC P-256 key in Key Vault (Premium / Managed HSM) with only the `sign`
-permission, used through a managed identity. A `KeyVaultSigner` would implement the existing
-`Signer` interface in [`signing.py`](../backend/app/signing.py): `sign()` sends the SHA-256 digest
-to Key Vault and converts the result to raw `r‖s`; `public_key()` reads the public key. The
-private key would never leave the HSM. **None of this exists yet.**
+Local development: `./flutter-ota-system.sh setup` creates the development key `local-dev-1` in
+the Docker volume `flutter-ota-system_keys`. **Never ship an app that trusts a development key.**
 
 ## Artifact downloads
 
@@ -233,14 +227,7 @@ track releases in your own change management.
 
 ## Compromised signing key: procedure
 
-1. **Contain:** stop the API or cut admin network access. Revoke every patch you did not publish
-   (`ota patch revoke`).
-2. **Assess:** with the key, an attacker can sign patches. Devices accept them only if the
-   attacker also controls the update-check response (your server, DNS or TLS). Check those.
-3. **Rotate:** create a new key with a new `key_id`, configure the server, and ship **new store
-   builds** that trust only the new key (and a new backup key).
-4. **Retire:** once old builds are gone, delete their releases so they get no more patches.
-5. **Disclose** as your obligations require.
+See [signing-key-management.md](signing-key-management.md#if-the-private-key-is-compromised).
 
 ## Secret rotation
 

@@ -9,6 +9,20 @@ an experimental, open-source, **self-hosted** over-the-air (OTA) patch system fo
 > macOS, Windows, Linux and web are not supported or tested. Testing on some Android devices
 > does not establish compatibility with every device, OS version, ABI or Flutter version.
 
+> [!CAUTION]
+> Flutter OTA System is an experimental, self-hosted OTA platform. Its Android AotPatchRuntime
+> modifies executable application code and presents significant platform-policy and security
+> considerations. It has not been independently security-audited or validated for production use.
+> Developers must evaluate applicable app-store policies and deployment risks before integrating it
+> into distributed applications.
+>
+> Read first: [Google Play policy considerations](https://github.com/punitsoni22/flutter_ota_system/blob/main/docs/policy/google-play.md) ·
+> [Apple App Store](https://github.com/punitsoni22/flutter_ota_system/blob/main/docs/policy/apple-app-store.md) ·
+> [security](https://github.com/punitsoni22/flutter_ota_system/blob/main/docs/security.md) ·
+> [signing keys](https://github.com/punitsoni22/flutter_ota_system/blob/main/docs/signing-key-management.md) ·
+> [privacy and data handling](https://github.com/punitsoni22/flutter_ota_system/blob/main/docs/privacy-and-data-handling.md) ·
+> [platform compatibility](https://github.com/punitsoni22/flutter_ota_system/blob/main/docs/platform-compatibility.md)
+
 ## What it is and why it exists
 
 Flutter OTA System lets you ship fixes to an installed Flutter app without a new store release,
@@ -183,13 +197,25 @@ More: [troubleshooting guide](https://github.com/punitsoni22/flutter_ota_system/
 - The server holds the private signing key and signs what an admin uploads: protect the server
   and its admin key like the key itself. See the
   [security documentation](https://github.com/punitsoni22/flutter_ota_system/blob/main/docs/security.md).
-- **Store policies:** the experimental `AotPatchRuntime` downloads and loads native executable
-  code. Do not use it in Google Play-distributed applications unless you have independently
-  reviewed and confirmed compliance with applicable Google Play policies. No store has reviewed
-  or approved this project.
-- The SDK sends a random installation id, the app version, platform, CPU ABI, channel and
-  boot-success/failure events to **your** server; declare this in your app's privacy
-  disclosures (e.g. Google Play Data safety) as applicable.
+- **Store policies:** Flutter OTA System's experimental AotPatchRuntime modifies executable
+  application code through an OTA patching mechanism. Its use in applications distributed through
+  Google Play presents a significant policy risk under Google Play's Device and Network Abuse
+  policy. Do not assume that the runtime is permitted for Play-distributed applications.
+  Independently review the current policy and obtain appropriate guidance before using it in a
+  distributed application ([details](https://github.com/punitsoni22/flutter_ota_system/blob/main/docs/policy/google-play.md)). iOS is not
+  supported ([details](https://github.com/punitsoni22/flutter_ota_system/blob/main/docs/policy/apple-app-store.md)). No store has reviewed or
+  approved this project.
+- **Data:** the SDK sends a random installation id, the app version, platform, CPU ABI, channel,
+  current patch number and boot/download events to **your** server, and your servers see the
+  device's IP address. Declare this in your app's privacy disclosures (e.g. Google Play Data
+  safety) as applicable: [field-by-field inventory](https://github.com/punitsoni22/flutter_ota_system/blob/main/docs/privacy-and-data-handling.md).
+- **Trust model:** the native start-up check does not repeat the signature verification, and
+  patch ids, download URLs and rollback instructions are not signed (protocol v1):
+  [limitations](https://github.com/punitsoni22/flutter_ota_system/blob/main/docs/signing-key-management.md#known-limitations-verified-in-the-code).
+
+This documentation is provided for technical guidance and is not legal advice. Platform policies
+can change. Developers are responsible for independently reviewing the policies applicable to
+their applications and distribution channels.
 
 ## Current limitations
 
