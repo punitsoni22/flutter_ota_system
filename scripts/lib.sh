@@ -99,6 +99,16 @@ i = json.load(urllib.request.urlopen(r, timeout=5))
 print(i["key_id"] + ":" + i["uncompressed_point_base64"])' 2>/dev/null
 }
 
+# Server id of the demo application (OTA_APPLICATION_ID for example_app); empty if not seeded.
+demo_app_id() {
+  compose exec -T api python -c '
+import json, os, urllib.request
+r = urllib.request.Request("http://127.0.0.1:8000/v1/admin/apps",
+                           headers={"X-API-Key": os.environ["OTA_ADMIN_API_KEY"]})
+apps = json.load(urllib.request.urlopen(r, timeout=5))
+print(next((a["id"] for a in apps if a["slug"] == "flutter-ota-system-demo"), ""))' 2>/dev/null
+}
+
 # Asks the user to type a word. Returns 0 only on an exact match. Works with piped input.
 confirm_word() {  # prompt word
   local ans=""

@@ -9,8 +9,12 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:ota_client/ota_client.dart';
-import 'package:ota_client/src/bsdiff.dart';
+import 'package:flutter_ota_system/flutter_ota_system.dart';
+import 'package:flutter_ota_system/src/canonical.dart';
+import 'package:flutter_ota_system/src/native_boot.dart';
+import 'package:flutter_ota_system/src/signature.dart';
+import 'package:flutter_ota_system/src/test_overrides.dart';
+import 'package:flutter_ota_system/src/bsdiff.dart';
 
 // Golden values produced by backend/app/signing.py with a fixed test key (see README).
 const _point =
@@ -200,20 +204,22 @@ void main() {
       dir = await Directory.systemTemp.createTemp('ota-client-test');
       server = FakeServer();
     });
-    tearDown(() => dir.delete(recursive: true));
+    tearDown(() async {
+      debugOtaTestOverrides = null;
+      await dir.delete(recursive: true);
+    });
 
     /// Simulates one app start: new client, boot, return it.
     Future<OtaClient> start({String version = '1.0.0+1'}) async {
       runtime = MockPatchRuntime();
+      debugOtaTestOverrides = OtaTestOverrides(storageDir: dir, platform: 'android', arch: 'arm64-v8a');
       final client = OtaClient(OtaConfig(
         serverUrl: 'https://api.test',
         appSlug: 'demo',
+        applicationId: 'app-0001',
         releaseVersion: version,
         publicKeys: const {'test-1': _point},
         runtime: runtime,
-        storageDir: dir,
-        platform: 'android',
-        arch: 'arm64-v8a',
         httpClient: server.client,
       ));
       await client.boot();
@@ -397,19 +403,21 @@ void main() {
         ..attempt = null
         ..failed.clear();
     });
-    tearDown(() => dir.delete(recursive: true));
+    tearDown(() async {
+      debugOtaTestOverrides = null;
+      await dir.delete(recursive: true);
+    });
 
     Future<OtaClient> start({bool visible = true}) async {
       native.processStart(visible: visible);
+      debugOtaTestOverrides = OtaTestOverrides(storageDir: dir, platform: 'android', arch: 'arm64-v8a');
       final client = OtaClient(OtaConfig(
         serverUrl: 'https://api.test',
         appSlug: 'demo',
+        applicationId: 'app-0001',
         releaseVersion: '1.0.0+1',
         publicKeys: const {'test-1': _point},
         runtime: native,
-        storageDir: dir,
-        platform: 'android',
-        arch: 'arm64-v8a',
         httpClient: server.client,
       ));
       await client.boot();

@@ -12,20 +12,77 @@ import 'package:flutter/services.dart';
 import 'bsdiff.dart';
 import 'models.dart';
 import 'patch_id.dart';
+import 'native_boot.dart';
 import 'runtime.dart';
 
-/// `aot-bidiff-android-v1`: real Dart code patches on Android.
+/// Runs **Android code patches** (`aot-bidiff-android-v1`): replaces the app's compiled Dart
+/// code. **Experimental.**
 ///
-/// A patch is a binary diff from the store's libapp.so (all the app's compiled Dart code) to the
-/// new one. [stage] rebuilds the new libapp.so and checks both hashes; the native side of this
-/// plugin loads it on the next start, before any Dart runs (see OtaBoot.java).
-class AotPatchRuntime implements NativeBootRuntime {
-  AotPatchRuntime({MethodChannel? channel}) : _channel = channel ?? const MethodChannel('ota_client/aot');
+/// A patch is a binary diff from the store build's `libapp.so` (all of the app's compiled Dart
+/// code) to a new one. After the download is verified, the runtime rebuilds the new `libapp.so`
+/// and checks both the base and the result hash against the signed values. The plugin's Android
+/// code loads it on the next cold start, before any Dart code runs.
+///
+/// Requirements: Android, a **release** build (debug builds run Dart in JIT mode; there it
+/// accepts no patches), and the exact store build registered with `ota release android`.
+/// On other platforms and in debug builds it reports no supported formats, so the server offers
+/// it nothing.
+///
+/// This runtime downloads and loads native executable code. Do not use it in apps distributed
+/// through Google Play unless you have independently reviewed and confirmed compliance with
+/// the applicable Google Play policies.
+///
+/// ```dart
+/// final client = OtaClient(OtaConfig(
+///   serverUrl: 'https://ota.example.com',
+///   appSlug: 'my-app',
+///   applicationId: '<server application id>',
+///   releaseVersion: '1.0.0+1',
+///   publicKeys: const {'prod-1': '<base64 point>'},
+///   runtime: AotPatchRuntime(),
+/// ));
+/// ```
+final class AotPatchRuntime implements PatchRuntime {
+  /// Creates the Android code-patch runtime.
+  AotPatchRuntime() : _native = _AotNativeRuntime(const MethodChannel('ota_client/aot'));
+
+  final _AotNativeRuntime _native;
+
+  /// The patch format this runtime runs: `aot-bidiff-android-v1`.
+  static const format = 'aot-bidiff-android-v1';
+
+  /// `{format}` on Android release builds once the native side is ready, otherwise empty.
+  @override
+  Set<String> get supportedFormats => _native.supportedFormats;
+
+  /// `ota-aot-android-1`; must equal the release's runtime ABI on the server.
+  @override
+  String get runtimeAbi => _native.runtimeAbi;
+
+  /// Rebuilds `libapp.so` from the verified diff into [patchDir] and checks the base and result
+  /// hashes. Throws a [StateError] if code patches are unavailable or a hash does not match.
+  @override
+  Future<void> stage(PatchRecord patch, File verifiedPayload, Directory patchDir) =>
+      _native.stage(patch, verifiedPayload, patchDir);
+
+  /// Does nothing: the native side already chose and loaded the code before Dart started.
+  @override
+  Future<void> load(PatchRecord? patch, Directory? patchDir) => _native.load(patch, patchDir);
+}
+
+/// The native-boot view of a runtime, for [OtaClient]: [AotPatchRuntime]'s internal part, or a
+/// test double that implements [NativeBootRuntime] directly. Null for other runtimes.
+NativeBootRuntime? nativeBootRuntimeOf(PatchRuntime runtime) =>
+    runtime is AotPatchRuntime ? runtime._native : (runtime is NativeBootRuntime ? runtime : null);
+
+/// The implementation behind [AotPatchRuntime]; talks to OtaBoot.java over [MethodChannel].
+class _AotNativeRuntime implements NativeBootRuntime {
+  _AotNativeRuntime(this._channel);
 
   final MethodChannel _channel;
   Map<String, dynamic>? _report;
 
-  static const format = 'aot-bidiff-android-v1';
+  static const format = AotPatchRuntime.format;
 
   bool get _enabled => _report?['enabled'] == true;
 
@@ -41,7 +98,7 @@ class AotPatchRuntime implements NativeBootRuntime {
       if (!Platform.isAndroid) return const NativeBootReport(enabled: false);
       _report = await _channel.invokeMapMethod<String, dynamic>('report');
     } catch (e) {
-      debugPrint('ota_client: native boot report unavailable: $e');
+      debugPrint('flutter_ota_system: native boot report unavailable: $e');
       _report = null;
     }
     final r = _report;

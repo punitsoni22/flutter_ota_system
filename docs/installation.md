@@ -151,6 +151,7 @@ signing key  local-dev-1 (LOCAL DEVELOPMENT KEY - not for production)
 
 For example_app, pass:
   --dart-define=OTA_APP=flutter-ota-system-demo --dart-define=OTA_CHANNEL=dev \
+  --dart-define=OTA_APPLICATION_ID=<the demo app's server id> \
   --dart-define=OTA_PUBLIC_KEY=local-dev-1:<base64 point>
 published patch #1  id=…
 [PASS] API reachable from host
@@ -233,10 +234,13 @@ The example app uses `mock-v1` patches: a patch is a JSON file that changes its 
 No code is downloaded. Its defaults already match the demo: application `flutter-ota-system-demo`, channel
 `dev`. You only pass the server address and the public key.
 
-**Get the public key** (it is printed by `./flutter-ota-system.sh status`):
+**Get the public key and the demo app's server id** (both are printed by
+`./flutter-ota-system.sh status`; the id is the app's `"id"` in `ota app list`, not the Android
+package name):
 
 ```bash
 KEY=$(./flutter-ota-system.sh status | sed -n 's/.*OTA_PUBLIC_KEY=\(local-dev-1:[^ ]*\).*/\1/p'); echo "$KEY"
+APP_ID=$(./flutter-ota-system.sh status | sed -n 's/.*OTA_APPLICATION_ID=\([0-9a-f-]*\).*/\1/p'); echo "$APP_ID"
 ```
 
 **Let the device reach your computer.** Choose one:
@@ -270,6 +274,7 @@ adb reverse tcp:8080 tcp:8080            # patch files (must match OTA_CDN_BASE_
 cd example_app
 flutter run \
   --dart-define=OTA_SERVER_URL=http://localhost:8000 \
+  --dart-define=OTA_APPLICATION_ID="$APP_ID" \
   --dart-define=OTA_PUBLIC_KEY="$KEY"
 ```
 
@@ -282,6 +287,7 @@ The rules last until the cable is unplugged or `adb` restarts. Remove them with
 cd example_app
 flutter run \
   --dart-define=OTA_SERVER_URL=http://10.0.2.2:8000 \
+  --dart-define=OTA_APPLICATION_ID="$APP_ID" \
   --dart-define=OTA_PUBLIC_KEY="$KEY"
 ```
 

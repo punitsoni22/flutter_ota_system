@@ -56,6 +56,7 @@ git status                                   # nothing uncommitted
 ota release android my-app -- \
   --dart-define=OTA_SERVER_URL=https://ota.example.com \
   --dart-define=OTA_PUBLIC_KEY=prod-1:BIi7De… \
+  --dart-define=OTA_APPLICATION_ID=12ebc1fd-abb9-4ee3-83c3-78deb9fadaa8 \
   --dart-define=API_BASE_URL=https://api.example.com
 ```
 

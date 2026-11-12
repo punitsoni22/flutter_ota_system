@@ -111,7 +111,7 @@ The scripts refuse to run when `.env` contains `OTA_ENV=production`.
 | Scripts, desktop, iOS simulator (iOS not tested) | `http://localhost:8080/cdn` |
 | USB phone with `adb reverse tcp:8080 tcp:8080` (debug builds only; release builds need `https://`) | `http://localhost:8080/cdn` |
 | Android emulator | `http://10.0.2.2:8080/cdn` |
-| Phone on your Wi-Fi | An `https://` URL for your computer (+ `FLUTTER_OTA_BIND_ADDRESS=0.0.0.0`). `ota_client` refuses plain `http://` to a LAN IP; prefer `adb reverse` (debug builds) |
+| Phone on your Wi-Fi | An `https://` URL for your computer (+ `FLUTTER_OTA_BIND_ADDRESS=0.0.0.0`). `flutter_ota_system` refuses plain `http://` to a LAN IP; prefer `adb reverse` (debug builds) |
 | Production | `https://<your-domain>/cdn` |
 
 Apply changes with `./flutter-ota-system.sh up` (or `docker compose up -d`).

@@ -8,47 +8,74 @@ import 'package:crypto/crypto.dart';
 
 import 'models.dart';
 
-/// How a patch is executed (ADR-0001). The rest of the client never depends on it.
+/// How a patch is applied and run. The rest of the client does not depend on it (ADR-0001).
 ///
-/// Implementations: [MockPatchRuntime] now; the Android engine fork (Track R) later.
+/// Use one of the two built-in runtimes:
+/// - [MockPatchRuntime] (`mock-v1`): inert data such as a JSON config; no code runs.
+/// - [AotPatchRuntime] (`aot-bidiff-android-v1`): Android code patches (experimental).
+///
+/// Implementing your own runtime is possible but only useful together with a server-side
+/// format of the same name; the server offers only patches whose format is in
+/// [supportedFormats] and whose release runtime ABI equals [runtimeAbi].
 abstract interface class PatchRuntime {
-  /// Formats this runtime can run. Sent to the server on every check.
+  /// Formats this runtime can run, e.g. `{'mock-v1'}`. Sent to the server on every check.
   Set<String> get supportedFormats;
 
-  /// Must equal the release's runtime_abi on the server, e.g. "ota-runtime-v1".
+  /// Must equal the release's `runtime_abi` on the server, e.g. `ota-runtime-v1`.
   String get runtimeAbi;
 
-  /// Called with a payload whose hash AND signature are already verified.
-  /// Must leave the result in [patchDir]. Called before the patch is ever activated.
+  /// Prepares a downloaded patch. [verifiedPayload]'s size, SHA-256 and signature are already
+  /// verified. Must leave the result in [patchDir] (which it may create). Called before the
+  /// patch is ever activated; throwing makes the client refuse the patch.
   Future<void> stage(PatchRecord patch, File verifiedPayload, Directory patchDir);
 
-  /// Called once at app start by [OtaClient.boot] with the patch to run (null = store build).
-  /// Throwing here makes the client fall back to the store build.
+  /// Called once by [OtaClient.boot] with the patch to run (`null` = the store build) and its
+  /// directory. Throwing makes the client fall back to the store build and never use that
+  /// patch again.
   Future<void> load(PatchRecord? patch, Directory? patchDir);
 }
 
-/// `mock-v1`: the payload is an inert file (e.g. JSON config) that the app reads at start.
+/// Runs `mock-v1` patches: the payload is an **inert file** (e.g. a JSON config) that the app
+/// reads at start. No code is downloaded or executed.
 ///
-/// It proves the whole pipeline (sign → rollout → download → verify → stage → boot protection)
-/// without executing code. Track R swaps in the engine-fork runtime with the same interface.
+/// It exercises the whole pipeline (signing, rollout, download, verification, staging, boot
+/// protection, rollback) and is useful for remote configuration. Call [OtaClient.boot] before
+/// `runApp` and read [activePayload] while building the first screen:
+///
+/// ```dart
+/// final runtime = MockPatchRuntime();
+/// // ... OtaClient(OtaConfig(..., runtime: runtime)); await client.boot();
+/// final config = runtime.activePayload == null
+///     ? const <String, dynamic>{}
+///     : jsonDecode(utf8.decode(runtime.activePayload!)) as Map<String, dynamic>;
+/// ```
 class MockPatchRuntime implements PatchRuntime {
+  /// Creates the `mock-v1` runtime. Keep a reference to read [activePayload] after boot.
+  MockPatchRuntime();
+
   Uint8List? _activePayload;
 
-  /// The active patch's bytes, or null when the store build runs.
+  /// The active patch's bytes, re-verified against its SHA-256 at boot, or `null` when the
+  /// store build runs.
   Uint8List? get activePayload => _activePayload;
 
+  /// Always `{'mock-v1'}`.
   @override
   Set<String> get supportedFormats => const {'mock-v1'};
 
+  /// Always `ota-runtime-v1`.
   @override
   String get runtimeAbi => 'ota-runtime-v1';
 
+  /// Moves the verified payload into [patchDir].
   @override
   Future<void> stage(PatchRecord patch, File verifiedPayload, Directory patchDir) async {
     await patchDir.create(recursive: true);
     await verifiedPayload.rename('${patchDir.path}/payload');
   }
 
+  /// Reads the payload of [patch] into [activePayload] after re-checking its SHA-256. Throws a
+  /// [StateError] if the file on disk no longer matches.
   @override
   Future<void> load(PatchRecord? patch, Directory? patchDir) async {
     _activePayload = null;
@@ -60,28 +87,4 @@ class MockPatchRuntime implements PatchRuntime {
     }
     _activePayload = bytes;
   }
-}
-
-/// A runtime whose code is chosen by native code before Dart starts (Android code patches).
-///
-/// [OtaClient.boot] asks it what actually loaded, instead of choosing a patch itself, and tells it
-/// what to load on the next start whenever that changes.
-abstract interface class NativeBootRuntime implements PatchRuntime {
-  Future<NativeBootReport> readBootReport();
-
-  /// Next start: try [next] (the newest patch), fall back to [good] (last confirmed) or the store code.
-  Future<void> setNextBoot({PatchRecord? next, Directory? nextDir, PatchRecord? good, Directory? goodDir});
-}
-
-class NativeBootReport {
-  const NativeBootReport({required this.enabled, this.loadedPatchId, this.failedPatchIds = const []});
-
-  /// False in debug builds (JIT, nothing to swap) and on platforms without the native part.
-  final bool enabled;
-
-  /// The patch running now, or null for the store code.
-  final String? loadedPatchId;
-
-  /// Patches the native side refused at this start: unconfirmed last start, or failed verification.
-  final List<String> failedPatchIds;
 }

@@ -6,6 +6,7 @@ import 'dart:io';
 
 import 'models.dart';
 import 'patch_id.dart';
+import 'protocol.dart';
 
 /// Everything the client remembers, in one JSON file written atomically (write tmp, then rename).
 ///
@@ -26,9 +27,9 @@ class OtaState {
     this.lastCheckAt,
     this.channel,
     List<Map<String, String>>? pendingEvents,
-  })  : badPatchIds = badPatchIds ?? {},
-        retiredReleaseIds = retiredReleaseIds ?? {},
-        pendingEvents = pendingEvents ?? [];
+  }) : badPatchIds = badPatchIds ?? {},
+       retiredReleaseIds = retiredReleaseIds ?? {},
+       pendingEvents = pendingEvents ?? [];
 
   /// Random id created on first launch. Not tied to the person or the hardware.
   final String installationId;
@@ -84,31 +85,32 @@ class OtaState {
   }
 
   Map<String, dynamic> toJson() => {
-        'installation_id': installationId,
-        'release_version': releaseVersion,
-        'release_id': releaseId,
-        'access_token': accessToken,
-        'active': active?.toJson(),
-        'staged': staged?.toJson(),
-        'last_good': lastGood?.toJson(),
-        'boot_attempt_patch_id': bootAttemptPatchId,
-        'bad_patch_ids': badPatchIds.toList(),
-        'retired_release_ids': retiredReleaseIds.toList(),
-        'highest_accepted_number': highestAcceptedNumber,
-        'last_check_at': lastCheckAt?.toIso8601String(),
-        'channel': channel,
-        'pending_events': pendingEvents,
-      };
+    'installation_id': installationId,
+    'release_version': releaseVersion,
+    'release_id': releaseId,
+    'access_token': accessToken,
+    'active': active == null ? null : patchRecordToJson(active!),
+    'staged': staged == null ? null : patchRecordToJson(staged!),
+    'last_good': lastGood == null ? null : patchRecordToJson(lastGood!),
+    'boot_attempt_patch_id': bootAttemptPatchId,
+    'bad_patch_ids': badPatchIds.toList(),
+    'retired_release_ids': retiredReleaseIds.toList(),
+    'highest_accepted_number': highestAcceptedNumber,
+    'last_check_at': lastCheckAt?.toIso8601String(),
+    'channel': channel,
+    'pending_events': pendingEvents,
+  };
 
   factory OtaState.fromJson(Map<String, dynamic> j) {
     PatchRecord? patch(String key) {
       if (j[key] == null) return null;
-      final record = PatchRecord.fromJson(j[key] as Map<String, dynamic>);
+      final record = patchRecordFromJson(j[key] as Map<String, dynamic>);
       // Patch ids name directories. A state file with any other id was tampered with: the caller
       // ([StateStore.load]) then starts fresh and the store build runs (SEC-01).
       if (!isValidPatchId(record.id)) throw const FormatException('invalid patch id in state');
       return record;
     }
+
     return OtaState(
       installationId: j['installation_id'] as String,
       releaseVersion: j['release_version'] as String?,
@@ -123,10 +125,7 @@ class OtaState {
       highestAcceptedNumber: j['highest_accepted_number'] as int? ?? 0,
       lastCheckAt: j['last_check_at'] == null ? null : DateTime.parse(j['last_check_at'] as String),
       channel: j['channel'] as String?,
-      pendingEvents: [
-        for (final e in (j['pending_events'] as List? ?? const []))
-          Map<String, String>.from(e as Map),
-      ],
+      pendingEvents: [for (final e in (j['pending_events'] as List? ?? const [])) Map<String, String>.from(e as Map)],
     );
   }
 }

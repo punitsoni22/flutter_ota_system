@@ -224,11 +224,12 @@ signing key. Other commands:
 final client = OtaClient(OtaConfig(
   serverUrl: 'https://ota.example.com',
   appSlug: 'my-app',
+  applicationId: '<"id" from `ota app list`>',             // the server's id for this app
   releaseVersion: '${info.version}+${info.buildNumber}',   // from package_info_plus
   publicKeys: {'prod-1': '<uncompressed_point_base64 from `ota key show`>'},
   runtime: AotPatchRuntime(),
 ));
-await client.boot();                                        // never throws
+await client.boot();                                        // bad patches never make it throw
 client.markBootSuccessfulAfterFirstFrame(stableFor: const Duration(seconds: 5));
 await client.checkForUpdate();                              // never throws; returns an UpdateResult
 ```

@@ -1,0 +1,49 @@
+# pub uses this file instead of .gitignore for the files it publishes, so it repeats the
+# .gitignore rules and adds publishing-only exclusions.
+
+# Build outputs and tool state
+/build/
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+/coverage/
+**/doc/api/
+/pubspec.lock
+android/.gradle/
+android/build/
+android/local.properties
+android/.cxx/
+
+# Example: only its source is published (no generated platform folders or lock file)
+example/build/
+example/.dart_tool/
+example/pubspec.lock
+example/.flutter-plugins-dependencies
+example/.metadata
+example/android/
+example/ios/
+example/linux/
+example/macos/
+example/windows/
+example/web/
+
+# Editors and OS files
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.DS_Store
+*.swp
+*.log
+*.class
+
+# Never publish secrets or signing material
+.env
+.env.*
+*.pem
+*.key
+*.jks
+*.keystore
+*.p12
+key.properties
