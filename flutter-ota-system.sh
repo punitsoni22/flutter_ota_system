@@ -139,9 +139,10 @@ check_health() {
 }
 
 print_info() {
-  local api cdn key
+  local api cdn key app_id
   api="$(api_url)"; cdn="$(cdn_url)"
   key="$(public_key || true)"
+  app_id="$(demo_app_id || true)"
   cat <<EOF
 
   API:        $api            (OpenAPI docs: $api/docs)
@@ -150,6 +151,7 @@ print_info() {
   Project:    $(project_name)   (volumes $(project_name)_pgdata, _artifacts, _keys)
   App key:    OTA_PUBLIC_KEY=${key:-<not available: is the API running?>}
               (LOCAL DEVELOPMENT KEY - never use it for production apps)
+  Demo app:   OTA_APPLICATION_ID=${app_id:-<not seeded yet: run ./flutter-ota-system.sh demo>}
 EOF
 }
 

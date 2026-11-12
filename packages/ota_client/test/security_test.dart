@@ -12,9 +12,11 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:ota_client/ota_client.dart';
-import 'package:ota_client/src/patch_id.dart';
-import 'package:ota_client/src/transport.dart';
+import 'package:flutter_ota_system/flutter_ota_system.dart';
+import 'package:flutter_ota_system/src/native_boot.dart';
+import 'package:flutter_ota_system/src/test_overrides.dart';
+import 'package:flutter_ota_system/src/patch_id.dart';
+import 'package:flutter_ota_system/src/transport.dart';
 
 const _javaPaths = 'android/src/main/java/dev/flutterota/ota_client/OtaPaths.java';
 
@@ -148,15 +150,17 @@ void main() {
   tearDown(() async {
     debugReleaseModeOverride = null;
     debugOtaTimeouts = null;
+    debugOtaTestOverrides = null;
     if (await parent.exists()) await parent.delete(recursive: true);
   });
 
   Future<OtaClient> start({
     String serverUrl = 'https://api.test',
-    String? applicationId,
+    String applicationId = 'app-0001',
     http.Client? httpClient,
   }) async {
     runtime = MockPatchRuntime();
+    debugOtaTestOverrides = OtaTestOverrides(storageDir: dir, platform: 'android', arch: 'arm64-v8a');
     final client = OtaClient(OtaConfig(
       serverUrl: serverUrl,
       appSlug: 'demo',
@@ -164,9 +168,6 @@ void main() {
       publicKeys: const {'test-1': _point},
       runtime: runtime,
       applicationId: applicationId,
-      storageDir: dir,
-      platform: 'android',
-      arch: 'arm64-v8a',
       httpClient: httpClient ?? server.client,
     ));
     await client.boot();
@@ -234,6 +235,38 @@ void main() {
   });
 
   group('cross-application patches', () {
+    test('applicationId is required and must not be empty', () {
+      expect(
+        () => OtaConfig(
+          serverUrl: 'https://api.test',
+          appSlug: 'demo',
+          applicationId: '',
+          releaseVersion: '1.0.0+1',
+          publicKeys: const {},
+          runtime: MockPatchRuntime(),
+        ),
+        throwsA(isA<AssertionError>()),
+      );
+    });
+
+    test('using the client before boot() fails clearly', () async {
+      final client = OtaClient(OtaConfig(
+        serverUrl: 'https://api.test',
+        appSlug: 'demo',
+        applicationId: 'app-0001',
+        releaseVersion: '1.0.0+1',
+        publicKeys: const {'test-1': _point},
+        runtime: MockPatchRuntime(),
+        httpClient: server.client,
+      ));
+      expect(() => client.installationId, throwsStateError);
+      expect(() => client.channel, throwsStateError);
+      expect(client.setChannel('staging'), throwsStateError);
+      expect(client.activePatch, isNull);
+      expect((await client.checkForUpdate()).status, UpdateStatus.failed);
+      expect(server.requests, 0);
+    });
+
     test('a pinned applicationId refuses another application\'s response', () async {
       server.applicationId = 'app-0002';
       final client = await start(applicationId: 'app-0001');
@@ -244,8 +277,9 @@ void main() {
     });
 
     test('a patch signed for one application fails verification when offered as another', () async {
-      server.applicationId = 'app-0002'; // the signature covers app-0001
-      final client = await start();
+      // The app and the response agree on app-0002, but the patch was signed for app-0001.
+      server.applicationId = 'app-0002';
+      final client = await start(applicationId: 'app-0002');
       final result = await client.checkForUpdate();
       expect(result.status, UpdateStatus.rejected);
       expect(result.message, 'signature invalid');
@@ -486,15 +520,14 @@ void main() {
 
     test('invalid ids in the native boot report are ignored and never sent to the server', () async {
       runtime = MockPatchRuntime();
+      debugOtaTestOverrides = OtaTestOverrides(storageDir: dir, platform: 'android', arch: 'arm64-v8a');
       final client = OtaClient(OtaConfig(
         serverUrl: 'https://api.test',
         appSlug: 'demo',
         releaseVersion: '1.0.0+1',
         publicKeys: const {'test-1': _point},
+        applicationId: 'app-0001',
         runtime: _BadReportRuntime(),
-        storageDir: dir,
-        platform: 'android',
-        arch: 'arm64-v8a',
         httpClient: server.client,
       ));
       await client.boot();

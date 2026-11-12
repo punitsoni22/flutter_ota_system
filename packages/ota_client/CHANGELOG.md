@@ -1,13 +1,24 @@
-## Unreleased
-
-* **Security:** patch ids must be canonical lowercase UUIDs (Dart and Android); other ids are
-  refused before any download or file operation.
-* **Security:** release builds accept `https://` only (server, downloads, redirects). Debug
-  builds also allow `http://localhost` and `http://10.0.2.2`. No https→http redirects; every
-  redirect hop is checked; the device token is not forwarded to another host.
-* **Security:** download timeouts (response, stall, total) and a connect timeout.
-
 ## 0.1.0-alpha.1
 
-* First public alpha, released with Flutter OTA System v0.1.0-alpha.1. See the repository
-  [CHANGELOG](../../CHANGELOG.md).
+First pub.dev release of the Flutter OTA System client SDK (package `flutter_ota_system`;
+earlier versions of this code were used from the Git repository as `ota_client`).
+**Experimental, not production-ready. Android only.** Versioned independently of the Flutter OTA
+System server and platform.
+
+* `OtaClient` and `OtaConfig`: device registration, update checks per channel, staged patches
+  that activate on the next app start, boot protection with automatic fallback to the last good
+  patch or the store build, server-side rollback and revocation, boot telemetry.
+* Patch verification before use: ES256 signature against compiled-in keys (several keys for
+  rotation), SHA-256, exact size, application, release, CPU ABI, runtime and format, and
+  anti-replay.
+* Runtimes: `MockPatchRuntime` (`mock-v1`, inert data such as JSON config) and the experimental
+  `AotPatchRuntime` (`aot-bidiff-android-v1`, Android code patches, release builds only).
+* `OtaConfig.applicationId` (the server application id) is **required**; responses for another
+  application are refused.
+* Security: patch ids must be lowercase UUIDs (checked in Dart and Android before any file
+  operation); release and profile builds use `https://` only, debug builds may also use
+  `http://localhost` and `http://10.0.2.2`; redirects are checked hop by hop, never downgraded to
+  HTTP, and do not forward the device token to another host; connect, request and download
+  timeouts.
+* Public API: `OtaClient`, `OtaConfig`, `PatchRuntime`, `MockPatchRuntime`, `AotPatchRuntime`,
+  `PatchRecord`, `UpdateResult`, `UpdateStatus`. Protocol and native-boot details are internal.

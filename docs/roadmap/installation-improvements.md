@@ -29,7 +29,7 @@ Status legend: ✅ done (tested on Linux) · 🚧 partly done · 🔭 open.
 | 5 | The single-server production setup (`deploy/`) has **not been verified end to end** | Test it from a clean server; turn it into a documented, tested "server quickstart" (🔭 open) |
 | 6 | Production signing-key creation and backup are manual | A guided first-run command, with backup instructions and a check that the key exists (🔭 open) |
 | 7 | No pre-built images; users build from source | Optionally publish images, **after** the licence duties in [THIRD_PARTY_NOTICES.md §7](../../THIRD_PARTY_NOTICES.md#7-future-actions-before-publishing-pre-built-docker-images) are done (🔭 open) |
-| 11 | `ota_client` is not published on pub.dev; apps use a git or path dependency | Decide on publishing, versioning and tags (🔭 open) |
+| 11 | The Flutter SDK is not published on pub.dev; apps use a git or path dependency | Prepared as `flutter_ota_system` 0.1.0-alpha.1 (independent versioning); publishing pending (🔭 open) |
 | 12 | The app side is tested on Android only, on a small number of devices. iOS is **not tested** (needs macOS + Xcode) | Build and run the example app on iOS; test more Android devices, OS versions and ABIs; test more Flutter versions (🔭 open, see [Platform testing](README.md#platform-testing-planned)) |
 | 16 | Python dependencies of the API image use minimum versions (`>=`), not a lock file | Add a lock file (e.g. `pip-compile` with hashes) so image builds are reproducible (🔭 open) |
 | 17 | The emulator and Wi-Fi phone paths were not re-tested with `flutter-ota-system.sh` | Re-test both and record the result (🔭 open) |

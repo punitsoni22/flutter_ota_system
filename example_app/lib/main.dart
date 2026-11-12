@@ -5,7 +5,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:ota_client/ota_client.dart';
+import 'package:flutter_ota_system/flutter_ota_system.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 // Set with --dart-define, see docs/installation.md and docs/configuration.md.
@@ -14,6 +14,8 @@ const _appSlug = String.fromEnvironment('OTA_APP', defaultValue: 'flutter-ota-sy
 const _channel = String.fromEnvironment('OTA_CHANNEL', defaultValue: 'dev');
 // "<key_id>:<base64 point>" from `ota key show`.
 const _publicKey = String.fromEnvironment('OTA_PUBLIC_KEY');
+// The application's server id ("id" in `ota app list`), not the Android package name.
+const _applicationId = String.fromEnvironment('OTA_APPLICATION_ID');
 
 final _runtime = MockPatchRuntime();
 late final OtaClient ota;
@@ -26,6 +28,8 @@ Future<void> main() async {
   ota = OtaClient(OtaConfig(
     serverUrl: _serverUrl,
     appSlug: _appSlug,
+    // Without OTA_APPLICATION_ID every response is refused ('application id mismatch').
+    applicationId: _applicationId.isEmpty ? 'not-set' : _applicationId,
     channel: _channel,
     releaseVersion: '${info.version}+${info.buildNumber}',
     publicKeys: keyParts.length == 2 ? {keyParts[0]: keyParts[1]} : const {},
@@ -116,6 +120,12 @@ class _HomePageState extends State<HomePage> {
             const Padding(
               padding: EdgeInsets.only(top: 16),
               child: Text('OTA_PUBLIC_KEY not set: every patch will be refused.',
+                  style: TextStyle(color: Colors.red)),
+            ),
+          if (_applicationId.isEmpty)
+            const Padding(
+              padding: EdgeInsets.only(top: 16),
+              child: Text('OTA_APPLICATION_ID not set: every update check will be refused.',
                   style: TextStyle(color: Colors.red)),
             ),
           const SizedBox(height: 24),

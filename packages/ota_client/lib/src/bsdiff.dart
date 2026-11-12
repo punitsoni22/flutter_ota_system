@@ -47,7 +47,10 @@ Uint8List applyOtaDiff(Uint8List old, Uint8List patch) {
   final controlLen = header.getInt64(8, Endian.little);
   final diffLen = header.getInt64(16, Endian.little);
   final extraLen = header.getInt64(24, Endian.little);
-  if (newSize < 0 || controlLen < 0 || diffLen < 0 || extraLen < 0 ||
+  if (newSize < 0 ||
+      controlLen < 0 ||
+      diffLen < 0 ||
+      extraLen < 0 ||
       40 + controlLen + diffLen + extraLen != patch.length) {
     throw const FormatException('corrupt OTADIF01 header');
   }
@@ -66,8 +69,11 @@ Uint8List applyOtaDiff(Uint8List old, Uint8List patch) {
     final add = ctrl.getInt64(i, Endian.little);
     final copy = ctrl.getInt64(i + 8, Endian.little);
     final seek = ctrl.getInt64(i + 16, Endian.little);
-    if (add < 0 || copy < 0 || newPos + add + copy > newSize ||
-        diffPos + add > diff.length || extraPos + copy > extra.length) {
+    if (add < 0 ||
+        copy < 0 ||
+        newPos + add + copy > newSize ||
+        diffPos + add > diff.length ||
+        extraPos + copy > extra.length) {
       throw const FormatException('OTADIF01 patch out of bounds');
     }
     for (var j = 0; j < add; j++) {

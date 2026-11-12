@@ -100,7 +100,7 @@ You can reproduce what the server decides with the same query the app sends
 | `patch previously failed on this device` | It crashed here before | Fix it in a new patch |
 | `arch mismatch`, `runtime abi mismatch`, `unsupported format` | Patch made for another build type (e.g. a `mock-v1` release patched for a code-patch app) | Patch the right release; code-patch releases must come from `ota release android` |
 | `release id changed` | The server answered with a release id this install retired earlier (a deleted and re-created release id going back), or the app uses `ota_client` older than this fix and the release was deleted and created again | Current `ota_client` switches to a re-created release by itself and drops the old patches ([KI-1](known-issues.md#ki-1-re-creating-a-deleted-release-breaks-existing-installs), fixed). Older builds: reinstall the app. Prefer a new build number over re-creating a version |
-| `application id mismatch` | `OtaConfig.applicationId` is pinned to another app | Fix the pinned id |
+| `application id mismatch` | `OtaConfig.applicationId` is not this app's server id (or `OTA_APPLICATION_ID` was not set) | Use the `"id"` from `ota app list` (not the slug, not the Android package name) |
 
 `failed` (not `rejected`) with `download failed: HTTP 404` means the file server cannot find the
 file: check `OTA_CDN_BASE_URL` and that the file server shares the storage volume or bucket.

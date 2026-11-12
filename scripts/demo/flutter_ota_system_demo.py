@@ -210,8 +210,11 @@ def cmd_seed(_args) -> int:
 
         key = expect(c.get("/v1/admin/signing-key", headers=ADMIN), 200).json()
         print(f"signing key  {key['key_id']} (LOCAL DEVELOPMENT KEY - not for production)")
+        apps = expect(c.get("/v1/admin/apps", headers=ADMIN), 200).json()
+        app_id = next(a["id"] for a in apps if a["slug"] == APP)
         print("\nFor example_app, pass:")
         print(f"  --dart-define=OTA_APP={APP} --dart-define=OTA_CHANNEL={CHANNEL} \\")
+        print(f"  --dart-define=OTA_APPLICATION_ID={app_id} \\")
         print(f"  --dart-define=OTA_PUBLIC_KEY={key['key_id']}:{key['uncompressed_point_base64']}")
     return 0
 

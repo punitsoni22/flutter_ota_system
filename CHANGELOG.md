@@ -24,6 +24,15 @@ All notable changes to this project are documented here. The format follows
 
 ### Changed
 
+- **Breaking:** the Flutter SDK is now the package `flutter_ota_system` (still in
+  `packages/ota_client`), prepared for pub.dev: import
+  `package:flutter_ota_system/flutter_ota_system.dart` and depend on `flutter_ota_system`.
+  `OtaConfig.applicationId` (the server application id from `ota app list`) is now required.
+  `OtaConfig.storageDir`, `platform` and `arch` were test-only and are removed. Protocol,
+  patch-format, signature and native details (`UpdateCheckResponse`, `SignedFields`,
+  `SignatureVerifier`, `NativeBootRuntime`, `NativeBootReport`) are no longer exported.
+- `./flutter-ota-system.sh status` and the demo seed print the demo app's
+  `OTA_APPLICATION_ID` for `example_app`.
 - **Breaking for some setups:** release builds must use `https://` (local `adb reverse` testing
   of release builds over `http://localhost` no longer works). Debug builds pointed at
   `http://<LAN IP>` (phone on Wi-Fi) must use HTTPS or `adb reverse` with `http://localhost`.

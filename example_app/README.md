@@ -10,6 +10,7 @@ Run it against the local stack by following [docs/installation.md](../docs/insta
 ```bash
 flutter run \
   --dart-define=OTA_SERVER_URL=http://10.0.2.2:8000 \
+  --dart-define=OTA_APPLICATION_ID=<OTA_APPLICATION_ID printed by ./flutter-ota-system.sh status> \
   --dart-define=OTA_PUBLIC_KEY=local-dev-1:<base64 point printed by ./flutter-ota-system.sh status>
 ```
 

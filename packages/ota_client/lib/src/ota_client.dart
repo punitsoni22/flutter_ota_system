@@ -11,70 +11,124 @@ import 'package:crypto/crypto.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 
+import 'aot_runtime.dart';
 import 'canonical.dart';
 import 'models.dart';
+import 'native_boot.dart';
+import 'protocol.dart';
 import 'patch_id.dart';
 import 'runtime.dart';
 import 'signature.dart';
 import 'state.dart';
+import 'test_overrides.dart';
 import 'transport.dart';
 
+/// Settings of an [OtaClient]: which server and application to use, which keys to trust, and
+/// how patches run.
+///
+/// ```dart
+/// final config = OtaConfig(
+///   serverUrl: 'https://ota.example.com',
+///   appSlug: 'shop-app',
+///   applicationId: '12ebc1fd-abb9-4ee3-83c3-78deb9fadaa8', // from `ota app list`
+///   releaseVersion: '1.0.0+1',                             // version+build, as registered
+///   publicKeys: const {'prod-1': 'BIi7De…'},               // from `ota key show --dart`
+///   runtime: MockPatchRuntime(),
+/// );
+/// ```
 class OtaConfig {
+  /// Creates the settings. [serverUrl], [appSlug], [applicationId], [releaseVersion],
+  /// [publicKeys] and [runtime] are required; [channel] defaults to `production`.
   const OtaConfig({
     required this.serverUrl,
     required this.appSlug,
+    required this.applicationId,
     required this.releaseVersion,
     required this.publicKeys,
     required this.runtime,
     this.channel = 'production',
-    this.applicationId,
-    this.storageDir,
-    this.platform,
-    this.arch,
     this.httpClient,
-  });
+  }) : assert(applicationId != '', 'applicationId must be the server application id');
 
-  /// e.g. https://ota.example.com. Release builds require `https://`. Debug builds may also use
-  /// `http://localhost` (e.g. with `adb reverse`) and `http://10.0.2.2` (Android emulator).
-  /// Patch download URLs and every redirect follow the same rules.
+  /// Base URL of your Flutter OTA System server, e.g. `https://ota.example.com`.
+  ///
+  /// Release and profile builds require `https://`. Debug builds may also use
+  /// `http://localhost`, `http://127.0.0.1`, `http://[::1]` (e.g. with `adb reverse`) and
+  /// `http://10.0.2.2` (Android emulator). Patch download URLs and every redirect follow the
+  /// same rules; a refused URL makes [OtaClient.checkForUpdate] return
+  /// [UpdateStatus.failed] or [UpdateStatus.rejected] without sending the request.
   final String serverUrl;
+
+  /// The application's **slug** on the server (e.g. `shop-app`), as given to `ota app create`.
+  /// Used to register the device.
   final String appSlug;
 
-  /// Store version incl. build number, exactly as registered with `ota release create`.
+  /// The application's **server id**: the UUID that `ota app create` and `ota app list` print
+  /// as `"id"`.
+  ///
+  /// Every update-check response names the application it belongs to, and every patch
+  /// signature covers this id. The client refuses responses for any other application
+  /// (`application id mismatch`), so patches of another app on the same server can never be
+  /// installed.
+  ///
+  /// Not to be confused with [appSlug], nor with the Android `applicationId` (package name) in
+  /// your Gradle files: this is the Flutter OTA System server's id.
+  final String applicationId;
+
+  /// The installed store build's full version **including the build number**, exactly as
+  /// registered on the server (`ota release create` / `ota release android`), e.g. `1.0.0+1`.
+  /// With `package_info_plus`: `'${info.version}+${info.buildNumber}'`.
   final String releaseVersion;
 
-  /// key id → base64 uncompressed P-256 point. From `ota key show --dart`.
+  /// Trusted signing keys: key id → base64 uncompressed P-256 public key, as printed by
+  /// `ota key show --dart`. Patches signed with any other key are refused. Several keys allow
+  /// key rotation. Never ship an app that trusts a local development key.
   final Map<String, String> publicKeys;
+
+  /// How patches run: [MockPatchRuntime] (inert data) or [AotPatchRuntime] (Android code
+  /// patches, experimental).
   final PatchRuntime runtime;
+
+  /// Default channel of this build, e.g. `production` or `staging`. Testers can switch at
+  /// runtime with [OtaClient.setChannel].
   final String channel;
 
-  /// Optional: pin the server's application id so patches of another app are refused.
-  final String? applicationId;
-
-  /// Test overrides. Defaults: app support dir, current platform, current CPU ABI.
-  final Directory? storageDir;
-  final String? platform;
-  final String? arch;
+  /// Optional HTTP client, e.g. for a proxy or certificate pinning. Every request still passes
+  /// the URL rules described at [serverUrl], including redirects, which the OTA client follows
+  /// itself. Defaults to a `dart:io` client with a 15-second connect timeout.
   final http.Client? httpClient;
 }
 
-/// The OTA client: boot protection at start, then check → download → verify → stage.
+/// The Flutter OTA System client.
+///
+/// At start, [boot] picks the code or data to run and protects against patches that fail to
+/// start. Later, [checkForUpdate] asks the server for a newer patch, downloads it, verifies its
+/// size, SHA-256 and ES256 signature, and stages it. A staged patch runs after the next app
+/// restart; the running code is never replaced live.
 ///
 /// ```dart
 /// final ota = OtaClient(config);
-/// await ota.boot();                       // before runApp
-/// runApp(...);
-/// ota.markBootSuccessfulAfterFirstFrame(); // confirms the patch works
-/// ota.checkForUpdate();                    // in the background, never awaited at startup
+/// await ota.boot();                        // once, at start
+/// runApp(const MyApp());
+/// ota.markBootSuccessfulAfterFirstFrame(); // confirms that a new patch starts correctly
+/// unawaited(ota.checkForUpdate());         // in the background; never block startup on it
 /// ```
+///
+/// Only [boot] may be called before [boot] has completed; the other members throw a
+/// [StateError] (or, for [checkForUpdate], return [UpdateStatus.failed]).
 class OtaClient {
+  /// Creates a client for [config]. Throws an [ArgumentError] if a public key in
+  /// [OtaConfig.publicKeys] is not a valid P-256 point.
   OtaClient(this.config)
-      : _verifier = SignatureVerifier(config.publicKeys),
-        // Every request, including redirects, goes through the URL rules (SEC-02).
-        _http = SecureRedirectClient(config.httpClient ?? createDefaultHttpClient());
+    : _verifier = SignatureVerifier(config.publicKeys),
+      _overrides = otaTestOverrides,
+      // Every request, including redirects, goes through the URL rules (SEC-02).
+      _http = SecureRedirectClient(config.httpClient ?? createDefaultHttpClient());
 
+  /// The settings this client was created with.
   final OtaConfig config;
   final SignatureVerifier _verifier;
+  final OtaTestOverrides _overrides;
   final http.Client _http;
 
   late Directory _root;
@@ -83,25 +137,43 @@ class OtaClient {
   bool _booted = false;
   Future<UpdateResult>? _inFlight;
 
-  /// The patch running now, or null for the store build.
+  void _requireBoot(String member) {
+    if (!_booted) throw StateError('OtaClient.$member used before boot() completed');
+  }
+
+  /// The patch running now, or `null` for the store build (also before [boot]).
   PatchRecord? get activePatch => _booted ? _state.active : null;
+
+  /// Number of the patch running now, or `0` for the store build.
   int get activePatchNumber => activePatch?.number ?? 0;
-  String get installationId => _state.installationId;
 
-  /// The channel this device checks: the runtime choice from [setChannel], else [OtaConfig.channel].
-  String get channel => _state.channel ?? config.channel;
+  /// Random id of this installation, created on first launch and sent to the server. It is not
+  /// tied to the person or the hardware. Throws a [StateError] before [boot].
+  String get installationId {
+    _requireBoot('installationId');
+    return _state.installationId;
+  }
 
-  /// Switch this device to another channel, e.g. "staging" for testers (null = back to the default).
-  /// Saved, and used from the next check on. The running code does not change until a patch from the
-  /// new channel is downloaded and the app restarts.
+  /// The channel this device checks: the choice made with [setChannel], else
+  /// [OtaConfig.channel]. Throws a [StateError] before [boot].
+  String get channel {
+    _requireBoot('channel');
+    return _state.channel ?? config.channel;
+  }
+
+  /// Switches this device to another channel, e.g. `staging` for testers; `null` returns to
+  /// [OtaConfig.channel]. The choice is saved and used from the next check on. The running code
+  /// does not change until a patch from the new channel is downloaded and the app restarts.
+  /// Throws a [StateError] before [boot].
   Future<void> setChannel(String? channel) async {
+    _requireBoot('setChannel');
     _state.channel = channel == config.channel ? null : channel;
     _state.lastCheckAt = null;
     await _save();
   }
 
-  String get _platform => config.platform ?? (Platform.isIOS ? 'ios' : 'android');
-  String get _arch => config.arch ?? _abiName(Abi.current());
+  String get _platform => _overrides.platform ?? (Platform.isIOS ? 'ios' : 'android');
+  String get _arch => _overrides.arch ?? _abiName(Abi.current());
 
   /// Every patch path goes through here. Ids are validated when they arrive (server response,
   /// state file); this is the last line of defence against an id like `../..` (SEC-01).
@@ -109,13 +181,23 @@ class OtaClient {
     if (!isValidPatchId(id)) throw ArgumentError.value(id, 'id', 'invalid patch id');
     return Directory('${_root.path}/patches/$id');
   }
+
   Directory get _tmpDir => Directory('${_root.path}/tmp');
 
   // ---- boot ------------------------------------------------------------------------------
 
-  /// Call once, before runApp. Never throws: on any problem the store build runs.
+  /// Loads the client's state and decides what runs. Call once per app start, before any
+  /// other member.
+  ///
+  /// With [MockPatchRuntime], call it before `runApp` so the active payload is ready for the
+  /// first screen. With [AotPatchRuntime] the code was already chosen natively, so it can also
+  /// run after the first frame.
+  ///
+  /// A missing or corrupted patch, or a patch that failed to start last time, never makes it
+  /// throw: the last good patch or the store build runs instead. It throws only if the app's
+  /// storage directory cannot be read or written.
   Future<void> boot() async {
-    _root = config.storageDir ?? Directory('${(await getApplicationSupportDirectory()).path}/ota');
+    _root = _overrides.storageDir ?? Directory('${(await getApplicationSupportDirectory()).path}/ota');
     _store = StateStore(_root);
     _state = await _store.load() ?? OtaState(installationId: _newInstallationId());
     _booted = true;
@@ -126,9 +208,9 @@ class OtaClient {
       await _deleteDir(Directory('${_root.path}/patches'));
     }
 
-    final runtime = config.runtime;
-    if (runtime is NativeBootRuntime) {
-      await _bootNative(runtime);
+    final native = nativeBootRuntimeOf(config.runtime);
+    if (native != null) {
+      await _bootNative(native);
       unawaited(_cleanUnusedPatches());
       return;
     }
@@ -209,8 +291,8 @@ class OtaClient {
   /// Saves the state, and for code patches tells the native side what to load on the next start.
   Future<void> _save() async {
     await _store.save(_state);
-    final runtime = config.runtime;
-    if (runtime is! NativeBootRuntime) return;
+    final runtime = nativeBootRuntimeOf(config.runtime);
+    if (runtime == null) return;
     final next = _state.staged ?? _state.active;
     final good = _state.lastGood;
     await runtime.setNextBoot(
@@ -221,7 +303,13 @@ class OtaClient {
     );
   }
 
-  /// Confirms that the patch which just booted works. Call once the app is stable.
+  /// Confirms that the patch which just started works, so it becomes the last good patch and
+  /// the fallback for later patches. Call it once the app has started and is usable.
+  ///
+  /// Until a new patch is confirmed, the next start treats it as failed: it is skipped and the
+  /// previous good patch (or the store build) runs. Does nothing before [boot] or when no new
+  /// patch is waiting for confirmation. Also sends pending telemetry; network errors are
+  /// ignored.
   Future<void> markBootSuccessful() async {
     if (!_booted) return;
     final attempt = _state.bootAttemptPatchId;
@@ -234,14 +322,24 @@ class OtaClient {
     await _flushEvents();
   }
 
-  /// Waits for the first frame plus [stableFor], then calls [markBootSuccessful].
+  /// Calls [markBootSuccessful] after [stableFor] (default 10 seconds).
+  ///
+  /// Despite its name, it does not watch frames itself: the delay starts when you call it. Call
+  /// it right after `runApp` (or from a post-frame callback), so a patch that crashes while
+  /// the first screen builds is never confirmed.
   void markBootSuccessfulAfterFirstFrame({Duration stableFor = const Duration(seconds: 10)}) {
     Future.delayed(stableFor, markBootSuccessful);
   }
 
   // ---- update check ----------------------------------------------------------------------
 
-  /// Checks the server and stages a new patch if there is one. Never throws.
+  /// Asks the server for a newer patch and, if there is one, downloads, verifies and stages it.
+  ///
+  /// Never throws: the outcome is in the returned [UpdateResult]. A staged patch runs after the
+  /// next app restart ([UpdateStatus.stagedRestartRequired]). Also applies server-side rollbacks
+  /// and revocations ([UpdateStatus.rollbackRestartRequired]) and sends pending telemetry.
+  /// Calls made while a check is running share its result. Returns [UpdateStatus.failed]
+  /// before [boot].
   ///
   /// Respects the server's check interval unless [force] is true.
   Future<UpdateResult> checkForUpdate({bool force = false}) {
@@ -288,12 +386,10 @@ class OtaClient {
 
   Duration _minInterval = Duration.zero;
 
-  Duration _jittered(int seconds) =>
-      Duration(seconds: (seconds * (0.8 + Random().nextDouble() * 0.4)).round());
+  Duration _jittered(int seconds) => Duration(seconds: (seconds * (0.8 + Random().nextDouble() * 0.4)).round());
 
   String? _checkIdentity(UpdateCheckResponse r) {
-    final pinned = config.applicationId;
-    if (pinned != null && r.applicationId != pinned) return 'application id mismatch';
+    if (r.applicationId != config.applicationId) return 'application id mismatch';
     final releaseId = r.releaseId;
     if (releaseId == null) return null;
     final known = _state.releaseId;
@@ -413,7 +509,9 @@ class OtaClient {
   Future<void> _download(PatchRecord p, Uri uri, File target) async {
     final t = otaTimeouts;
     final total = Stopwatch()..start();
-    final response = await _http.send(http.Request('GET', uri)).timeout(
+    final response = await _http
+        .send(http.Request('GET', uri))
+        .timeout(
           t.downloadResponse,
           onTimeout: () => throw TimeoutException('download: no response', t.downloadResponse),
         );
@@ -509,13 +607,15 @@ class OtaClient {
     if (_state.pendingEvents.isEmpty) return;
     final batch = List<Map<String, String>>.of(_state.pendingEvents);
     try {
-      final r = await _authed((h) => _http
-          .post(
-            _uri('/v1/events/batch'),
-            headers: {...h, 'Content-Type': 'application/json'},
-            body: jsonEncode({'events': batch}),
-          )
-          .timeout(otaTimeouts.request));
+      final r = await _authed(
+        (h) => _http
+            .post(
+              _uri('/v1/events/batch'),
+              headers: {...h, 'Content-Type': 'application/json'},
+              body: jsonEncode({'events': batch}),
+            )
+            .timeout(otaTimeouts.request),
+      );
       if (r.statusCode == 202 || r.statusCode == 422) {
         // 422 = malformed batch; drop it rather than retry forever.
         _state.pendingEvents.removeRange(0, batch.length);
@@ -552,14 +652,14 @@ class OtaClient {
   }
 
   static String _abiName(Abi abi) => switch (abi) {
-        Abi.androidArm64 => 'arm64-v8a',
-        Abi.androidArm => 'armeabi-v7a',
-        Abi.androidX64 => 'x86_64',
-        Abi.androidIA32 => 'x86',
-        Abi.iosArm64 => 'arm64',
-        Abi.iosX64 => 'x86_64',
-        _ => abi.toString(),
-      };
+    Abi.androidArm64 => 'arm64-v8a',
+    Abi.androidArm => 'armeabi-v7a',
+    Abi.androidX64 => 'x86_64',
+    Abi.androidIA32 => 'x86',
+    Abi.iosArm64 => 'arm64',
+    Abi.iosX64 => 'x86_64',
+    _ => abi.toString(),
+  };
 }
 
 class _IntegrityError implements Exception {

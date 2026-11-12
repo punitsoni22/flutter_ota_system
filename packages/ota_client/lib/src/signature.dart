@@ -12,9 +12,7 @@ import 'package:pointycastle/export.dart';
 /// Print them with `ota key show --dart`.
 class SignatureVerifier {
   SignatureVerifier(Map<String, String> publicKeys)
-      : _keys = {
-          for (final e in publicKeys.entries) e.key: _parsePoint(e.value),
-        };
+    : _keys = {for (final e in publicKeys.entries) e.key: _parsePoint(e.value)};
 
   final Map<String, ECPublicKey> _keys;
 
@@ -47,6 +45,5 @@ class SignatureVerifier {
     }
   }
 
-  static BigInt _toBigInt(List<int> bytes) =>
-      bytes.fold(BigInt.zero, (acc, b) => (acc << 8) | BigInt.from(b));
+  static BigInt _toBigInt(List<int> bytes) => bytes.fold(BigInt.zero, (acc, b) => (acc << 8) | BigInt.from(b));
 }

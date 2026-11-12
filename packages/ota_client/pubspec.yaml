@@ -1,11 +1,22 @@
-name: ota_client
-description: "Over-the-air patch client for Flutter: check, download, verify (SHA-256 + ES256), stage, boot protection."
+name: flutter_ota_system
+description: >-
+  Experimental Flutter client for Flutter OTA System, a self-hosted OTA patch platform:
+  signed patches, staged updates and automatic fallback. Android only.
 version: 0.1.0-alpha.1
-publish_to: none
+homepage: https://github.com/punitsoni22/flutter_ota_system
+repository: https://github.com/punitsoni22/flutter_ota_system/tree/main/packages/ota_client
+issue_tracker: https://github.com/punitsoni22/flutter_ota_system/issues
+documentation: https://github.com/punitsoni22/flutter_ota_system/blob/main/docs/flutter-integration.md
+topics:
+  - ota
+  - code-push
+  - over-the-air
+  - self-hosted
+  - patching
 
 environment:
   sdk: ^3.12.2
-  flutter: ">=3.27.0"
+  flutter: ">=3.44.9"
 
 dependencies:
   flutter:

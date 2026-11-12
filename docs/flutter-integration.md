@@ -1,6 +1,6 @@
 # Flutter integration guide
 
-How to connect a Flutter app to your Flutter OTA System server with the `ota_client` package. You need a
+How to connect a Flutter app to your Flutter OTA System server with the `flutter_ota_system` package (source: `packages/ota_client`). You need a
 running server first ([installation.md](installation.md)) and should know the
 [core concepts](concepts.md).
 
@@ -37,7 +37,7 @@ No custom Flutter engine is needed: `AotPatchRuntime` uses stock Flutter's abili
 ```yaml
 dependencies:
   package_info_plus: any            # to read the app's version; skip if you already have it
-  ota_client:
+  flutter_ota_system:
     git:
       url: https://github.com/punitsoni22/flutter_ota_system.git
       path: packages/ota_client
@@ -45,8 +45,9 @@ dependencies:
 ```
 
 Then run `flutter pub get`. With a local copy of the repository you can use
-`path: ../flutter_ota_system/packages/ota_client` instead. `ota_client` is not published on
-pub.dev.
+`path: ../flutter_ota_system/packages/ota_client` instead. The package is prepared for pub.dev
+but **not published yet**; after the first publication, `flutter pub add flutter_ota_system`
+replaces the Git dependency.
 
 Requirements: Dart ≥ 3.12, Flutter ≥ 3.27 (tests ran with Flutter 3.44 stable; other versions
 are not tested). The Android part needs `minSdk` 21 or higher and
@@ -93,9 +94,9 @@ The configuration object is `OtaConfig`
 | `releaseVersion` | yes | The **full** store version, exactly as registered: `'${info.version}+${info.buildNumber}'` |
 | `publicKeys` | yes | `{key_id: base64 point}`. Several keys are allowed (for key rotation) |
 | `runtime` | yes | `AotPatchRuntime()` or `MockPatchRuntime()` |
+| `applicationId` | yes | The application's **server id**: the UUID printed as `"id"` by `ota app create` / `ota app list`. Every patch signature covers it, and responses for another application are refused. **Not** the slug, and **not** the Android `applicationId` (package name) in your Gradle files |
 | `channel` | no | Default channel of this build. Default `production` |
-| `applicationId` | no | Pin the server's application id; responses for another app are refused |
-| `storageDir`, `platform`, `arch`, `httpClient` | no | Test overrides. Defaults: app support directory, current platform, current CPU ABI |
+| `httpClient` | no | A custom `package:http` client (proxy, certificate pinning). The URL rules above still apply, including to redirects |
 
 ### Code patches (Android): a ready-made helper
 
@@ -106,18 +107,20 @@ and set `_appSlug`:
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:ota_client/ota_client.dart';
+import 'package:flutter_ota_system/flutter_ota_system.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 /// Build-time settings (`--dart-define`):
 ///   OTA_SERVER_URL  the Flutter OTA System server. Empty = OTA off.
 ///   OTA_PUBLIC_KEY  "key_id:base64_point" from `ota key show`. Patches are refused without it.
+///   OTA_APPLICATION_ID  the app's server id ("id" in `ota app list`). Empty = OTA off.
 ///   OTA_CHANNEL     default channel of this build (production).
 class OtaUpdater {
   OtaUpdater._();
 
   static const _serverUrl = String.fromEnvironment('OTA_SERVER_URL');
   static const _publicKey = String.fromEnvironment('OTA_PUBLIC_KEY');
+  static const _applicationId = String.fromEnvironment('OTA_APPLICATION_ID');
   static const _channel = String.fromEnvironment('OTA_CHANNEL', defaultValue: 'production');
   static const _appSlug = 'shop-app'; // ← your app's slug
 
@@ -128,13 +131,14 @@ class OtaUpdater {
   static String get channel => _client?.channel ?? _channel;
 
   static Future<void> start() async {
-    if (_serverUrl.isEmpty || _client != null) return;
+    if (_serverUrl.isEmpty || _applicationId.isEmpty || _client != null) return;
     try {
       final info = await PackageInfo.fromPlatform();
       final key = _publicKey.split(':');
       final client = OtaClient(OtaConfig(
         serverUrl: _serverUrl,
         appSlug: _appSlug,
+        applicationId: _applicationId,
         channel: _channel,
         releaseVersion: '${info.version}+${info.buildNumber}',
         publicKeys: key.length == 2 ? {key[0]: key[1]} : const {},
@@ -193,6 +197,7 @@ Future<void> main() async {
   ota = OtaClient(OtaConfig(
     serverUrl: _serverUrl,
     appSlug: _appSlug,
+    applicationId: _applicationId.isEmpty ? 'not-set' : _applicationId,
     channel: _channel,
     releaseVersion: '${info.version}+${info.buildNumber}',
     publicKeys: keyParts.length == 2 ? {keyParts[0]: keyParts[1]} : const {},
@@ -302,6 +307,7 @@ Every build you give to anyone must carry the OTA settings, plus your app's own:
 ```bash
 --dart-define=OTA_SERVER_URL=https://ota.example.com \
 --dart-define=OTA_PUBLIC_KEY=prod-1:BIi7De… \
+--dart-define=OTA_APPLICATION_ID=12ebc1fd-abb9-4ee3-83c3-78deb9fadaa8 \
 --dart-define=OTA_CHANNEL=staging          # tester builds only; production builds leave it out
 ```
 

@@ -123,8 +123,9 @@ class SecureRedirectClient extends http.BaseClient {
       final next = url.resolve(location);
       if (url.scheme == 'https' && next.scheme == 'http') {
         throw InsecureUrlException(
-            'insecure redirect from https://${url.authority} to http://${next.authority}: '
-            'downgrades are never followed');
+          'insecure redirect from https://${url.authority} to http://${next.authority}: '
+          'downgrades are never followed',
+        );
       }
       _check(next);
       if (next.origin != url.origin) headers.removeWhere((k, _) => _originBoundHeaders.contains(k.toLowerCase()));
