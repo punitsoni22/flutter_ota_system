@@ -183,7 +183,8 @@ client after the first frame never delays startup.
 ### Config patches (`mock-v1`): read the payload at start
 
 With `MockPatchRuntime`, call `boot()` **before** `runApp`, because the app reads the active
-payload while it builds its first screen. From [`example_app/lib/main.dart`](../example_app/lib/main.dart):
+payload while it builds its first screen. From the example app's
+[`lib/main.dart`](../packages/ota_client/example/lib/main.dart):
 
 ```dart
 final _runtime = MockPatchRuntime();

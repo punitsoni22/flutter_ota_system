@@ -75,7 +75,7 @@ if docker run --rm -v "$ROOT/backend:/src:ro" python:3.13-slim sh -c \
 if command -v flutter >/dev/null 2>&1; then
   say "Flutter"
   if (cd packages/ota_client && flutter pub get >/dev/null && flutter analyze && flutter test); then pass "ota_client analyze + test"; else bad "ota_client analyze/test"; fi
-  if (cd example_app && flutter pub get >/dev/null && flutter analyze); then pass "example_app analyze"; else bad "example_app analyze"; fi
+  if (cd packages/ota_client/example && flutter pub get >/dev/null && flutter analyze); then pass "example app analyze"; else bad "example app analyze"; fi
 else
   echo "[SKIP] flutter not installed"
 fi

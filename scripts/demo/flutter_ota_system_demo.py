@@ -13,7 +13,7 @@ What this proves: the control plane and artifact data plane work (registration, 
 download from object storage, SHA-256 and ES256 signature checks, rollback, revoke).
 
 What it does NOT prove: executing new Dart code. The demo patch uses the "mock-v1" format, an
-inert signed JSON file that example_app reads at start. Android AOT code patches are a separate,
+inert signed JSON file that the example app (packages/ota_client/example) reads at start. Android AOT code patches are a separate,
 experimental path (docs/releases-and-patches.md) that needs a real device build.
 
 The signature check below re-implements the canonical message from ADR-0002 independently of
@@ -212,7 +212,7 @@ def cmd_seed(_args) -> int:
         print(f"signing key  {key['key_id']} (LOCAL DEVELOPMENT KEY - not for production)")
         apps = expect(c.get("/v1/admin/apps", headers=ADMIN), 200).json()
         app_id = next(a["id"] for a in apps if a["slug"] == APP)
-        print("\nFor example_app, pass:")
+        print("\nFor the example app (packages/ota_client/example), pass:")
         print(f"  --dart-define=OTA_APP={APP} --dart-define=OTA_CHANNEL={CHANNEL} \\")
         print(f"  --dart-define=OTA_APPLICATION_ID={app_id} \\")
         print(f"  --dart-define=OTA_PUBLIC_KEY={key['key_id']}:{key['uncompressed_point_base64']}")

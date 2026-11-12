@@ -138,12 +138,13 @@ migration upgrade on an existing database.
 
 ## KI-5: Example app and demo scripts use different app slugs
 
-**Priority:** Low. **Status:** ✅ Fixed in v0.1.0-alpha.1: `example_app` now defaults `OTA_APP` to
+**Priority:** Low. **Status:** ✅ Fixed in v0.1.0-alpha.1: the example app (then `example_app/`, now
+`packages/ota_client/example/`) defaults `OTA_APP` to
 `flutter-ota-system-demo`; tested on a phone without an `OTA_APP` define (registered, no 404).
 
-**Current behaviour.** `example_app` defaults to `OTA_APP=demo`
-([`main.dart`](../example_app/lib/main.dart)), while `scripts/seed_demo.sh` and the demo create the
-app `flutter-ota-system-demo`. Following the scripts without `--dart-define=OTA_APP=flutter-ota-system-demo` gives
+**Behaviour before the fix.** `example_app` defaulted to `OTA_APP=demo`
+([`main.dart`](../packages/ota_client/example/lib/main.dart)), while `scripts/seed_demo.sh` and the demo create the
+app `flutter-ota-system-demo`. Following the scripts without `--dart-define=OTA_APP=flutter-ota-system-demo` gave
 `register failed: HTTP 404 {"detail":"Unknown application"}`.
 
 **Proposed fix:** use one slug everywhere (example app default, scripts, docs) and run the whole

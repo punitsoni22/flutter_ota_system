@@ -238,10 +238,10 @@ flutter pub get && flutter analyze && flutter test
 ```
 
 The Android code has JVM unit tests (`android/src/test`). They are not run in CI; run them
-locally through the repository's example app, which hosts the plugin (needs JDK 17 or newer):
+locally through the package's example app, which hosts the plugin (needs JDK 17 or newer):
 
 ```bash
-cd ../../example_app
+cd example
 flutter build apk --config-only          # creates android/gradlew and local.properties
 cd android && ./gradlew :flutter_ota_system:testDebugUnitTest
 ```

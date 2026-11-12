@@ -54,13 +54,7 @@ if __name__ == "__main__":
     root = Path(__file__).resolve().parents[2]
     render(256, rounded=True).save(root / "docs/assets/flutter-ota-system-icon.png", optimize=True)
     # Android legacy launcher icons (rounded, transparent corners)
-    res = root / "example_app/android/app/src/main/res"
+    res = root / "packages/ota_client/example/android/app/src/main/res"
     for name, px in (("mdpi", 48), ("hdpi", 72), ("xhdpi", 96), ("xxhdpi", 144), ("xxxhdpi", 192)):
         render(px, rounded=True).save(res / f"mipmap-{name}/ic_launcher.png", optimize=True)
-    # iOS app icons: square and opaque (iOS applies its own mask and forbids transparency)
-    ios = root / "example_app/ios/Runner/Assets.xcassets/AppIcon.appiconset"
-    for f in sorted(ios.glob("Icon-App-*.png")):
-        pt, scale = f.stem.removeprefix("Icon-App-").split("@")
-        px = round(float(pt.split("x")[0]) * int(scale.rstrip("x")))
-        render(px).save(f, optimize=True)
     print("icons written")

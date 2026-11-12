@@ -25,7 +25,7 @@ What you get:
 
 ```mermaid
 flowchart LR
-  app["example_app<br/>(emulator / phone)"] -- "JSON :8000" --> api["api (FastAPI)<br/>+ /admin page"]
+  app["example app<br/>(emulator / phone)"] -- "JSON :8000" --> api["api (FastAPI)<br/>+ /admin page"]
   api --> pg[("postgres<br/>internal network only")]
   api -- writes --> vol[["volume flutter-ota-system_artifacts"]]
   api --- keys[["volume flutter-ota-system_keys<br/>(dev signing key)"]]
@@ -50,7 +50,7 @@ automatically when the API starts.
 | Docker Engine (tested on Linux) or Docker Desktop (not tested) | the server | 24 or newer, with **Compose v2.20+** | `docker compose version` |
 | Free ports `8000` and `8080` on 127.0.0.1 | the server | — | change them in `.env` if taken ([below](#ports-are-taken-or-a-second-stack)) |
 | Python 3.10+ with `venv` | the `ota` CLI only | 3.10 or newer | `python3 --version` |
-| Flutter | the example app only | stable ≥ 3.27, Dart ≥ 3.12 | `flutter --version` |
+| Flutter | the example app only | stable ≥ 3.44.9, Dart ≥ 3.12.2 | `flutter --version` |
 | Android emulator or phone + `adb` | the example app only (Android is the only tested app platform) | — | `adb devices` |
 
 Only Docker is needed to run the server. Nothing else is installed on your computer: the server
@@ -149,7 +149,7 @@ channel      dev
 release      android 1.0.0+1  (created)
 signing key  local-dev-1 (LOCAL DEVELOPMENT KEY - not for production)
 
-For example_app, pass:
+For the example app (packages/ota_client/example), pass:
   --dart-define=OTA_APP=flutter-ota-system-demo --dart-define=OTA_CHANNEL=dev \
   --dart-define=OTA_APPLICATION_ID=<the demo app's server id> \
   --dart-define=OTA_PUBLIC_KEY=local-dev-1:<base64 point>
@@ -230,7 +230,9 @@ then run `.venv/bin/python cli/ota.py …`. All commands: [cli-reference.md](cli
 
 ## 8. Run the example app
 
-The example app uses `mock-v1` patches: a patch is a JSON file that changes its banner and colour.
+The example app ([`packages/ota_client/example`](../packages/ota_client/example/README.md), the
+project's only demo app) uses `mock-v1` patches: a patch is a JSON file that changes its banner
+and colour.
 No code is downloaded. Its defaults already match the demo: application `flutter-ota-system-demo`, channel
 `dev`. You only pass the server address and the public key.
 
@@ -271,7 +273,7 @@ over the USB cable. The server stays bound to 127.0.0.1 and is never exposed to 
 adb devices                              # your phone is listed as "device"
 adb reverse tcp:8000 tcp:8000            # API
 adb reverse tcp:8080 tcp:8080            # patch files (must match OTA_CDN_BASE_URL's port)
-cd example_app
+cd packages/ota_client/example
 flutter run \
   --dart-define=OTA_SERVER_URL=http://localhost:8000 \
   --dart-define=OTA_APPLICATION_ID="$APP_ID" \
@@ -284,7 +286,7 @@ The rules last until the cable is unplugged or `adb` restarts. Remove them with
 ### Emulator
 
 ```bash
-cd example_app
+cd packages/ota_client/example
 flutter run \
   --dart-define=OTA_SERVER_URL=http://10.0.2.2:8000 \
   --dart-define=OTA_APPLICATION_ID="$APP_ID" \

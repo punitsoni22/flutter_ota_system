@@ -1,5 +1,5 @@
 name: flutter_ota_system_example
-description: Minimal example of the flutter_ota_system package (Flutter OTA System client).
+description: The official demo app of the flutter_ota_system package (Flutter OTA System client).
 publish_to: none
 version: 1.0.0+1
 
@@ -12,6 +12,11 @@ dependencies:
     sdk: flutter
   flutter_ota_system:
     path: ../
+  # Reads this build's version and build number, which must match the registered release.
+  package_info_plus: ^10.2.2
 
 dev_dependencies:
   flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
