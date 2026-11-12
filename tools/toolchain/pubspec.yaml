@@ -1,0 +1,18 @@
+# Copyright 2026 The Punit Authors
+# SPDX-License-Identifier: Apache-2.0
+name: flutter_ota_toolchain_tools
+description: Owner-side tools that build and sign Flutter OTA System toolchain bundles.
+version: 0.0.0
+publish_to: none
+
+environment:
+  sdk: ">=3.8.0 <4.0.0"
+
+dependencies:
+  args: ^2.6.0
+  flutter_ota_cli:
+    path: ../../packages/flutter_ota_cli
+  path: ^1.9.0
+
+dev_dependencies:
+  lints: ^6.0.0
