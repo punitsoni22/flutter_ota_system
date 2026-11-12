@@ -144,29 +144,34 @@ What the command does, in order:
    `.flutter_ota/packages/dynamic_modules/` and, if needed, adds it to `pubspec.yaml`.
 5. Runs `flutter pub get` with the toolchain, then writes the feature registry
    (`lib/flutter_ota_features.g.dart`, see the feature-patching guide) and the entry point
-   `lib/flutter_ota_main.g.dart`.
-6. **Computes the dynamic interface** (section 3.1) from a first kernel compile of the app.
-7. **Builds the configuration** and compiles **`link.dill`** from
+   `lib/flutter_ota_main.g.dart`. These files are written in **your** project (commit them).
+6. **Copies the app workspace** (the app and its path packages, including the files from step 5)
+   to the neutral build folder `/tmp/flutter_ota-build/project` and runs `flutter pub get` there
+   (section 3.3). Every later compile and the store build run in that copy.
+7. **Computes the dynamic interface** (section 3.1) from a first kernel compile of the app.
+8. **Builds the configuration** and compiles **`link.dill`** from
    `package:<app>/flutter_ota_main.g.dart`, the kernel that patches are compiled against.
-8. Runs the store build:
+9. Runs the store build in the build copy:
 
    ```text
    <toolchain>/flutter/bin/flutter build apk|appbundle --release -t lib/flutter_ota_main.g.dart \
      --target-platform android-arm64 \
      --dart-define=FLUTTER_OTA_CONFIG=<base64url> \
-     --extra-front-end-options=--dynamic-interface=<release folder>/dynamic_interface.yaml \
+     --extra-front-end-options=--dynamic-interface=/tmp/flutter_ota-build/workspace/<app>/.flutter_ota/releases/<release_id>/dynamic_interface.yaml \
      --build-name=<name> --build-number=<number> [your extra arguments]
    ```
 
    with `FLUTTER_STORAGE_BASE_URL=file://<toolchain>/mirror` (the engine can only come from the
    toolchain), `GRADLE_USER_HOME=<toolchain>/gradle-home` (no cached stock engine), and the
-   toolchain's `flutter/bin` first on the child process's `PATH`.
-9. **Verifies** that the APK or bundle contains the toolchain's own `libflutter.so` (SHA-256 of the
+   toolchain's `flutter/bin` first on the child process's `PATH`. Only the APK or bundle is
+   copied back, to its usual place in your project (`build/app/outputs/flutter-apk/` or
+   `build/app/outputs/bundle/release/`); the copy is deleted when the command ends.
+10. **Verifies** that the APK or bundle contains the toolchain's own `libflutter.so` (SHA-256 of the
    copy in the toolchain's engine jar). If not, it stops and registers nothing.
-10. Takes `lib/arm64-v8a/libapp.so` (in a bundle: `base/lib/arm64-v8a/libapp.so`) and hashes it.
-11. Writes the **local baseline** (section 4), including the feature snapshot that
-    `patch android` compares against.
-12. **Registers** the release: `POST /v1/admin/apps/{slug}/releases` with the chosen `id` and the
+11. Takes `lib/arm64-v8a/libapp.so` (in a bundle: `base/lib/arm64-v8a/libapp.so`) and hashes it.
+12. Writes the **local baseline** (section 4) in your project, including the feature snapshot
+    that `patch android` compares against (it hashes your real project files).
+13. **Registers** the release: `POST /v1/admin/apps/{slug}/releases` with the chosen `id` and the
     baseline identity (`toolchain_id`, `dart_revision`, `bytecode_format`, `interface_sha256`,
     `trust_environment`), then uploads `libapp.so` for `arm64-v8a`. **The APK, the bundle and your
     source code are never uploaded.**
@@ -223,19 +228,43 @@ It contains **no** private key, admin key or other secret.
 
 ### 3.3 Paths in the build
 
-`link.dill` records file paths. So that it does not contain your home folder, the CLI compiles it
-through symlinks below a fixed folder, `/tmp/flutter_ota-build` (mode 0700, owned by you):
+Compiled files record file paths. So that neither `link.dill` nor the store `libapp.so` contains
+your home folder, the CLI builds below a fixed folder, `/tmp/flutter_ota-build` (mode 0700, owned
+by you):
 
 ```text
 /tmp/flutter_ota-build/toolchain  -> the toolchain folder
 /tmp/flutter_ota-build/pub-cache  -> your pub cache
-/tmp/flutter_ota-build/workspace  -> the folder that holds the app and its path packages
+/tmp/flutter_ota-build/project/      a temporary copy of the app workspace (a real folder)
+/tmp/flutter_ota-build/workspace  -> during a release: the copy; during a patch: your workspace
 ```
 
-One build at a time uses it (a second build waits). If that folder belongs to another user, the
-CLI refuses to build; remove it, or set `FLUTTER_OTA_BUILD_ROOT` to a folder you own (then use the
-same value for the release and its patches). The path packages of the app must live next to the
-app (in one common folder below your home folder).
+The **workspace** is the folder that holds the app and all its path packages. The Flutter tool
+writes `.dart_tool/flutter_build/dart_plugin_registrant.dart` (apps with plugins) into the app
+folder and compiles it by its real, symlink-free path, so a symlink is not enough for the store
+build. That is why `release android` builds in a **copy** of the workspace at the real path
+`/tmp/flutter_ota-build/project/` (the app keeps its place relative to its path packages, so
+relative `path:` dependencies still work; absolute `path:` dependencies into the workspace are
+rewritten to relative ones in the copy only).
+
+The copy leaves out what is rebuilt or private: `build/`, `ios/`, `.flutter-plugins`,
+`.flutter-plugins-dependencies`, `android/local.properties` and `.flutter_ota/releases/` of every
+package, and `.dart_tool/`, `.git`, `.gradle` and `.cxx` folders anywhere. The release then runs
+`flutter pub get`, the two `link.dill` compiles and `flutter build` in the copy, copies the APK or
+bundle back to your project, and deletes the copy (also when the build fails). The Gradle cache
+stays in the toolchain's Gradle home, but every release builds the Android part from scratch, so it
+takes a little longer than a normal incremental build.
+
+`link.dill` is compiled through `/tmp/flutter_ota-build/workspace`, which points to the copy during
+a release. `patch android` points the same link at your real workspace, which has the same layout,
+so the release kernel and the patch module record exactly the same `/tmp/flutter_ota-build/...`
+paths.
+
+One build at a time uses the folder (a second build waits). If that folder belongs to another user,
+the CLI refuses to build; remove it, or set `FLUTTER_OTA_BUILD_ROOT` to a folder you own (then use
+the same value for the release and its patches). The path packages of the app must live next to the
+app (in one common folder below your home folder), and the build folder needs free space for a
+copy of that workspace (without build outputs).
 
 ### 3.4 The module loader and the entry point
 
@@ -282,7 +311,7 @@ SDK cannot depend on a package from the toolchain. So the CLI (see
 `bytecode_format`, `toolchain`, `toolchain_id`, `toolchain_record`, `runtime`,
 `interface_sha256`, `interface_policy`, `interface_libraries`, `host_packages`, `root_keys`
 (public), `entry_contract`, `flutter_ota_config` (the define value), `link_dill_sha256`,
-`canonical_build_root`, `link_entry`, `link_defines`, `build_args`, `cli_version`, `created_at`
+`canonical_build_root`, `build_dir` (where `flutter build` ran: the build copy), `link_entry`, `link_defines`, `build_args`, `cli_version`, `created_at`
 and `registered`.
 
 **Keep every release folder.** `flutter_ota patch android` builds patches against that folder's
@@ -319,10 +348,11 @@ toolchains built before milestone 4D that do not ship it yet.
 
 - Linux x64 hosts and Android arm64 only. Other ABIs in the APK are not patched.
 - `lib/main.dart` is the only app entry point; `--target` is not supported yet.
-- If the app uses plugins, the store `libapp.so` contains the absolute path of
-  `.dart_tool/flutter_build/dart_plugin_registrant.dart` (generated by the Flutter tool, which
-  always works in the real project folder). Build releases in a neutral folder (for example in
-  CI) if that path must not contain a user name.
+- Fixed: the store `libapp.so` of an app with plugins used to contain the absolute path of
+  `.dart_tool/flutter_build/dart_plugin_registrant.dart` in your project folder (often with your
+  user name). The store build now runs in the neutral build copy (section 3.3), so that path is
+  `/tmp/flutter_ota-build/project/<app>/.dart_tool/...`. It still contains the folder names
+  of your workspace below that root (for example `<app>`), as `link.dill` always did.
 - Obfuscated builds (`--obfuscate`) and `--dart-define-from-file` are refused for now.
 - The release routes of the backend address the app by slug, so the CLI looks the slug up from the
   app UUID.

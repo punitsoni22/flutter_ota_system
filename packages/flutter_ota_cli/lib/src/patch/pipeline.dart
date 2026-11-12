@@ -339,21 +339,24 @@ class PatchPipeline {
   final _mappingPairs = <String, String>{};
 
   /// Links toolchain, pub cache and workspace below the canonical root exactly as the release
-  /// command does, so patch sources and the release kernel share the same paths.
+  /// command does, so patch sources and the release kernel share the same paths. (The release
+  /// links `<root>/workspace` to its build copy of this workspace, which has the same layout, so
+  /// the canonical paths in link.dill and in the patch module are identical.)
   PathMapping _linkCanonical(CanonicalBuildRoot canon, ProjectPackages project) {
     final packages = readPackageConfig(project.config.path);
     final tcReal = Directory(toolchainRoot).resolveSymbolicLinksSync();
     final pc = _pubCache();
     final pubReal = Directory(pc).existsSync() ? Directory(pc).resolveSymbolicLinksSync() : null;
     final projectReal = Directory(projectDir).resolveSymbolicLinksSync();
-    final local = [
-      for (final x in packages)
-        if (!p.isWithin(tcReal, x.root) && (pubReal == null || !p.isWithin(pubReal, x.root))) x.root,
-    ];
-    final workspace = commonAncestor([projectReal, ...local]);
-    if (workspace == p.separator || workspace == ctx.environment['HOME']) {
-      throw CliException('The app and its path packages share no folder below your home directory ($workspace).');
-    }
+    // Same workspace as `release android`, whose link.dill reaches the build copy of this folder
+    // through the same <root>/workspace link (identical relative layout).
+    final workspace = appWorkspace(
+      projectReal: projectReal,
+      packages: packages,
+      toolchainReal: tcReal,
+      pubCacheReal: pubReal,
+      home: ctx.environment['HOME'],
+    );
     canon.link(canonToolchain, tcReal);
     if (pubReal != null) canon.link(canonPubCache, pubReal);
     canon.link(canonWorkspace, workspace);

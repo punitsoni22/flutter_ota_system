@@ -220,6 +220,13 @@ if [ "$1" = "pub" ]; then
 fi
 if [ "$1" = "build" ]; then
   [ -n "$FAKE_BUILD_FAIL" ] && { echo "gradle exploded" >&2; exit 1; }
+  {
+    [ -f lib/flutter_ota_main.g.dart ] && echo 'BUILT-WITH lib/flutter_ota_main.g.dart'
+    [ -f .flutter_ota/packages/dynamic_modules/lib/dynamic_modules.dart ] && echo 'BUILT-WITH loader package'
+    grep -q '^  dynamic_modules:' pubspec.yaml && echo 'BUILT-WITH dynamic_modules dependency'
+    [ -d build ] && echo 'BUILT-WITH stale build folder'
+    for f in .flutter_ota/releases/*/*; do [ -f "$f" ] && echo "BUILT-WITH $(basename "$f")"; done
+  } >> "$FAKE_FLUTTER_LOG"
   if [ "$2" = "apk" ]; then
     mkdir -p build/app/outputs/flutter-apk && cp "$FAKE_APK" build/app/outputs/flutter-apk/app-release.apk
   else
