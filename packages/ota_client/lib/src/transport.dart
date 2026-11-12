@@ -61,13 +61,19 @@ http.Client createDefaultHttpClient() => IOClient(createIoHttpClient());
 /// - Debug builds: also `http://` to loopback (`localhost`, 127.0.0.0/8, `[::1]`) and to
 ///   `10.0.2.2` (the Android emulator's address for the host computer), for local development.
 /// - Every other scheme is refused.
-String? insecureUrlProblem(Uri url) {
+///
+/// [allowLoopbackHttp] (bytecode runtime only, for local end-to-end tests through `adb reverse`):
+/// release and profile builds also accept `http://` to `localhost`, `127.0.0.0/8` and `[::1]`
+/// (never any other host, and never the emulator address). Bytecode patches are signed by the
+/// developer and verified on the device, so the transport is not what makes a patch trusted.
+String? insecureUrlProblem(Uri url, {bool allowLoopbackHttp = false}) {
   if (url.scheme != 'https' && url.scheme != 'http') {
     return 'unsupported URL scheme "${url.scheme}": use https://';
   }
   if (url.host.isEmpty) return 'URL has no host: $url';
   if (url.scheme == 'https') return null;
   final origin = '${url.scheme}://${url.authority}'; // never the path or query
+  if (allowLoopbackHttp && _isLoopback(url.host)) return null;
   if (!_isDebugBuild) return 'insecure URL $origin: release builds require https://';
   if (_isLoopback(url.host) || url.host == '10.0.2.2') return null;
   return 'insecure URL $origin: http:// is only allowed for localhost or the Android emulator '
@@ -99,10 +105,13 @@ bool _isLoopback(String host) {
 ///
 /// Other methods (POST) get the 3xx response back unchanged; the caller treats it as an error.
 class SecureRedirectClient extends http.BaseClient {
-  SecureRedirectClient(this._inner, {this.maxRedirects = 5});
+  SecureRedirectClient(this._inner, {this.maxRedirects = 5, this.allowLoopbackHttp = false});
 
   final http.Client _inner;
   final int maxRedirects;
+
+  /// See [insecureUrlProblem]. Off for `OtaClient`; on for the bytecode runtime.
+  final bool allowLoopbackHttp;
 
   static const _redirectCodes = {301, 302, 303, 307, 308};
   static const _originBoundHeaders = {'authorization', 'cookie'};
@@ -138,8 +147,8 @@ class SecureRedirectClient extends http.BaseClient {
     return response;
   }
 
-  static void _check(Uri url) {
-    final problem = insecureUrlProblem(url);
+  void _check(Uri url) {
+    final problem = insecureUrlProblem(url, allowLoopbackHttp: allowLoopbackHttp);
     if (problem != null) throw InsecureUrlException(problem);
   }
 

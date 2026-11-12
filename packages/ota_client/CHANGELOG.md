@@ -1,3 +1,21 @@
+## Unreleased (Phase 4, milestone 4C)
+
+Additive; the `0.1.0-alpha.1` API, wire formats, method channels and storage are unchanged.
+**Experimental alpha, Android arm64 only, needs the Flutter OTA System toolchain (Flutter 3.47.9).**
+
+* New bytecode runtime: `FlutterOta.initialize()`, `FlutterOta.feature<T>()`, `OtaFeature`,
+  status getters, `FlutterOta.lastStartupTimings`, `FlutterOta.checkForUpdate()`. Configuration
+  comes from the `FLUTTER_OTA_CONFIG` dart-define; without it OTA is disabled (no crash).
+* Developer-signed `dbc-v1` patches (`OTAPRT02` container): the Phase 3C verification pipeline
+  (canonical manifest, root-certified ES256 keys, approvals, toolchain id, revocation lists) moved
+  into the package, with its 69 tests.
+* New patches are loaded once in a separate `:flutter_ota_verify` process before activation, and
+  activated at the next start. Crash state machine with `ApplicationExitInfo` attribution,
+  previous-patch restore and re-verification of the stored patch at every start.
+* Android: channel `flutter_ota/runtime` and the service `FlutterOtaVerifierService`.
+* The bytecode runtime also accepts plain `http://` to loopback hosts (`127.0.0.1`, `localhost`,
+  `[::1]`) in release builds, for local tests through `adb reverse`. `OtaClient` is unchanged.
+
 ## 0.1.0-alpha.1
 
 First pub.dev release of the Flutter OTA System client SDK (package `flutter_ota_system`;
