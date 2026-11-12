@@ -25,6 +25,7 @@ class VerifierService : Service() {
     companion object {
         const val MSG_VERIFY = 1
         const val MSG_RESULT = 2
+        const val MSG_JOB_TAKEN = 3
     }
 
     private var engine: FlutterEngine? = null
@@ -54,6 +55,7 @@ class VerifierService : Service() {
                         putString("status", m["status"] as String?)
                         putString("detail", m["detail"]?.toString())
                         putDouble("ms", (m["ms"] as Number).toDouble())
+                        putString("probes", "uid=${Process.myUid()};dart=${m["probes"] ?: ""}")
                     }
                     try { replyTo.send(out) } catch (_: RemoteException) {}
                     main.postDelayed({ Process.killProcess(Process.myPid()) }, 300)

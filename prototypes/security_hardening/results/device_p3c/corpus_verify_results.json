@@ -1,0 +1,461 @@
+{
+  "pid": 13546,
+  "results": {
+    "A00_control_valid": {
+      "crypto": "OK",
+      "status": "OK",
+      "detail": "catalog.version=catalog v2 (patch 1) / product_service v1; catalog.priceLabel=Product price: \u20b9499",
+      "verifier_ms": 2.163,
+      "probes": "uid=11742;dart=dart_read_state=DENIED(PathNotFoundException),dart_write_store=ALLOWED",
+      "process": "otaverify",
+      "ms": 262
+    },
+    "A01_untrusted_key": {
+      "crypto": "REJECTED",
+      "code": "unknown_key",
+      "detail": "signing key p3-rogue is not trusted by this build",
+      "status": "NOT_RUN"
+    },
+    "A02_wrong_app": {
+      "crypto": "REJECTED",
+      "code": "wrong_app",
+      "detail": "patch is for another application",
+      "status": "NOT_RUN"
+    },
+    "A03_wrong_baseline": {
+      "crypto": "REJECTED",
+      "code": "wrong_baseline",
+      "detail": "patch was built for another libapp.so",
+      "status": "NOT_RUN"
+    },
+    "A04_wrong_engine": {
+      "crypto": "REJECTED",
+      "code": "wrong_runtime",
+      "detail": "runtime engine 00000000 != 89c39edf",
+      "status": "NOT_RUN"
+    },
+    "A05_expired": {
+      "crypto": "REJECTED",
+      "code": "expired",
+      "detail": "patch expired at 2026-01-01T00:00:00Z",
+      "status": "NOT_RUN"
+    },
+    "A06_second_trusted_key": {
+      "crypto": "OK",
+      "status": "OK",
+      "detail": "catalog.version=catalog v2 (patch 1) / product_service v1; catalog.priceLabel=Product price: \u20b9499",
+      "verifier_ms": 2.209,
+      "probes": "uid=11742;dart=dart_read_state=DENIED(PathNotFoundException),dart_write_store=ALLOWED",
+      "process": "otaverify",
+      "ms": 246
+    },
+    "A07_tampered_module": {
+      "crypto": "REJECTED",
+      "code": "bad_hash",
+      "detail": "module SHA-256 mismatch",
+      "status": "NOT_RUN"
+    },
+    "A08_tampered_manifest": {
+      "crypto": "REJECTED",
+      "code": "bad_signature",
+      "detail": "manifest signature does not verify",
+      "status": "NOT_RUN"
+    },
+    "A09_truncated_download": {
+      "crypto": "REJECTED",
+      "code": "wrong_size",
+      "detail": "module size 2375 != 5463",
+      "status": "NOT_RUN"
+    },
+    "A10_trusted_id_wrong_key": {
+      "crypto": "REJECTED",
+      "code": "bad_signature",
+      "detail": "manifest signature does not verify",
+      "status": "NOT_RUN"
+    },
+    "B01_truncated_half": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier disconnected; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify, pid=13982, timestamp=1794493628435}",
+      "ms": 1261
+    },
+    "B02_truncated_header": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify, pid=14346, timestamp=1794493630902}",
+      "ms": 1167
+    },
+    "B03_truncated_magic_only": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier process died; exit={reason=5, status=11, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify, pid=14668, timestamp=1794493633367}",
+      "ms": 1143
+    },
+    "B04_truncated_last_byte": {
+      "crypto": "OK",
+      "status": "OK",
+      "detail": "catalog.version=catalog v2 (patch 1) / product_service v1; catalog.priceLabel=Product price: \u20b9499",
+      "verifier_ms": 2.438,
+      "probes": "uid=11742;dart=dart_read_state=DENIED(PathNotFoundException),dart_write_store=ALLOWED",
+      "process": "otaverify",
+      "ms": 232
+    },
+    "B05_truncated_at_codes": {
+      "crypto": "OK",
+      "status": "REJECTED",
+      "detail": "StateError: Bad state: Bytecode verification failed in package:patch_v1/entry.dart_::_otaPatchEntry: pc 0: empty function body",
+      "verifier_ms": 1.357,
+      "probes": "uid=11742;dart=dart_read_state=DENIED(PathNotFoundException),dart_write_store=ALLOWED",
+      "process": "otaverify",
+      "ms": 217
+    },
+    "B06_bad_magic": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify, pid=15101, timestamp=1794493639218}",
+      "ms": 1320
+    },
+    "B07_bad_version_next": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify, pid=15397, timestamp=1794493641871}",
+      "ms": 1286
+    },
+    "B08_bad_version_zero": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify, pid=15718, timestamp=1794493644412}",
+      "ms": 1216
+    },
+    "B09_strings_offset_past_end": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier disconnected; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify, pid=15881, timestamp=1794493646887}",
+      "ms": 1227
+    },
+    "B10_objects_offset_zero": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier process died; exit={reason=5, status=11, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify, pid=16118, timestamp=1794493649482}",
+      "ms": 1238
+    },
+    "B11_codes_offset_huge": {
+      "crypto": "OK",
+      "status": "REJECTED",
+      "detail": "StateError: Bad state: Bytecode verification failed in package:patch_v1/entry.dart_::_otaPatchEntry: pc 0: empty function body",
+      "verifier_ms": 1.649,
+      "probes": "uid=11742;dart=dart_read_state=DENIED(PathNotFoundException),dart_write_store=ALLOWED",
+      "process": "otaverify",
+      "ms": 255
+    },
+    "B12_libraries_count_huge": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify, pid=16600, timestamp=1794493653804}",
+      "ms": 1370
+    },
+    "B13_libraries_count_zero": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify, pid=16817, timestamp=1794493656514}",
+      "ms": 1436
+    },
+    "B14_main_offset_zero": {
+      "crypto": "OK",
+      "status": "REJECTED",
+      "detail": "entry point returned Null, not a contract-2 map",
+      "verifier_ms": 1.996,
+      "probes": "uid=11742;dart=dart_read_state=DENIED(PathNotFoundException),dart_write_store=ALLOWED",
+      "process": "otaverify",
+      "ms": 258
+    },
+    "B15_all_sections_empty": {
+      "crypto": "OK",
+      "status": "REJECTED",
+      "detail": "entry point returned Null, not a contract-2 map",
+      "verifier_ms": 1.207,
+      "probes": "uid=11742;dart=dart_read_state=DENIED(PathNotFoundException),dart_write_store=ALLOWED",
+      "process": "otaverify",
+      "ms": 241
+    },
+    "B16_unknown_host_library": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify, pid=17452, timestamp=1794493662467}",
+      "ms": 1317
+    },
+    "B17_unknown_host_class": {
+      "crypto": "OK",
+      "status": "OK",
+      "detail": "catalog.version=catalog v2 (patch 1) / product_service v1; catalog.priceLabel=Product price: \u20b9499",
+      "verifier_ms": 2.348,
+      "probes": "uid=11742;dart=dart_read_state=DENIED(PathNotFoundException),dart_write_store=ALLOWED",
+      "process": "otaverify",
+      "ms": 263
+    },
+    "B18_unknown_host_member": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify, pid=17747, timestamp=1794493666930}",
+      "ms": 1397
+    },
+    "B19_module_library_collides": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify, pid=17982, timestamp=1794493669573}",
+      "ms": 1317
+    },
+    "B20_strings_garbled": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier process died; exit={reason=5, status=11, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify, pid=18287, timestamp=1794493672212}",
+      "ms": 1316
+    },
+    "B21_objects_flip_0": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify, pid=18471, timestamp=1794493674953}",
+      "ms": 1392
+    },
+    "B22_objects_flip_1": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify, pid=18635, timestamp=1794493677620}",
+      "ms": 1347
+    },
+    "B23_objects_flip_2": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier process died; exit={reason=5, status=11, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify, pid=18936, timestamp=1794493680270}",
+      "ms": 1286
+    },
+    "B24_codes_opcode_0": {
+      "crypto": "OK",
+      "status": "REJECTED",
+      "detail": "StateError: Bad state: Bytecode verification failed in package:patch_v1/entry.dart_::_otaPatchEntry: pc 48: LoadConstant_Wide: register 1 outside the frame (0)",
+      "verifier_ms": 1.474,
+      "probes": "uid=11742;dart=dart_read_state=DENIED(PathNotFoundException),dart_write_store=ALLOWED",
+      "process": "otaverify",
+      "ms": 284
+    },
+    "B25_codes_opcode_1": {
+      "crypto": "OK",
+      "status": "REJECTED",
+      "detail": "StateError: Bad state: Bytecode verification failed in package:feature_catalog_patch1/feature_catalog.dart_CatalogFeatureImpl_buildRow: pc 29: reserved opcode Unused20",
+      "verifier_ms": 1.612,
+      "probes": "uid=11742;dart=dart_read_state=DENIED(PathNotFoundException),dart_write_store=ALLOWED",
+      "process": "otaverify",
+      "ms": 272
+    },
+    "B26_codes_opcode_2": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify, pid=19429, timestamp=1794493686272}",
+      "ms": 1334
+    },
+    "B27_codes_opcode_3": {
+      "crypto": "OK",
+      "status": "REJECTED",
+      "detail": "StateError: Bad state: Bytecode verification failed in package:feature_catalog_patch1/feature_catalog.dart__CatalogScreenState@609245413_build: pc 341: DirectCall: argument count 58 != arguments descriptor 3",
+      "verifier_ms": 2.082,
+      "probes": "uid=11742;dart=dart_read_state=DENIED(PathNotFoundException),dart_write_store=ALLOWED",
+      "process": "otaverify",
+      "ms": 228
+    },
+    "B28_codes_all_ff": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier process died; exit={reason=5, status=11, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify, pid=19863, timestamp=1794493690382}",
+      "ms": 1272
+    },
+    "B29_libraries_garbled": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify, pid=20083, timestamp=1794493693118}",
+      "ms": 1405
+    },
+    "B30_classes_garbled": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify, pid=20255, timestamp=1794493695885}",
+      "ms": 1324
+    },
+    "B31_members_garbled": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify, pid=20507, timestamp=1794493698472}",
+      "ms": 1339
+    },
+    "B32_appended_garbage": {
+      "crypto": "OK",
+      "status": "OK",
+      "detail": "catalog.version=catalog v2 (patch 1) / product_service v1; catalog.priceLabel=Product price: \u20b9499",
+      "verifier_ms": 2.135,
+      "probes": "uid=11742;dart=dart_read_state=DENIED(PathNotFoundException),dart_write_store=ALLOWED",
+      "process": "otaverify",
+      "ms": 252
+    },
+    "B33_duplicated_module": {
+      "crypto": "OK",
+      "status": "OK",
+      "detail": "catalog.version=catalog v2 (patch 1) / product_service v1; catalog.priceLabel=Product price: \u20b9499",
+      "verifier_ms": 2.131,
+      "probes": "uid=11742;dart=dart_read_state=DENIED(PathNotFoundException),dart_write_store=ALLOWED",
+      "process": "otaverify",
+      "ms": 249
+    },
+    "B34_random_00_flip": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier disconnected; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify, pid=21051, timestamp=1794493704308}",
+      "ms": 1357
+    },
+    "B35_random_01_insert": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify, pid=21243, timestamp=1794493706983}",
+      "ms": 1286
+    },
+    "B36_random_02_delete": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify, pid=21597, timestamp=1794493709676}",
+      "ms": 1293
+    },
+    "B37_random_03_flip": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify, pid=21852, timestamp=1794493712250}",
+      "ms": 1320
+    },
+    "B38_random_04_flip": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify, pid=22219, timestamp=1794493714742}",
+      "ms": 1128
+    },
+    "B39_random_05_flip": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify, pid=22594, timestamp=1794493717309}",
+      "ms": 1261
+    },
+    "B40_random_06_delete": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify, pid=22980, timestamp=1794493719855}",
+      "ms": 1280
+    },
+    "B41_random_07_insert": {
+      "crypto": "OK",
+      "status": "REJECTED",
+      "detail": "StateError: Bad state: Bytecode verification failed in package:feature_catalog_patch1/feature_catalog.dart__CatalogScreenState@609245413_build_<anonymous closure>: pc 6: opcode 219 is not a public bytecode",
+      "verifier_ms": 2.031,
+      "probes": "uid=11742;dart=dart_read_state=DENIED(PathNotFoundException),dart_write_store=ALLOWED",
+      "process": "otaverify",
+      "ms": 249
+    },
+    "B42_random_08_flip": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier process died; exit={reason=5, status=11, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify, pid=23307, timestamp=1794493724269}",
+      "ms": 1390
+    },
+    "B43_random_09_insert": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify, pid=23598, timestamp=1794493726900}",
+      "ms": 1263
+    },
+    "B44_random_10_flip": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier process died; exit={reason=5, status=11, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify, pid=24014, timestamp=1794493729629}",
+      "ms": 1375
+    },
+    "B45_random_11_flip": {
+      "crypto": "OK",
+      "status": "REJECTED",
+      "detail": "StateError: Bad state: Bytecode verification failed in package:feature_catalog_patch1/feature_catalog.dart_::_productRef: pc 14: UncheckedInterfaceCall: pool[6] is not an arguments descriptor",
+      "verifier_ms": 1.616,
+      "probes": "uid=11742;dart=dart_read_state=DENIED(PathNotFoundException),dart_write_store=ALLOWED",
+      "process": "otaverify",
+      "ms": 241
+    },
+    "B46_random_12_flip": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier disconnected; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify, pid=24327, timestamp=1794493733938}",
+      "ms": 1264
+    },
+    "B47_random_13_delete": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify, pid=24619, timestamp=1794493736503}",
+      "ms": 1217
+    },
+    "B48_random_14_delete": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier disconnected; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify, pid=24980, timestamp=1794493739152}",
+      "ms": 1295
+    },
+    "B49_random_15_overwrite": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify, pid=25251, timestamp=1794493741714}",
+      "ms": 1239
+    },
+    "B50_random_16_flip": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify, pid=25506, timestamp=1794493744335}",
+      "ms": 1287
+    },
+    "B51_random_17_insert": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify, pid=25851, timestamp=1794493746904}",
+      "ms": 1302
+    },
+    "B52_random_18_overwrite": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier disconnected; exit={reason=5, status=11, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify, pid=26144, timestamp=1794493749611}",
+      "ms": 1391
+    },
+    "B53_random_19_overwrite": {
+      "crypto": "OK",
+      "status": "CRASHED",
+      "detail": "verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otaverify, pid=26318, timestamp=1794493752364}",
+      "ms": 1332
+    },
+    "C01_signed_ffi_module": {
+      "crypto": "OK",
+      "status": "REJECTED",
+      "detail": "StateError: Bad state: Bytecode verification failed in package:product_service_ffi/product_service.dart_ProductService_get_version_#ffiClosure0: pc 15: opcode FfiCall is not allowed in a dynamic module",
+      "verifier_ms": 1.992,
+      "probes": "uid=11742;dart=dart_read_state=DENIED(PathNotFoundException),dart_write_store=ALLOWED",
+      "process": "otaverify",
+      "ms": 254
+    },
+    "R25_regression_B25_reserved_opcode": {
+      "crypto": "OK",
+      "status": "REJECTED",
+      "detail": "StateError: Bad state: Bytecode verification failed in package:feature_catalog_patch1/feature_catalog.dart_CatalogFeatureImpl_buildRow: pc 29: reserved opcode Unused20",
+      "verifier_ms": 1.615,
+      "probes": "uid=11742;dart=dart_read_state=DENIED(PathNotFoundException),dart_write_store=ALLOWED",
+      "process": "otaverify",
+      "ms": 225
+    },
+    "R27_regression_B27_bad_argcount": {
+      "crypto": "OK",
+      "status": "REJECTED",
+      "detail": "StateError: Bad state: Bytecode verification failed in package:feature_catalog_patch1/feature_catalog.dart__CatalogScreenState@609245413_build: pc 341: DirectCall: argument count 58 != arguments descriptor 3",
+      "verifier_ms": 2.155,
+      "probes": "uid=11742;dart=dart_read_state=DENIED(PathNotFoundException),dart_write_store=ALLOWED",
+      "process": "otaverify",
+      "ms": 269
+    }
+  }
+}

@@ -25,6 +25,15 @@ class PatchManifest {
   List<Map<String, Object?>> get packages =>
       (raw['packages']! as List).map((p) => (p! as Map).cast<String, Object?>()).toList();
   Map<String, Object?> get hostInterface => (raw['host_interface']! as Map).cast<String, Object?>();
+  Map<String, Object?> get toolchain => (raw['toolchain']! as Map).cast<String, Object?>();
+
+  /// Toolchain record fields (Phase 3C provenance). `id` = SHA-256 of the canonical JSON of all
+  /// other fields; the host compares it with the toolchain id it was built for.
+  static const toolchainFields = {
+    'flutter', 'dart', 'engine', 'dart_revision', 'engine_patch_sha256', 'compiler_sha256',
+    'generator_sha256', 'bytecode_format', 'build_config_sha256',
+  };
+
   List<Map<String, Object?>> get assets =>
       (raw['assets']! as List).map((p) => (p! as Map).cast<String, Object?>()).toList();
 
@@ -37,7 +46,7 @@ class PatchManifest {
 
   static const _top = {
     'format', 'app_id', 'release_id', 'baseline_libapp_sha256', 'patch_id', 'sequence', 'key_id',
-    'created_at', 'expires_at', 'runtime', 'module', 'packages', 'host_interface', 'assets',
+    'created_at', 'expires_at', 'runtime', 'module', 'packages', 'host_interface', 'assets', 'toolchain',
   };
   static const _optional = {'expires_at'};
 
@@ -123,6 +132,15 @@ class PatchManifest {
       str(o, 'sha256', _sha, 'sha256');
       integer(o, 'size', 0, maxContainerBytes);
     }
+    final tc = obj(m['toolchain'], 'toolchain', {'id', ...toolchainFields});
+    str(tc, 'id', _sha, 'sha256');
+    for (final k in const ['engine_patch_sha256', 'compiler_sha256', 'generator_sha256', 'build_config_sha256']) {
+      str(tc, k, _sha, 'sha256');
+    }
+    for (final k in const ['flutter', 'dart', 'engine', 'dart_revision']) {
+      str(tc, k, _version, 'version');
+    }
+    integer(tc, 'bytecode_format', 1, 1000);
     return PatchManifest._(m);
   }
 }

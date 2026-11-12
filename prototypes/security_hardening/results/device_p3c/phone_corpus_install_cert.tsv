@@ -1,0 +1,104 @@
+id	part	status	title	detail
+p3_corpus_main_alive	4, 10	PASS	main process survived all 67 corpus files (verify-only)	
+corpus:A00_control_valid	3	PASS	A00_control_valid: accepted	
+corpus:A01_untrusted_key	3.3	PASS	A01_untrusted_key: rejected before any load	
+corpus:A02_wrong_app	3.3	PASS	A02_wrong_app: rejected before any load	
+corpus:A03_wrong_baseline	3.3	PASS	A03_wrong_baseline: rejected before any load	
+corpus:A04_wrong_engine	3.3	PASS	A04_wrong_engine: rejected before any load	
+corpus:A05_expired	3.3	PASS	A05_expired: rejected before any load	
+corpus:A06_second_trusted_key	3	PASS	A06_second_trusted_key: accepted	
+corpus:A07_tampered_module	3.3	PASS	A07_tampered_module: rejected before any load	
+corpus:A08_tampered_manifest	3.3	PASS	A08_tampered_manifest: rejected before any load	
+corpus:A09_truncated_download	3.3	PASS	A09_truncated_download: rejected before any load	
+corpus:A10_trusted_id_wrong_key	3.3	PASS	A10_trusted_id_wrong_key: rejected before any load	
+corpus:B01_truncated_half	4	PASS	B01_truncated_half: signed but malformed -> refused safely	isolated=CRASHED; verifier disconnected; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otav
+corpus:B02_truncated_header	4	PASS	B02_truncated_header: signed but malformed -> refused safely	isolated=CRASHED; verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otav
+corpus:B03_truncated_magic_only	4	PASS	B03_truncated_magic_only: signed but malformed -> refused safely	isolated=CRASHED; verifier process died; exit={reason=5, status=11, description=crash|J:100, process=io.github.punitsoni22.compat_host:ota
+corpus:B04_truncated_last_byte	4	FAIL	B04_truncated_last_byte: signed but malformed -> refused safely	isolated=OK; catalog.version=catalog v2 (patch 1) / product_service v1; catalog.priceLabel=Product price: ₹499
+corpus:B05_truncated_at_codes	4	PASS	B05_truncated_at_codes: signed but malformed -> refused safely	isolated=REJECTED; StateError: Bad state: Bytecode verification failed in package:patch_v1/entry.dart_::_otaPatchEntry: pc 0: empty functio
+corpus:B06_bad_magic	4	PASS	B06_bad_magic: signed but malformed -> refused safely	isolated=CRASHED; verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otav
+corpus:B07_bad_version_next	4	PASS	B07_bad_version_next: signed but malformed -> refused safely	isolated=CRASHED; verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otav
+corpus:B08_bad_version_zero	4	PASS	B08_bad_version_zero: signed but malformed -> refused safely	isolated=CRASHED; verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otav
+corpus:B09_strings_offset_past_end	4	PASS	B09_strings_offset_past_end: signed but malformed -> refused safely	isolated=CRASHED; verifier disconnected; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otav
+corpus:B10_objects_offset_zero	4	PASS	B10_objects_offset_zero: signed but malformed -> refused safely	isolated=CRASHED; verifier process died; exit={reason=5, status=11, description=crash|J:100, process=io.github.punitsoni22.compat_host:ota
+corpus:B11_codes_offset_huge	4	PASS	B11_codes_offset_huge: signed but malformed -> refused safely	isolated=REJECTED; StateError: Bad state: Bytecode verification failed in package:patch_v1/entry.dart_::_otaPatchEntry: pc 0: empty functio
+corpus:B12_libraries_count_huge	4	PASS	B12_libraries_count_huge: signed but malformed -> refused safely	isolated=CRASHED; verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otav
+corpus:B13_libraries_count_zero	4	PASS	B13_libraries_count_zero: signed but malformed -> refused safely	isolated=CRASHED; verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otav
+corpus:B14_main_offset_zero	4	PASS	B14_main_offset_zero: signed but malformed -> refused safely	isolated=REJECTED; entry point returned Null, not a contract-2 map
+corpus:B15_all_sections_empty	4	PASS	B15_all_sections_empty: signed but malformed -> refused safely	isolated=REJECTED; entry point returned Null, not a contract-2 map
+corpus:B16_unknown_host_library	4	PASS	B16_unknown_host_library: signed but malformed -> refused safely	isolated=CRASHED; verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otav
+corpus:B17_unknown_host_class	4	FAIL	B17_unknown_host_class: signed but malformed -> refused safely	isolated=OK; catalog.version=catalog v2 (patch 1) / product_service v1; catalog.priceLabel=Product price: ₹499
+corpus:B18_unknown_host_member	4	PASS	B18_unknown_host_member: signed but malformed -> refused safely	isolated=CRASHED; verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otav
+corpus:B19_module_library_collides	4	PASS	B19_module_library_collides: signed but malformed -> refused safely	isolated=CRASHED; verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otav
+corpus:B20_strings_garbled	4	PASS	B20_strings_garbled: signed but malformed -> refused safely	isolated=CRASHED; verifier process died; exit={reason=5, status=11, description=crash|J:100, process=io.github.punitsoni22.compat_host:ota
+corpus:B21_objects_flip_0	4	PASS	B21_objects_flip_0: signed but malformed -> refused safely	isolated=CRASHED; verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otav
+corpus:B22_objects_flip_1	4	PASS	B22_objects_flip_1: signed but malformed -> refused safely	isolated=CRASHED; verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otav
+corpus:B23_objects_flip_2	4	PASS	B23_objects_flip_2: signed but malformed -> refused safely	isolated=CRASHED; verifier process died; exit={reason=5, status=11, description=crash|J:100, process=io.github.punitsoni22.compat_host:ota
+corpus:B24_codes_opcode_0	4	PASS	B24_codes_opcode_0: signed but malformed -> refused safely	isolated=REJECTED; StateError: Bad state: Bytecode verification failed in package:patch_v1/entry.dart_::_otaPatchEntry: pc 48: LoadConstant
+corpus:B25_codes_opcode_1	4	PASS	B25_codes_opcode_1: signed but malformed -> refused safely	isolated=REJECTED; StateError: Bad state: Bytecode verification failed in package:feature_catalog_patch1/feature_catalog.dart_CatalogFeatur
+corpus:B26_codes_opcode_2	4	PASS	B26_codes_opcode_2: signed but malformed -> refused safely	isolated=CRASHED; verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otav
+corpus:B27_codes_opcode_3	4	PASS	B27_codes_opcode_3: signed but malformed -> refused safely	isolated=REJECTED; StateError: Bad state: Bytecode verification failed in package:feature_catalog_patch1/feature_catalog.dart__CatalogScree
+corpus:B28_codes_all_ff	4	PASS	B28_codes_all_ff: signed but malformed -> refused safely	isolated=CRASHED; verifier process died; exit={reason=5, status=11, description=crash|J:100, process=io.github.punitsoni22.compat_host:ota
+corpus:B29_libraries_garbled	4	PASS	B29_libraries_garbled: signed but malformed -> refused safely	isolated=CRASHED; verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otav
+corpus:B30_classes_garbled	4	PASS	B30_classes_garbled: signed but malformed -> refused safely	isolated=CRASHED; verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otav
+corpus:B31_members_garbled	4	PASS	B31_members_garbled: signed but malformed -> refused safely	isolated=CRASHED; verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otav
+corpus:B32_appended_garbage	4	FAIL	B32_appended_garbage: signed but malformed -> refused safely	isolated=OK; catalog.version=catalog v2 (patch 1) / product_service v1; catalog.priceLabel=Product price: ₹499
+corpus:B33_duplicated_module	4	FAIL	B33_duplicated_module: signed but malformed -> refused safely	isolated=OK; catalog.version=catalog v2 (patch 1) / product_service v1; catalog.priceLabel=Product price: ₹499
+corpus:B34_random_00_flip	4	PASS	B34_random_00_flip: signed but malformed -> refused safely	isolated=CRASHED; verifier disconnected; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otav
+corpus:B35_random_01_insert	4	PASS	B35_random_01_insert: signed but malformed -> refused safely	isolated=CRASHED; verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otav
+corpus:B36_random_02_delete	4	PASS	B36_random_02_delete: signed but malformed -> refused safely	isolated=CRASHED; verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otav
+corpus:B37_random_03_flip	4	PASS	B37_random_03_flip: signed but malformed -> refused safely	isolated=CRASHED; verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otav
+corpus:B38_random_04_flip	4	PASS	B38_random_04_flip: signed but malformed -> refused safely	isolated=CRASHED; verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otav
+corpus:B39_random_05_flip	4	PASS	B39_random_05_flip: signed but malformed -> refused safely	isolated=CRASHED; verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otav
+corpus:B40_random_06_delete	4	PASS	B40_random_06_delete: signed but malformed -> refused safely	isolated=CRASHED; verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otav
+corpus:B41_random_07_insert	4	PASS	B41_random_07_insert: signed but malformed -> refused safely	isolated=REJECTED; StateError: Bad state: Bytecode verification failed in package:feature_catalog_patch1/feature_catalog.dart__CatalogScree
+corpus:B42_random_08_flip	4	PASS	B42_random_08_flip: signed but malformed -> refused safely	isolated=CRASHED; verifier process died; exit={reason=5, status=11, description=crash|J:100, process=io.github.punitsoni22.compat_host:ota
+corpus:B43_random_09_insert	4	PASS	B43_random_09_insert: signed but malformed -> refused safely	isolated=CRASHED; verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otav
+corpus:B44_random_10_flip	4	PASS	B44_random_10_flip: signed but malformed -> refused safely	isolated=CRASHED; verifier process died; exit={reason=5, status=11, description=crash|J:100, process=io.github.punitsoni22.compat_host:ota
+corpus:B45_random_11_flip	4	PASS	B45_random_11_flip: signed but malformed -> refused safely	isolated=REJECTED; StateError: Bad state: Bytecode verification failed in package:feature_catalog_patch1/feature_catalog.dart_::_productRef
+corpus:B46_random_12_flip	4	PASS	B46_random_12_flip: signed but malformed -> refused safely	isolated=CRASHED; verifier disconnected; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otav
+corpus:B47_random_13_delete	4	PASS	B47_random_13_delete: signed but malformed -> refused safely	isolated=CRASHED; verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otav
+corpus:B48_random_14_delete	4	PASS	B48_random_14_delete: signed but malformed -> refused safely	isolated=CRASHED; verifier disconnected; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otav
+corpus:B49_random_15_overwrite	4	PASS	B49_random_15_overwrite: signed but malformed -> refused safely	isolated=CRASHED; verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otav
+corpus:B50_random_16_flip	4	PASS	B50_random_16_flip: signed but malformed -> refused safely	isolated=CRASHED; verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otav
+corpus:B51_random_17_insert	4	PASS	B51_random_17_insert: signed but malformed -> refused safely	isolated=CRASHED; verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otav
+corpus:B52_random_18_overwrite	4	PASS	B52_random_18_overwrite: signed but malformed -> refused safely	isolated=CRASHED; verifier disconnected; exit={reason=5, status=11, description=crash|J:100, process=io.github.punitsoni22.compat_host:ota
+corpus:B53_random_19_overwrite	4	PASS	B53_random_19_overwrite: signed but malformed -> refused safely	isolated=CRASHED; verifier process died; exit={reason=5, status=6, description=crash|J:100, process=io.github.punitsoni22.compat_host:otav
+corpus:C01_signed_ffi_module	4	PASS	C01_signed_ffi_module: signed but malformed -> refused safely	isolated=REJECTED; StateError: Bad state: Bytecode verification failed in package:product_service_ffi/product_service.dart_ProductService_g
+corpus:R25_regression_B25_reserved_opcode	3C	PASS	R25_regression_B25_reserved_opcode: dangerous module refused by the VM verifier	
+corpus:R27_regression_B27_bad_argcount	3C	PASS	R27_regression_B27_bad_argcount: dangerous module refused by the VM verifier	
+p3_01_signed_patch	12.1, 3.2	PASS	normal signed patch: verified, isolated load OK, activated	
+p3_isolation	3C-isolation	FAIL	verifier ran in an Android isolated process without app data access	failed: isolated process used (no fallback); separate UID; Process.isIsolated() true; cannot read the private patch store; cannot write the private patch store; cannot read the app external inbox; cannot create a network socket
+p3_02_cold_restart	12.13	PASS	repeated activation / cold restarts re-verify and load	
+p3_03_upgrade	13	PASS	newer patch v2 replaces v1	
+p3_neg_neg_tampered_module	12.2, 3.3	PASS	tampered patch (bytecode changed after signing): rejected safely	
+p3_neg_neg_wrong_key	12.3	PASS	wrong signature (trusted key id, other private key): rejected safely	
+p3_neg_neg_untrusted_key	3.3	PASS	signing key not trusted by this build: rejected safely	
+p3_neg_neg_wrong_baseline	12.4	PASS	built for another libapp.so (baseline): rejected safely	
+p3_neg_neg_wrong_engine	3.3	PASS	built for another engine revision: rejected safely	
+p3_neg_neg_expired	3.3	PASS	expired patch: rejected safely	
+p3_neg_neg_partial_download	8.12	PASS	half download, cut inside the module: rejected safely	
+p3_neg_neg_partial_header	8.12	PASS	half download, cut inside the manifest: rejected safely	
+p3_neg_v1	3.3, 11	PASS	replayed older patch (v1 while v2 active): rejected safely	
+p3_neg_malformed_signed	4, 12.7	FAIL	validly signed MALFORMED bytecode (install path): rejected safely	failed: rejected [isolated_]
+p3_neg_ffi_unguarded_signed	5, 12.5	FAIL	validly signed FFI module (guard bypassed): rejected safely	failed: rejected [isolated_]
+p3_neg_crash_throw_init	12.8	PASS	module throws during initialisation: rejected safely	
+p3_neg_crash_abort_in_entry	12.8	PASS	module aborts the process during initialisation: rejected safely	
+p3_neg_blacklisted_again	8.15	PASS	blacklisted patch delivered again	
+p3_revocation	3.3, 9	PASS	signed revocation list revokes the active patch v2	
+p3_revocation_replay	3.3	PASS	revocation list replayed	
+p3_kill_during_activation	8.10	PASS	process killed during activation	
+p3_kill_then_new_patch	8.10	PASS	a newer patch installs normally afterwards	
+p3_stored_torn	8.12	PASS	stored active patch truncated on disk	
+p3_rollback	12.11, 12.12	PASS	rollback, then cold restarts	
+p3c_cert_signed	3C-signing	PASS	patch signed by a root-certified key	
+p3c_cert_neg_other_env	3C-signing	PASS	certificate for another environment: rejected	
+p3c_cert_neg_other_root	3C-signing	PASS	certificate signed by another root key: rejected	
+p3c_cert_neg_unauthorised_rotation	3C-signing	PASS	unauthorised rotation (signer key certifies a key): rejected	
+p3c_cert_neg_no_cert	3C-signing	PASS	new key without a certificate: rejected	
+p3c_tc_neg_other_compiler	3C-signing	PASS	patch built with another compiler (consistent record): rejected	
+p3c_tc_neg_forged_id	3C-signing	PASS	toolchain id does not match its fields: rejected	
+p3c_rotation	3C-signing	PASS	key rotation: newly certified key accepted without a new store build	
+p3c_old_key_revoked	3C-signing	PASS	old key after rotation + root-signed revocation of its certificate	
+p3c_revocation_replay	3C-signing	PASS	replayed revocation list	
+apk_unchanged	-	PASS	installed APK byte-identical to the baseline APK (patches never modify it)	a466e4b36ad282d3

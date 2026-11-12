@@ -12,6 +12,18 @@
 //      declaration and every function's bytecode at load time and aborts the process on malformed
 //      input, so a malformed module kills only that process.
 // The stored active patch is re-verified cryptographically (step 1) at every start.
+//
+// Phase 3C additions: toolchain provenance (the manifest's toolchain id must equal the one this
+// build pins), root-certified signing keys (CertificateTrust; certificate serials can be revoked),
+// verification in an Android isolated process (read-only FD; logged fallback), the in-VM bytecode
+// verifier (patched engine), and an explicit crash state machine per patch:
+//   DOWNLOADED -> VERIFIED -> PROBATIONARY -> ACTIVE
+//   PROBATIONARY/ACTIVE -> SUSPECTED_FAILURE (crash attributed to a patched session)
+//   SUSPECTED_FAILURE -> ACTIVE (a later session ended without a crash)
+//   SUSPECTED_FAILURE -> ROLLED_BACK -> BLACKLISTED (maxFailures attributed crashes)
+//   ACTIVE -> ROLLED_BACK (explicit rollback)          DOWNLOADED -> BLACKLISTED (isolated check failed)
+// How the previous process ended comes from Android's ApplicationExitInfo, matched by pid to the
+// session marker: crashes count; force-stop, OS eviction and normal exits do not.
 
 import 'dart:convert';
 import 'dart:io';
@@ -28,11 +40,18 @@ const _publicKeysB64 = String.fromEnvironment('OTA_PUBLIC_KEYS_B64');
 const _interfaceSha256 = String.fromEnvironment('OTA_INTERFACE_SHA256');
 const _hostPackagesCsv = String.fromEnvironment('OTA_HOST_PACKAGES');
 const _runtimeB64 = String.fromEnvironment('OTA_RUNTIME_B64');
+const _toolchainId = String.fromEnvironment('OTA_TOOLCHAIN_ID');
+const _rootKeysB64 = String.fromEnvironment('OTA_ROOT_KEYS_B64');
+const environment = String.fromEnvironment('OTA_ENVIRONMENT', defaultValue: 'development');
 Map<String, String> _b64Json(String v) => v.isEmpty ? {} : (jsonDecode(utf8.decode(base64.decode(v))) as Map).cast<String, String>();
 
 /// Module entry-point contract version (map of slot overrides).
 const moduleContract = 2;
 const maxFailures = 2;
+
+/// Unconfirmed starts NOT attributed to a crash (force-stop, eviction...) tolerated in a row. A
+/// patch that never reaches confirmation is rolled back even if no start looks like a crash.
+const maxUnconfirmedStarts = 3;
 
 const package = 'io.github.punitsoni22.compat_host';
 final inboxDir = Directory('/storage/emulated/0/Android/data/$package/files/inbox');
@@ -44,11 +63,15 @@ void log(String message) => print('[compat] $message');
 const _host = MethodChannel('ota/host');
 
 /// Android's record of how the previous process ended (API 30+).
+enum ExitKind { crash, forceStop, osEviction, normal, unknown }
+
 class ExitInfo {
-  ExitInfo(this.reason, this.description, this.status);
+  ExitInfo(this.reason, this.description, this.status, [this.pid, this.timestamp]);
   final int reason;
   final String description;
   final int status;
+  final int? pid;
+  final int? timestamp;
   static const names = {
     0: 'UNKNOWN', 1: 'EXIT_SELF', 2: 'SIGNALED', 3: 'LOW_MEMORY', 4: 'CRASH', 5: 'CRASH_NATIVE',
     6: 'ANR', 7: 'INITIALIZATION_FAILURE', 8: 'PERMISSION_CHANGE', 9: 'EXCESSIVE_RESOURCE_USAGE',
@@ -56,16 +79,33 @@ class ExitInfo {
     15: 'PACKAGE_STATE_CHANGE', 16: 'PACKAGE_UPDATED',
   };
   String get name => names[reason] ?? 'REASON_$reason';
-  bool get notAPatchFailure => const {3, 10, 11, 15, 16}.contains(reason);
+
+  /// How the process ended, for crash attribution (Phase 3C). Status is the signal for SIGNALED.
+  ExitKind get kind => switch (reason) {
+        4 || 5 || 6 || 7 => ExitKind.crash, // CRASH, CRASH_NATIVE, ANR, INITIALIZATION_FAILURE
+        9 => ExitKind.crash, // EXCESSIVE_RESOURCE_USAGE: a symptom a bad patch can cause
+        2 when const {4, 6, 7, 8, 11}.contains(status) => ExitKind.crash, // SIGILL/ABRT/BUS/FPE/SEGV
+        2 when status == 9 => ExitKind.osEviction, // SIGKILL from the system (not a crash signal)
+        10 || 11 => ExitKind.forceStop, // USER_REQUESTED (force-stop), USER_STOPPED
+        3 || 14 => ExitKind.osEviction, // LOW_MEMORY, FREEZER
+        1 when status != 0 => ExitKind.crash, // EXIT_SELF with an error status
+        1 || 8 || 12 || 15 || 16 => ExitKind.normal, // EXIT_SELF(0), PERMISSION_CHANGE, DEPENDENCY_DIED, PACKAGE_*
+        _ => ExitKind.unknown, // UNKNOWN, OTHER, or an unlisted reason
+      };
+
+  /// [kind] if this record belongs to the process [sessionPid], otherwise unknown.
+  ExitKind kindFor(int? sessionPid) => sessionPid == null || pid == null || pid == sessionPid ? kind : ExitKind.unknown;
+
   @override
-  String toString() => '$name(status=$status${description.isEmpty ? '' : ', $description'})';
+  String toString() => '$name(status=$status, pid=$pid${description.isEmpty ? '' : ', $description'})';
 }
 
 Future<ExitInfo?> lastExitInfo() async {
   try {
     final m = await _host.invokeMapMethod<String, Object?>('lastExit');
     if (m == null) return null;
-    return ExitInfo(m['reason']! as int, m['description'] as String? ?? '', m['status'] as int? ?? 0);
+    return ExitInfo(m['reason']! as int, m['description'] as String? ?? '', m['status'] as int? ?? 0, m['pid'] as int?,
+        (m['timestamp'] as num?)?.toInt());
   } catch (e) {
     log('exit info unavailable: $e');
     return null;
@@ -75,11 +115,21 @@ Future<ExitInfo?> lastExitInfo() async {
 /// SHA-256 of the libapp.so inside the installed APK, computed natively (never taken from input).
 Future<String> installedLibappSha256() async => (await _host.invokeMethod<String>('libappSha256'))!;
 
-/// Loads [moduleFile] in the separate ":otaverify" process. Returns {status, detail, ms}.
-/// status: OK | REJECTED (clean Dart error) | CRASHED (process died) | TIMEOUT.
+/// Loads [moduleFile] in a separate process. Returns {status, detail, ms, process, probes}.
+/// status: OK | REJECTED (clean Dart error, e.g. bytecode verification) | CRASHED (process died) |
+/// TIMEOUT | UNAVAILABLE (isolated process could not start Flutter; never treated as OK).
+/// Phase 3C: the Android isolated process first; the same-UID ":otaverify" process only as a
+/// logged fallback when the isolated one is UNAVAILABLE.
 Future<Map<String, Object?>> verifyInIsolatedProcess(File moduleFile, {int timeoutMs = 20000}) async {
-  final r = await _host.invokeMapMethod<String, Object?>('verifyIsolated', {'path': moduleFile.path, 'timeoutMs': timeoutMs});
-  return r ?? {'status': 'CRASHED', 'detail': 'no result'};
+  Future<Map<String, Object?>> run(bool isolated) async =>
+      await _host.invokeMapMethod<String, Object?>(
+          'verifyIsolated', {'path': moduleFile.path, 'timeoutMs': timeoutMs, 'isolated': isolated}) ??
+      {'status': 'CRASHED', 'detail': 'no result'};
+  final r = await run(true);
+  log('ISOLATION process=${r['process']} probes="${r['probes']}"');
+  if (r['status'] != 'UNAVAILABLE') return r;
+  log('ISOLATION_FALLBACK isolated process unavailable (${r['detail']}); using the same-UID :otaverify process');
+  return run(false);
 }
 
 HostIdentity hostIdentity(String libappSha) => HostIdentity(
@@ -91,9 +141,15 @@ HostIdentity hostIdentity(String libappSha) => HostIdentity(
       hostPackages: _hostPackagesCsv.split(';').where((s) => s.isNotEmpty).toSet(),
       hostOwnedPackages: const {'app_core', 'app_models', 'shared_state', 'dynamic_modules', 'flutter', 'sky_engine'},
       entryContract: moduleContract,
+      toolchainId: _toolchainId,
     );
 
 Es256Verifier trustedKeys() => Es256Verifier(_b64Json(_publicKeysB64));
+
+/// Root keys of this application (Phase 3C). Directly trusted keys stay accepted in this
+/// prototype build (requireCertificates: false) so Phase 3 artifacts keep working.
+CertificateTrust certificateTrust() =>
+    CertificateTrust(roots: Es256Verifier(_b64Json(_rootKeysB64)), environment: environment, requireCertificates: false);
 
 class BootResult {
   BootResult(this.patch, this.overrides, this.loadMs);
@@ -112,6 +168,7 @@ class SecureStore {
   File get staging => File('${storeDir.path}/staging.otp');
   File get candidateModule => File('${storeDir.path}/candidate.bc');
   File get previous => File('${storeDir.path}/previous.otp');
+  File get session => File('${storeDir.path}/session.json');
 
   late Map<String, Object?> _s;
 
@@ -141,8 +198,21 @@ class SecureStore {
         blacklist: ((_s['blacklist'] as List?) ?? const []).cast<String>().toSet(),
         revokedPatchIds: ((_s['revoked_patch_ids'] as List?) ?? const []).cast<String>().toSet(),
         revokedKeyIds: ((_s['revoked_key_ids'] as List?) ?? const []).cast<String>().toSet(),
+        revokedCertSerials: ((_s['revoked_cert_serials'] as List?) ?? const []).cast<int>().toSet(),
         activePatchId: _s['active_patch_id'] as String?,
       );
+
+  Map<String, String> get _states => ((_s['states'] as Map?) ?? {}).cast<String, String>();
+  String stateOf(String id) => _states[id] ?? 'UNKNOWN';
+
+  /// Records a state transition of one patch (persisted with the next save()).
+  void _to(String id, String state, String why) {
+    final st = _states;
+    final from = st[id] ?? '-';
+    st[id] = state;
+    _s['states'] = st;
+    log('STATE patch=${id.substring(0, 8)} $from -> $state ($why)');
+  }
 
   Map<String, int> get _failures => ((_s['failures'] as Map?) ?? {}).cast<String, int>();
 
@@ -152,6 +222,7 @@ class SecureStore {
 
   void blacklist(String id, String why) {
     _s['blacklist'] = {...security.blacklist, id}.toList();
+    _to(id, 'BLACKLISTED', why);
     if (_s['active_patch_id'] == id) _dropActive();
     _delete(attempt);
     save();
@@ -180,7 +251,9 @@ class SecureStore {
     _s['failures'] = f;
     save();
     log('FAILURE_COUNT patch=${id.substring(0, 8)} count=$n/$maxFailures reason="$why"');
+    _to(id, 'SUSPECTED_FAILURE', why);
     if (n >= maxFailures) {
+      _to(id, 'ROLLED_BACK', '$n attributed failures');
       blacklist(id, 'failed $n starts');
       log('ROLLED_BACK patch=${id.substring(0, 8)}; baseline will run');
       return true;
@@ -188,30 +261,89 @@ class SecureStore {
     return false;
   }
 
+  /// Health confirmation of the current start. A PROBATIONARY patch becomes ACTIVE; a
+  /// SUSPECTED_FAILURE patch keeps its failure count (it failed AFTER an earlier confirmation) until
+  /// a session ends without a crash.
   void confirm(String id) {
     if (attempt.existsSync()) {
       _delete(attempt);
-      final f = _failures..remove(id);
-      _s['failures'] = f;
+      if (stateOf(id) == 'SUSPECTED_FAILURE') {
+        log('CONFIRMED patch=${id.substring(0, 8)} start confirmed (still suspected: ${_failures[id] ?? 0}/$maxFailures)');
+      } else {
+        final f = _failures..remove(id);
+        _s['failures'] = f;
+        (_s['unconfirmed'] as Map?)?.remove(id);
+        if (stateOf(id) != 'ACTIVE') _to(id, 'ACTIVE', 'health check passed');
+        log('CONFIRMED patch=${id.substring(0, 8)} start confirmed');
+      }
+      _atomicWrite(session, utf8.encode(jsonEncode({'patch': id, 'pid': pid, 'confirmed': true})));
       save();
-      log('CONFIRMED patch=${id.substring(0, 8)} start confirmed');
+    }
+  }
+
+  /// Attributes the end of the previous patched session (Phase 3C crash state machine).
+  void _attributePreviousSession(ExitInfo? lastExit) {
+    Map<String, Object?>? read(File f) {
+      try {
+        return f.existsSync() ? (jsonDecode(f.readAsStringSync()) as Map).cast<String, Object?>() : null;
+      } catch (_) {
+        return null;
+      }
+    }
+
+    final unconfirmed = read(attempt);
+    final previous = read(session);
+    _delete(attempt);
+    _delete(session);
+    final rec = unconfirmed ?? previous;
+    if (rec == null) return;
+    final id = rec['patch']! as String;
+    final kind = lastExit?.kindFor(rec['pid'] as int?) ?? ExitKind.unknown;
+    final when = unconfirmed != null ? 'before confirmation' : 'after confirmation';
+    log('SESSION_END patch=${id.substring(0, 8)} $when exit=${lastExit ?? 'unknown'} kind=${kind.name}');
+    if (security.blacklist.contains(id)) return;
+    switch (kind) {
+      case ExitKind.crash:
+        recordFailure(id, 'crash $when (${lastExit?.name})');
+      case ExitKind.unknown when unconfirmed != null:
+        // No evidence either way for an unconfirmed start: count it (conservative, Phase 3).
+        recordFailure(id, 'start not confirmed (exit unknown)');
+      case ExitKind.unknown:
+        log('NOT_COUNTED patch=${id.substring(0, 8)}: exit after confirmation unknown');
+      case ExitKind.forceStop || ExitKind.osEviction || ExitKind.normal:
+        log('NOT_COUNTED patch=${id.substring(0, 8)} ended by ${kind.name} $when: not counted');
+        if (unconfirmed != null) {
+          final u = ((_s['unconfirmed'] as Map?) ?? {}).cast<String, int>();
+          final n = (u[id] ?? 0) + 1;
+          u[id] = n;
+          _s['unconfirmed'] = u;
+          save();
+          if (n >= maxUnconfirmedStarts) recordFailure(id, '$n starts in a row never confirmed');
+        }
+        if (unconfirmed == null && stateOf(id) == 'SUSPECTED_FAILURE') {
+          final f = _failures..remove(id);
+          _s['failures'] = f;
+          _to(id, 'ACTIVE', 'a session ended without a crash');
+          save();
+        }
     }
   }
 
   /// Verifies and (if accepted) installs an incoming patch file. The active patch is replaced only
   /// after every check passed; on any failure it is untouched.
-  Future<void> installIncoming(File incoming, HostIdentity host, Es256Verifier keys) async {
+  Future<void> installIncoming(File incoming, HostIdentity host, Es256Verifier keys, CertificateTrust trust) async {
     final bytes = incoming.readAsBytesSync();
     incoming.deleteSync();
     final sw = Stopwatch()..start();
     final VerifiedPatch v;
     try {
-      v = verifyPatch(bytes, host: host, keys: keys, state: security, now: DateTime.now().toUtc());
+      v = verifyPatch(bytes, host: host, keys: keys, state: security, now: DateTime.now().toUtc(), trust: trust);
     } on PatchRejected catch (e) {
       log('REJECTED incoming patch [${e.code}] ${e.reason} (active patch kept: ${security.activePatchId?.substring(0, 8) ?? 'baseline'})');
       return;
     }
     final cryptoMs = sw.elapsedMicroseconds / 1000;
+    _to(v.manifest.patchId, 'DOWNLOADED', 'authentic: signature, hashes and compatibility verified');
     // Isolated structural/runtime check: load the module in a separate process.
     _atomicWrite(candidateModule, v.module);
     final iso = await verifyInIsolatedProcess(candidateModule);
@@ -233,7 +365,7 @@ class SecureStore {
       sleep(const Duration(seconds: 5));
     }
     final oldId = _s['active_patch_id'] as String?;
-    if (oldId != null && active.existsSync() && !attempt.existsSync() && !_failures.containsKey(oldId)) {
+    if (oldId != null && active.existsSync() && stateOf(oldId) == 'ACTIVE' && !_failures.containsKey(oldId)) {
       active.renameSync(previous.path); // keep the last confirmed patch as the fallback
       _s['previous_patch_id'] = oldId;
     } else {
@@ -242,6 +374,9 @@ class SecureStore {
     }
     staging.renameSync(active.path);
     _delete(attempt);
+    _delete(session);
+    _to(v.manifest.patchId, 'VERIFIED', 'isolated verification OK');
+    _to(v.manifest.patchId, 'PROBATIONARY', 'activated; waiting for a confirmed start');
     _s['highest_sequence'] = v.manifest.sequence;
     _s['active_patch_id'] = v.manifest.patchId;
     final f = _failures..remove(v.manifest.patchId);
@@ -250,11 +385,11 @@ class SecureStore {
     log('INSTALLED patch #${v.manifest.sequence} ${v.manifest.patchId.substring(0, 8)} (${bytes.length} bytes)');
   }
 
-  void applyRevocations(File file, HostIdentity host, Es256Verifier keys) {
+  void applyRevocations(File file, HostIdentity host, Es256Verifier keys, CertificateTrust trust) {
     final bytes = file.readAsBytesSync();
     file.deleteSync();
     try {
-      final r = verifyRevocations(bytes, host: host, keys: keys);
+      final r = verifyRevocations(bytes, host: host, keys: keys, trust: trust);
       if (r.sequence <= (_s['revocation_sequence'] as int? ?? 0)) {
         log('REJECTED revocation list [replay] sequence ${r.sequence}');
         return;
@@ -262,8 +397,9 @@ class SecureStore {
       _s['revocation_sequence'] = r.sequence;
       _s['revoked_patch_ids'] = {...security.revokedPatchIds, ...r.patchIds}.toList();
       _s['revoked_key_ids'] = {...security.revokedKeyIds, ...r.keyIds}.toList();
+      _s['revoked_cert_serials'] = {...security.revokedCertSerials, ...r.certSerials}.toList();
       save();
-      log('REVOCATIONS applied sequence=${r.sequence} patches=${r.patchIds.length} keys=${r.keyIds.length}');
+      log('REVOCATIONS applied sequence=${r.sequence} patches=${r.patchIds.length} keys=${r.keyIds.length} cert_serials=${r.certSerials.length}');
     } on PatchRejected catch (e) {
       log('REJECTED revocation list [${e.code}] ${e.reason}');
     }
@@ -289,10 +425,14 @@ class SecureStore {
       final libapp = await installedLibappSha256();
       final host = hostIdentity(libapp);
       final keys = trustedKeys();
+      final trust = certificateTrust();
 
       final rollback = File('${inboxDir.path}/ROLLBACK');
       if (rollback.existsSync()) {
         rollback.deleteSync();
+        final rolled = _s['active_patch_id'] as String?;
+        if (rolled != null) _to(rolled, 'ROLLED_BACK', 'explicit rollback');
+        _delete(session);
         _delete(active);
         _delete(previous);
         _delete(attempt);
@@ -311,20 +451,11 @@ class SecureStore {
         }
       }
       final revocations = File('${inboxDir.path}/revocations.otp');
-      if (revocations.existsSync()) applyRevocations(revocations, host, keys);
+      // Attribute the previous session BEFORE installing anything new (it belongs to the old patch).
+      _attributePreviousSession(lastExit);
+      if (revocations.existsSync()) applyRevocations(revocations, host, keys, trust);
       final incoming = File('${inboxDir.path}/patch.otp');
-      if (incoming.existsSync()) await installIncoming(incoming, host, keys);
-
-      if (attempt.existsSync()) {
-        final id = (jsonDecode(attempt.readAsStringSync()) as Map)['patch'] as String;
-        _delete(attempt);
-        if (lastExit != null && lastExit.notAPatchFailure) {
-          log('UNCONFIRMED_START patch=${id.substring(0, 8)} ended by $lastExit: not counted');
-        } else {
-          log('UNCONFIRMED_START patch=${id.substring(0, 8)} previous exit: ${lastExit ?? 'unknown'}');
-          recordFailure(id, 'start not confirmed (${lastExit?.name ?? 'unknown'})');
-        }
-      }
+      if (incoming.existsSync()) await installIncoming(incoming, host, keys, trust);
       if (!active.existsSync()) {
         log('NO_PATCH running baseline (AOT) code');
         return null;
@@ -334,7 +465,8 @@ class SecureStore {
       VerifiedPatch? v;
       for (var tries = 0; v == null && tries < 2 && active.existsSync(); tries++) {
         try {
-          v = verifyPatch(active.readAsBytesSync(), host: host, keys: keys, state: security, now: DateTime.now().toUtc(), reinstall: true);
+          v = verifyPatch(active.readAsBytesSync(),
+              host: host, keys: keys, state: security, now: DateTime.now().toUtc(), reinstall: true, trust: trust);
         } on PatchRejected catch (e) {
           log('STORED_PATCH_INVALID [${e.code}] ${e.reason}: removed');
           _dropActive();
@@ -345,7 +477,8 @@ class SecureStore {
         log('NO_PATCH running baseline (AOT) code');
         return null;
       }
-      _atomicWrite(attempt, utf8.encode(jsonEncode({'patch': v.manifest.patchId, 'started': DateTime.now().toIso8601String()})));
+      _atomicWrite(attempt, utf8.encode(jsonEncode({'patch': v.manifest.patchId, 'pid': pid, 'started': DateTime.now().toIso8601String()})));
+      log('SESSION_START patch=${v.manifest.patchId.substring(0, 8)} state=${stateOf(v.manifest.patchId)} pid=$pid');
       final sw = Stopwatch()..start();
       final Object? result;
       try {
@@ -376,7 +509,8 @@ class SecureStore {
     f.deleteSync();
     final libapp = await installedLibappSha256();
     try {
-      final v = verifyPatch(bytes, host: hostIdentity(libapp), keys: trustedKeys(), state: DeviceSecurityState(), now: DateTime.now().toUtc());
+      final v = verifyPatch(bytes,
+          host: hostIdentity(libapp), keys: trustedKeys(), state: DeviceSecurityState(), now: DateTime.now().toUtc(), trust: certificateTrust());
       final tmp = File('${storeDir.path}/verifyonly.bc');
       _atomicWrite(tmp, v.module);
       final iso = await verifyInIsolatedProcess(tmp);

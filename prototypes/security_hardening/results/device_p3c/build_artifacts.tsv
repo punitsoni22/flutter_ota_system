@@ -1,0 +1,31 @@
+artifact	exit	expected	result	detail
+v1	0	0	PASS	{"patch_id": "a24af540-1b92-4bc8-bd84-5fe2b068ceda", "sequence": 1, "otp_size": 7718, "module_size": 5463}
+v2	0	0	PASS	{"patch_id": "c52d57f9-f9eb-4e49-880f-985adbd187c7", "sequence": 2, "otp_size": 17715, "module_size": 15287}
+crash_ok	0	0	PASS	{"patch_id": "35b39b40-1528-484f-903b-82f734fa2827", "sequence": 10, "otp_size": 6566, "module_size": 4395}
+crash_throw_init	0	0	PASS	{"patch_id": "843ce757-5e7a-464a-9775-635b1d6ccef0", "sequence": 11, "otp_size": 2717, "module_size": 547}
+crash_abort_in_entry	0	0	PASS	{"patch_id": "5d87e2fb-4cec-488e-9ddf-009c6e548f33", "sequence": 12, "otp_size": 6517, "module_size": 4346}
+crash_abort_when_logged_in	0	0	PASS	{"patch_id": "de8fbf50-0864-4e7c-b177-4b05bee49a6b", "sequence": 13, "otp_size": 6645, "module_size": 4474}
+crash_abort_after_frame	0	0	PASS	{"patch_id": "92c68810-5a86-42dd-9675-760700f66260", "sequence": 14, "otp_size": 6633, "module_size": 4462}
+crash_throw_when_logged_in	0	0	PASS	{"patch_id": "610f9e42-e6d0-4609-bea4-f18053e66964", "sequence": 15, "otp_size": 6645, "module_size": 4474}
+crash_abort_after_confirm	0	0	PASS	{"patch_id": "191fc9c5-bb2f-471b-b26c-f2263627b682", "sequence": 16, "otp_size": 6641, "module_size": 4470}
+crash_abort_on_navigation	0	0	PASS	{"patch_id": "10ea6959-840a-4ea9-8c84-b22e62caafa4", "sequence": 17, "otp_size": 6641, "module_size": 4470}
+crash_abort_in_async	0	0	PASS	{"patch_id": "14bcb444-941b-4c35-bffe-53b7bbe8f3fb", "sequence": 18, "otp_size": 6621, "module_size": 4450}
+ffi_guarded	4	4	PASS	Reason: Unsupported FFI dependency detected.
+dynamic_guarded	4	4	PASS	Reason: Dynamic invocation detected (dynamic calls are disabled in modules).
+ffi_unguarded_signed	0	0	PASS	{"patch_id": "4f66f12d-ee62-42d0-b98e-1b90399b69da", "sequence": 22, "otp_size": 8751, "module_size": 6415}
+v3_for_kill	0	0	PASS	{"patch_id": "c812521b-ae5b-40cf-bad9-c0d03f233867", "sequence": 3, "otp_size": 7724, "module_size": 5469}
+v4_after_kill	0	0	PASS	{"patch_id": "15c1bdba-89ef-414d-9ab7-920dfcf9065a", "sequence": 4, "otp_size": 7728, "module_size": 5473}
+neg_wrong_key	0	0	PASS	-
+neg_untrusted_key	0	0	PASS	-
+neg_wrong_baseline	0	0	PASS	-
+neg_wrong_engine	0	0	PASS	-
+neg_expired	0	0	PASS	-
+cert_v1_signer_a	0	0	PASS	-
+cert_neg_other_env	0	0	PASS	-
+cert_neg_other_root	0	0	PASS	-
+cert_neg_unauthorised_rotation	0	0	PASS	-
+cert_neg_no_cert	0	0	PASS	-
+cert_v2_rotated_signer_b	0	0	PASS	-
+cert_neg_old_key_revoked	0	0	PASS	-
+tc_neg_other_compiler	0	0	PASS	-
+tc_neg_forged_id	0	0	PASS	-

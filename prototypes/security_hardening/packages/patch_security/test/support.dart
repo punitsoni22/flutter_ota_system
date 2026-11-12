@@ -45,6 +45,18 @@ const releaseId = '6a2a62a6-34c8-426a-9f57-4d99e02c3760';
 final libapp = 'a' * 64;
 final iface = 'b' * 64;
 
+/// A toolchain record and its id (Phase 3C provenance).
+Map<String, Object?> toolchainFields({String compiler = 'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc'}) => {
+      'flutter': '3.47.9', 'dart': '3.13.7', 'engine': '89c39edf', 'dart_revision': '416e33b0',
+      'engine_patch_sha256': 'e' * 64, 'compiler_sha256': compiler, 'generator_sha256': 'f' * 64,
+      'bytecode_format': 3, 'build_config_sha256': '1' * 64,
+    };
+String toolchainId(Map<String, Object?> fields) => sha256.convert(canonicalJson(fields)).toString();
+Map<String, Object?> toolchain({String? compiler}) {
+  final f = compiler == null ? toolchainFields() : toolchainFields(compiler: compiler);
+  return {...f, 'id': toolchainId(f)};
+}
+
 HostIdentity host() => HostIdentity(
       appId: appId,
       releaseId: releaseId,
@@ -54,6 +66,7 @@ HostIdentity host() => HostIdentity(
       hostPackages: {'app_core', 'app_models', 'shared_state', 'product_service', 'flutter', 'crypto'},
       hostOwnedPackages: {'app_core', 'app_models', 'shared_state'},
       entryContract: 2,
+      toolchainId: toolchainId(toolchainFields()),
     );
 
 Es256Verifier verifierFor(List<TestKey> keys) => Es256Verifier({for (final k in keys) k.id: k.publicB64});
@@ -78,6 +91,7 @@ Map<String, Object?> manifest({int sequence = 5, String? patchId, Uint8List? mod
     ],
     'host_interface': {'sha256': iface, 'host_packages': <Object?>['app_core', 'app_models', 'flutter']},
     'assets': <Object?>[],
+    'toolchain': toolchain(),
   };
 }
 
@@ -88,10 +102,12 @@ Uint8List signed(Map<String, Object?> m, {TestKey? key, Uint8List? moduleBytes, 
   return buildContainer(body, sig, moduleBytes ?? module);
 }
 
-VerifiedPatch run(Uint8List file, {DeviceSecurityState? state, DateTime? now, bool reinstall = false, List<TestKey>? keys}) =>
+VerifiedPatch run(Uint8List file,
+        {DeviceSecurityState? state, DateTime? now, bool reinstall = false, List<TestKey>? keys, CertificateTrust? trust}) =>
     verifyPatch(file,
         host: host(),
         keys: verifierFor(keys ?? [trusted, otherTrusted]),
         state: state ?? DeviceSecurityState(),
         now: now ?? DateTime.utc(2026, 11, 12, 12),
-        reinstall: reinstall);
+        reinstall: reinstall,
+        trust: trust);

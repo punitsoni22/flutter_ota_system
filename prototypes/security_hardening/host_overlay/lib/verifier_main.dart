@@ -1,8 +1,15 @@
 // Copyright 2026 The Punit Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// Entry point of the ISOLATED verifier (runs in the ":otaverify" Android process, started by
-// VerifierService with its own FlutterEngine on the same AOT snapshot as the app).
+// Entry point of the ISOLATED verifier. Phase 3C: runs in the Android isolated process
+// ":otaverify_iso" (IsolatedVerifierService: separate UID, module received as bytes read from a
+// read-only file descriptor) or, as a logged fallback, in the ":otaverify" process (VerifierService,
+// module path). Its own FlutterEngine runs on the same AOT snapshot as the app.
+//
+// Phase 3C: the patched Dart VM verifies every function's bytecode while the module is read
+// (runtime/vm/bytecode_verifier.cc); a malformed module now fails with a clean StateError
+// ("Bytecode verification failed ...") before any of its code runs. Process isolation remains as
+// a second layer for VM defects the verifier does not cover.
 //
 // It loads the candidate module exactly as the app would (the Dart VM reads every declaration and
 // every function's bytecode at load time, then runs the entry point), checks the entry point's
@@ -26,8 +33,8 @@ Future<void> verifierMain() async {
   final sw = Stopwatch()..start();
   Map<String, Object?> result;
   try {
-    final path = await _channel.invokeMethod<String>('job');
-    final bytes = File(path!).readAsBytesSync();
+    final job = await _channel.invokeMethod<Object?>('job');
+    final bytes = job is Uint8List ? job : File(job! as String).readAsBytesSync();
     final Object? r = await dm.loadModuleFromBytes(Uint8List.fromList(bytes));
     final loadMs = sw.elapsedMicroseconds / 1000;
     if (r is! Map || r['contract'] != 2) {
@@ -69,5 +76,27 @@ Future<void> verifierMain() async {
     result = {'status': 'REJECTED', 'detail': '${e.runtimeType}: $e'};
   }
   result['ms'] = sw.elapsedMicroseconds / 1000;
+  result['probes'] = _dartProbes();
   await _channel.invokeMethod<void>('result', result);
+}
+
+/// Isolation evidence from the Dart side of the verifier process.
+String _dartProbes() {
+  String attempt(String Function() f) {
+    try {
+      return f();
+    } catch (e) {
+      return 'DENIED(${e.runtimeType})';
+    }
+  }
+
+  const store = '/data/user/0/io.github.punitsoni22.compat_host/files/ota';
+  return [
+    'dart_read_state=${attempt(() => 'ALLOWED(${File('$store/state.json').readAsBytesSync().length} bytes)')}',
+    'dart_write_store=${attempt(() {
+      final f = File('$store/iso_probe_dart.tmp')..writeAsStringSync('x');
+      f.deleteSync();
+      return 'ALLOWED';
+    })}',
+  ].join(',');
 }

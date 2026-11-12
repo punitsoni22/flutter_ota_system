@@ -114,7 +114,9 @@ void main() {
           for (final k in {...orig.keys, ...v.manifest.raw.keys})
             if (utf8.decode(canonicalJson(orig[k])) != utf8.decode(canonicalJson(v.manifest.raw[k]))) k,
         };
-        expect(changed.difference({'packages', 'assets', 'host_interface'}), isEmpty,
+        // `sequence` may legitimately change to any other valid integer (replay is checked
+        // against device state, which is empty here).
+        expect(changed.difference({'packages', 'assets', 'host_interface', 'sequence'}), isEmpty,
             reason: 'case $i (kind $kind) accepted with changed fields $changed');
         if (changed.contains('host_interface')) {
           final hi = v.manifest.hostInterface;

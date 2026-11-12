@@ -24,7 +24,10 @@ PLATFORM="$SDK/bin/cache/artifacts/engine/common/flutter_patched_sdk_product/pla
 PUB_CACHE=${PUB_CACHE:-"$HOME/.pub-cache"}
 TOOLS="$LAB/work/tools"
 NAME=${NAME:-$(basename "$MOD")}
-OUT="$LAB/work/modules/$NAME"
+# MODULES_DIR: where modules are prepared and compiled. Module bytecode embeds this path, so a
+# canonical, user-independent directory makes builds reproducible across machines (Phase 3C).
+MODULES_DIR=${MODULES_DIR:-"$LAB/work/modules"}
+OUT="$MODULES_DIR/$NAME"
 MODPKG=$(python3 -I -c 'import sys,re; print(re.search(r"^name:\s*(\S+)", open(sys.argv[1]).read(), re.M).group(1))' "$MOD/pubspec.yaml")
 ENTRY=${ENTRY:-lib/entry.dart}
 # Optional extra dart2bytecode flags from module.yaml (e.g. "flags: --allow-dynamic-calls-in-dynamic-modules").
@@ -32,7 +35,7 @@ read -r -a FLAGS <<< "$(sed -n 's/^flags:[[:space:]]*//p' "$MOD/module.yaml")"
 
 # The tools run from AOT snapshots compiled once from the pinned Dart SDK sources (much faster
 # and lighter than running them from source each time).
-mkdir -p "$TOOLS" "$LAB/work/modules"
+mkdir -p "$TOOLS" "$MODULES_DIR"
 snapshot() {  # <source.dart> <out.aot>
   if [[ ! -s $2 || $1 -nt $2 ]]; then
     nice -n 10 "$DART_BIN" compile aot-snapshot --packages="$DART_SRC/.dart_tool/package_config.json" -o "$2" "$1" >/dev/null
@@ -45,6 +48,22 @@ snapshot "$HERE/tools/pkg_rename/bin/pkg_rename.dart" "$TOOLS/pkg_rename.aot"
   --host-lock "$BASE/pubspec.lock" --pub-cache "$PUB_CACHE" --policy "$HERE/tools/policy.yaml" \
   --out "$OUT" > "$OUT.rename.json" || { rc=$?; rm -f "$OUT.rename.json"; exit $rc; }
 (cd "$OUT/$MODPKG" && "$SDK/bin/flutter" pub get --offline --suppress-analytics >/dev/null)
+# Phase 3C: bytecode embeds source URIs (e.g. of framework mixins copied into the module). Route
+# the lab directory (SDK, baselines) and the pub cache through symlinks inside MODULES_DIR so that
+# no machine- or user-specific path ends up in a module.
+ln -sfn "$(realpath "$LAB")" "$MODULES_DIR/.lab"
+ln -sfn "$(realpath "$PUB_CACHE")" "$MODULES_DIR/.pub-cache"
+python3 -I - "$OUT/$MODPKG/.dart_tool/package_config.json" "$(realpath "$LAB")" "$MODULES_DIR/.lab" \
+  "$(realpath "$PUB_CACHE")" "$MODULES_DIR/.pub-cache" <<'PY'
+import json, pathlib, sys
+p = pathlib.Path(sys.argv[1]); cfg = json.loads(p.read_text())
+pairs = [("file://" + sys.argv[2], "file://" + sys.argv[3]), ("file://" + sys.argv[4], "file://" + sys.argv[5])]
+for pkg in cfg["packages"]:
+    for old, new in pairs:
+        if pkg["rootUri"].startswith(old + "/"):
+            pkg["rootUri"] = new + pkg["rootUri"][len(old):]
+p.write_text(json.dumps(cfg, indent=2))
+PY
 
 # Optional (Phase 3): GUARD=<patch_guard.dart> runs the security guard on the prepared sources
 # BEFORE any bytecode is generated. Exit code 4 = rejected (FFI, dynamic calls, mirrors, ...).

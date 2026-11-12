@@ -1,0 +1,885 @@
+diff --git a/runtime/vm/bytecode_reader.cc b/runtime/vm/bytecode_reader.cc
+index 16fcc57f..991d3c43 100644
+--- a/runtime/vm/bytecode_reader.cc
++++ b/runtime/vm/bytecode_reader.cc
+@@ -4,6 +4,10 @@
+ 
+ #include "vm/bytecode_reader.h"
+ 
++#if defined(DART_DYNAMIC_MODULES)
++#include "vm/bytecode_verifier.h"
++#endif
++
+ #include "vm/globals.h"
+ #if defined(DART_DYNAMIC_MODULES)
+ 
+@@ -200,6 +204,20 @@ BytecodeReaderHelper::BytecodeReaderHelper(
+       scoped_function_name_(String::Handle(thread->zone())),
+       scoped_function_class_(Class::Handle(thread->zone())) {}
+ 
++#if defined(DART_DYNAMIC_MODULES)
++// Flutter OTA System prototype patch: reject malformed bytecode before any of it can run.
++static void VerifyOrThrow(Zone* zone,
++                          const Function& function,
++                          const Bytecode& bytecode) {
++  if (const char* error = VerifyBytecode(zone, function, bytecode)) {
++    const String& msg = String::Handle(
++        zone, String::NewFormatted("Bytecode verification failed in %s: %s",
++                                   function.ToFullyQualifiedCString(), error));
++    Exceptions::ThrowStateError(msg);
++  }
++}
++#endif  // defined(DART_DYNAMIC_MODULES)
++
+ void BytecodeReaderHelper::ReadCode(const Function& function,
+                                     intptr_t code_offset) {
+   ASSERT(IsolateGroup::Current()->program_lock()->IsCurrentThreadWriter());
+@@ -264,6 +282,9 @@ void BytecodeReaderHelper::ReadCode(const Function& function,
+   function.AttachBytecode(bytecode);
+ 
+   ReadExceptionsTable(function, bytecode, has_exceptions_table);
++#if defined(DART_DYNAMIC_MODULES)
++  VerifyOrThrow(Z, function, bytecode);
++#endif
+ 
+   ReadSourcePositions(bytecode, has_source_positions);
+ 
+@@ -328,6 +349,9 @@ void BytecodeReaderHelper::ReadCode(const Function& function,
+       closure.AttachBytecode(closure_bytecode);
+ 
+       ReadExceptionsTable(closure, closure_bytecode, has_exceptions_table);
++#if defined(DART_DYNAMIC_MODULES)
++      VerifyOrThrow(Z, closure, closure_bytecode);
++#endif
+ 
+       ReadSourcePositions(closure_bytecode, has_source_positions);
+ 
+@@ -860,11 +884,19 @@ void BytecodeReaderHelper::ReadExceptionsTable(const Function& function,
+       const bool needs_stacktrace = (flags & kFlagNeedsStackTrace) != 0;
+       const bool is_generated = (flags & kFlagIsSynthetic) != 0;
+       intptr_t type_count = reader_.ReadListLength();
+-      ASSERT(type_count > 0);
++      if (type_count <= 0) {
++        Exceptions::ThrowStateError(String::Handle(
++            Z, String::New("Malformed bytecode: exception handler without types")));
++      }
+       handler_types = Array::New(type_count, Heap::kOld);
+       for (intptr_t i = 0; i < type_count; i++) {
+         intptr_t type_index = reader_.ReadUInt();
+-        ASSERT(type_index < pool.Length());
++        if (type_index >= pool.Length() ||
++            pool.TypeAt(type_index) != ObjectPool::EntryType::kTaggedObject ||
++            !Object::Handle(Z, pool.ObjectAt(type_index)).IsAbstractType()) {
++          Exceptions::ThrowStateError(String::Handle(
++              Z, String::New("Malformed bytecode: invalid exception handler type")));
++        }
+         handler_type ^= pool.ObjectAt(type_index);
+         handler_types.SetAt(i, handler_type);
+       }
+diff --git a/runtime/vm/bytecode_verifier.cc b/runtime/vm/bytecode_verifier.cc
+new file mode 100644
+index 00000000..176370ef
+--- /dev/null
++++ b/runtime/vm/bytecode_verifier.cc
+@@ -0,0 +1,595 @@
++// Copyright 2026 The Punit Authors
++// SPDX-License-Identifier: Apache-2.0
++//
++// Flutter OTA System prototype patch (Phase 3C): load-time verification of Dart bytecode in
++// dynamic modules. Not part of the upstream Dart SDK. Rules are documented in
++// bytecode_verifier.h; opcode encodings, kinds and operand meanings come from the VM's own
++// KERNEL_BYTECODES_LIST (constants_kbc.h); stack effects are derived from interpreter.cc.
++
++#include "vm/bytecode_verifier.h"
++
++#if defined(DART_DYNAMIC_MODULES)
++
++#include "vm/constants_kbc.h"
++#include "vm/dart_entry.h"
++#include "vm/object.h"
++#include "vm/stack_frame_kbc.h"
++#include "vm/zone.h"
++
++namespace dart {
++namespace bytecode {
++
++namespace {
++
++enum OpKind : uint8_t { kOp____, kOp_num, kOp_lit, kOp_reg, kOp_xeg, kOp_tgt };
++enum EncKind : uint8_t {
++  kEnc_0, kEnc_A, kEnc_D, kEnc_X, kEnc_T, kEnc_A_E, kEnc_A_Y, kEnc_D_F, kEnc_A_B_C,
++};
++enum InstrKind : uint8_t { kKind_ORDN, kKind_WIDE, kKind_RESV };
++
++struct OpInfo {
++  EncKind enc;
++  InstrKind kind;
++  OpKind op[3];
++};
++
++#define OP_INFO(name, encoding, kind, op1, op2, op3)                           \
++  {kEnc_##encoding, kKind_##kind, {kOp_##op1, kOp_##op2, kOp_##op3}},
++const OpInfo kOpInfo[] = {KERNEL_BYTECODES_LIST(OP_INFO)};
++#undef OP_INFO
++
++#define COUNT_OP(name, encoding, kind, op1, op2, op3) +1
++constexpr intptr_t kNumPublicOpcodes = 0 PUBLIC_KERNEL_BYTECODES_LIST(COUNT_OP);
++#undef COUNT_OP
++
++// Upper bound on the operand stack above the frame (valid compiler output stays far below).
++constexpr intptr_t kMaxStackDepth = 4096;
++
++// Fixed header of an arguments descriptor array (dart_entry.h: type args length, count, size,
++// positional count; the enum naming these indices is private to ArgumentsDescriptor).
++constexpr intptr_t kArgDescHeaderLength = 4;
++
++using Op = KernelBytecode::Opcode;
++
++struct Insn {
++  intptr_t pc;
++  Op op;    // as encoded
++  Op base;  // ordinary opcode (wide variants mapped to their ordinary form)
++  intptr_t len;
++  int64_t v[3];
++};
++
++uint32_t U32(const uint8_t* p) {
++  return static_cast<uint32_t>(p[0]) | (static_cast<uint32_t>(p[1]) << 8) |
++         (static_cast<uint32_t>(p[2]) << 16) |
++         (static_cast<uint32_t>(p[3]) << 24);
++}
++
++bool IsCall(Op b) {
++  return b == KernelBytecode::kDirectCall ||
++         b == KernelBytecode::kUncheckedDirectCall ||
++         b == KernelBytecode::kInterfaceCall ||
++         b == KernelBytecode::kInstantiatedInterfaceCall ||
++         b == KernelBytecode::kUncheckedInterfaceCall ||
++         b == KernelBytecode::kDynamicCall ||
++         b == KernelBytecode::kUncheckedClosureCall;
++}
++
++// Fixed stack effects (pops, pushes) derived from interpreter.cc at the pinned revision.
++// Returns false for opcodes the verifier does not accept in modules.
++bool FixedEffect(Op b, intptr_t* pops, intptr_t* pushes) {
++#define E(name, p, q)                                                          \
++  case KernelBytecode::k##name:                                                \
++    *pops = p;                                                                 \
++    *pushes = q;                                                               \
++    return true;
++  switch (b) {
++    E(Entry, 0, 0) E(EntryOptional, 0, 0) E(EntrySuspendable, 0, 0)
++    E(Frame, 0, 0) E(SetFrame, 0, 0) E(CheckStack, 0, 0) E(Nop, 0, 0)
++    E(CheckFunctionTypeArgs, 0, 0) E(Dup, 1, 2) E(InstantiateType, 2, 1)
++    E(InstantiateTypeArgumentsTOS, 2, 1) E(Drop1, 1, 0) E(LoadConstant, 0, 0)
++    E(PushConstant, 0, 1) E(PushNull, 0, 1) E(PushTrue, 0, 1)
++    E(PushFalse, 0, 1) E(PushInt, 0, 1) E(Push, 0, 1) E(StoreLocal, 1, 1)
++    E(PopLocal, 1, 0) E(MoveSpecial, 0, 0) E(BooleanNegateTOS, 1, 1)
++    E(ReturnTOS, 1, 0) E(InitLateField, 1, 0) E(PushUninitializedSentinel, 0, 1)
++    E(JumpIfInitialized, 1, 0) E(StoreStaticTOS, 1, 0) E(LoadStatic, 0, 1)
++    E(StoreFieldTOS, 2, 0) E(StoreContextParent, 2, 0) E(StoreContextVar, 2, 0)
++    E(LoadFieldTOS, 1, 1) E(LoadTypeArgumentsField, 1, 1)
++    E(LoadContextParent, 1, 1) E(LoadContextVar, 1, 1) E(LoadRecordField, 1, 1)
++    E(AllocateContext, 0, 1) E(CloneContext, 1, 1) E(Allocate, 0, 1)
++    E(AllocateT, 2, 1) E(CreateArrayTOS, 2, 1) E(AssertAssignable, 5, 1)
++    E(AssertSubtype, 5, 0) E(Jump, 0, 0) E(JumpIfNoAsserts, 0, 0)
++    E(JumpIfNotZeroTypeArgs, 0, 0) E(JumpIfUnchecked, 0, 0)
++    E(JumpIfEqStrict, 2, 0) E(JumpIfNeStrict, 2, 0) E(JumpIfTrue, 1, 0)
++    E(JumpIfFalse, 1, 0) E(JumpIfNull, 1, 0) E(JumpIfNotNull, 1, 0)
++    E(Suspend, 0, 0) E(StoreIndexedTOS, 3, 0) E(EqualsNull, 1, 1)
++    E(NullCheck, 1, 0) E(NegateInt, 1, 1) E(AddInt, 2, 1) E(SubInt, 2, 1)
++    E(MulInt, 2, 1) E(TruncDivInt, 2, 1) E(ModInt, 2, 1) E(BitAndInt, 2, 1)
++    E(BitOrInt, 2, 1) E(BitXorInt, 2, 1) E(ShlInt, 2, 1) E(ShrInt, 2, 1)
++    E(CompareIntEq, 2, 1) E(CompareIntGt, 2, 1) E(CompareIntLt, 2, 1)
++    E(CompareIntGe, 2, 1) E(CompareIntLe, 2, 1) E(NegateDouble, 1, 1)
++    E(AddDouble, 2, 1) E(SubDouble, 2, 1) E(MulDouble, 2, 1)
++    E(DivDouble, 2, 1) E(CompareDoubleEq, 2, 1) E(CompareDoubleGt, 2, 1)
++    E(CompareDoubleLt, 2, 1) E(CompareDoubleGe, 2, 1) E(CompareDoubleLe, 2, 1)
++    E(AllocateClosure, 0, 1) E(LoadClosureElement, 1, 1)
++    E(StoreClosureElement, 2, 0)
++    default:
++      return false;
++  }
++#undef E
++}
++
++class Verifier {
++ public:
++  Verifier(Zone* zone, const Function& function, const Bytecode& bytecode)
++      : zone_(zone),
++        function_(function),
++        bytecode_(bytecode),
++        pool_(ObjectPool::Handle(zone, bytecode.object_pool())),
++        obj_(Object::Handle(zone)),
++        obj2_(Object::Handle(zone)),
++        insns_(zone, 64) {}
++
++  const char* Run();
++
++ private:
++  const char* Error(intptr_t pc, const char* fmt, ...) PRINTF_ATTRIBUTE(3, 4);
++  const char* Decode();
++  // Loads pool[index] as a tagged object into *out; nullptr when out of range or not tagged.
++  bool Tagged(intptr_t index, Object* out);
++  const char* CheckArgDesc(const Insn& in, intptr_t index, intptr_t argc);
++  const char* CheckPoolOperands(const Insn& in, intptr_t* record_fields);
++  intptr_t Index(intptr_t pc) const {
++    return (pc >= 0 && pc < size_) ? pc_to_index_[pc] : -1;
++  }
++
++  Zone* zone_;
++  const Function& function_;
++  const Bytecode& bytecode_;
++  const ObjectPool& pool_;
++  Object& obj_;
++  Object& obj2_;
++  GrowableArray<Insn> insns_;
++  const uint8_t* code_ = nullptr;
++  intptr_t size_ = 0;
++  intptr_t* pc_to_index_ = nullptr;
++};
++
++const char* Verifier::Error(intptr_t pc, const char* fmt, ...) {
++  va_list args;
++  va_start(args, fmt);
++  const char* msg = zone_->VPrint(fmt, args);
++  va_end(args);
++  return zone_->PrintToString("pc %" Pd ": %s", pc, msg);
++}
++
++const char* Verifier::Decode() {
++  code_ = reinterpret_cast<const uint8_t*>(bytecode_.PayloadStart());
++  size_ = bytecode_.Size();
++  if (size_ <= 0) return Error(0, "empty function body");
++  pc_to_index_ = zone_->Alloc<intptr_t>(size_);
++  for (intptr_t i = 0; i < size_; i++) pc_to_index_[i] = -1;
++  for (intptr_t pc = 0; pc < size_;) {
++    const intptr_t byte = code_[pc];
++    if (byte >= kNumPublicOpcodes) {
++      return Error(pc, "opcode %" Pd " is not a public bytecode", byte);
++    }
++    const OpInfo& info = kOpInfo[byte];
++    if (info.kind == kKind_RESV) {
++      return Error(pc, "reserved opcode %s",
++                   KernelBytecode::NameOf(static_cast<Op>(byte)));
++    }
++    const intptr_t len = KernelBytecode::kInstructionSize[byte];
++    if (len <= 0 || pc + len > size_) {
++      return Error(pc, "truncated instruction %s",
++                   KernelBytecode::NameOf(static_cast<Op>(byte)));
++    }
++    const bool wide = info.kind == kKind_WIDE;
++    const uint8_t* p = code_ + pc;
++    Insn in;
++    in.pc = pc;
++    in.op = static_cast<Op>(byte);
++    in.base = wide ? static_cast<Op>(byte - 1) : in.op;
++    in.len = len;
++    in.v[0] = in.v[1] = in.v[2] = 0;
++    switch (info.enc) {
++      case kEnc_0:
++        break;
++      case kEnc_A:
++        in.v[0] = p[1];
++        break;
++      case kEnc_D:
++        in.v[0] = wide ? U32(p + 1) : p[1];
++        break;
++      case kEnc_X:
++        in.v[0] = wide ? static_cast<int32_t>(U32(p + 1))
++                       : static_cast<int8_t>(p[1]);
++        break;
++      case kEnc_T:
++        in.v[0] = wide ? (static_cast<int32_t>(
++                              (static_cast<uint32_t>(p[1]) << 8) |
++                              (static_cast<uint32_t>(p[2]) << 16) |
++                              (static_cast<uint32_t>(p[3]) << 24)) >>
++                          8)
++                       : static_cast<int8_t>(p[1]);
++        break;
++      case kEnc_A_E:
++        in.v[0] = p[1];
++        in.v[1] = wide ? U32(p + 2) : p[2];
++        break;
++      case kEnc_A_Y:
++        in.v[0] = p[1];
++        in.v[1] = wide ? static_cast<int32_t>(U32(p + 2))
++                       : static_cast<int8_t>(p[2]);
++        break;
++      case kEnc_D_F:
++        in.v[0] = wide ? U32(p + 1) : p[1];
++        in.v[1] = wide ? p[5] : p[2];
++        break;
++      case kEnc_A_B_C:
++        in.v[0] = p[1];
++        in.v[1] = p[2];
++        in.v[2] = p[3];
++        break;
++    }
++    pc_to_index_[pc] = insns_.length();
++    insns_.Add(in);
++    pc += len;
++  }
++  return nullptr;
++}
++
++bool Verifier::Tagged(intptr_t index, Object* out) {
++  if (index < 0 || index >= pool_.Length()) return false;
++  if (pool_.TypeAt(index) != ObjectPool::EntryType::kTaggedObject) return false;
++  *out = pool_.ObjectAt(index);
++  return true;
++}
++
++const char* Verifier::CheckArgDesc(const Insn& in, intptr_t index, intptr_t argc) {
++  if (!Tagged(index, &obj2_) || !obj2_.IsArray()) {
++    return Error(in.pc, "%s: pool[%" Pd "] is not an arguments descriptor",
++                 KernelBytecode::NameOf(in.op), index);
++  }
++  const Array& array = Array::Cast(obj2_);
++  if (array.Length() < kArgDescHeaderLength) {
++    return Error(in.pc, "%s: malformed arguments descriptor",
++                 KernelBytecode::NameOf(in.op));
++  }
++  for (intptr_t i = 0; i < kArgDescHeaderLength; i++) {
++    if (!Object::Handle(zone_, array.At(i)).IsSmi()) {
++      return Error(in.pc, "%s: malformed arguments descriptor",
++                   KernelBytecode::NameOf(in.op));
++    }
++  }
++  const intptr_t size = ArgumentsDescriptor(array).SizeWithTypeArgs();
++  if (size != argc) {
++    return Error(in.pc,
++                 "%s: argument count %" Pd " != arguments descriptor %" Pd,
++                 KernelBytecode::NameOf(in.op), argc, size);
++  }
++  return nullptr;
++}
++
++const char* Verifier::CheckPoolOperands(const Insn& in, intptr_t* record_fields) {
++  const char* name = KernelBytecode::NameOf(in.op);
++  const intptr_t d = in.v[0];
++  switch (in.base) {
++    case KernelBytecode::kDirectCall:
++    case KernelBytecode::kUncheckedDirectCall:
++    case KernelBytecode::kInterfaceCall:
++    case KernelBytecode::kUncheckedInterfaceCall:
++    case KernelBytecode::kInstantiatedInterfaceCall:
++      if (!Tagged(d, &obj_) || !obj_.IsFunction()) {
++        return Error(in.pc, "%s: pool[%" Pd "] is not a function", name, d);
++      }
++      if (in.base == KernelBytecode::kInstantiatedInterfaceCall &&
++          (!Tagged(d + 2, &obj2_) || !obj2_.IsAbstractType())) {
++        return Error(in.pc, "%s: missing static receiver type", name);
++      }
++      return CheckArgDesc(in, d + 1, in.v[1]);
++    case KernelBytecode::kDynamicCall:
++      if (!Tagged(d, &obj_) || !obj_.IsString()) {
++        return Error(in.pc, "%s: pool[%" Pd "] is not a selector", name, d);
++      }
++      return CheckArgDesc(in, d + 1, in.v[1]);
++    case KernelBytecode::kUncheckedClosureCall:
++      return CheckArgDesc(in, d, in.v[1]);
++    case KernelBytecode::kAllocate:
++      if (!Tagged(d, &obj_) || !obj_.IsClass()) {
++        return Error(in.pc, "%s: pool[%" Pd "] is not a class", name, d);
++      }
++      return nullptr;
++    case KernelBytecode::kAllocateClosure:
++      if (!Tagged(d, &obj_) || !obj_.IsFunction() || !Tagged(d + 1, &obj2_) ||
++          !obj2_.IsSmi()) {
++        return Error(in.pc, "%s: pool[%" Pd "] is not a closure function", name, d);
++      }
++      return nullptr;
++    case KernelBytecode::kLoadStatic:
++    case KernelBytecode::kStoreStaticTOS:
++      if (!Tagged(d, &obj_) || !obj_.IsField() || !Field::Cast(obj_).is_static()) {
++        return Error(in.pc, "%s: pool[%" Pd "] is not a static field", name, d);
++      }
++      return nullptr;
++    case KernelBytecode::kLoadFieldTOS:
++    case KernelBytecode::kStoreFieldTOS:
++    case KernelBytecode::kInitLateField: {
++      if (!Tagged(d, &obj_) || !obj_.IsSmi() || !Tagged(d + 1, &obj2_) ||
++          !obj2_.IsField() || Field::Cast(obj2_).is_static()) {
++        return Error(in.pc, "%s: pool[%" Pd "] is not an instance field", name, d);
++      }
++      const intptr_t expected =
++          Field::Cast(obj2_).HostOffset() / kCompressedWordSize;
++      if (Smi::Cast(obj_).Value() != expected || expected <= 0) {
++        return Error(in.pc, "%s: field offset does not match its field", name);
++      }
++      return nullptr;
++    }
++    case KernelBytecode::kLoadTypeArgumentsField:
++      if (!Tagged(d, &obj_) || !obj_.IsSmi() || Smi::Cast(obj_).Value() <= 0) {
++        return Error(in.pc, "%s: pool[%" Pd "] is not a type arguments offset", name, d);
++      }
++      return nullptr;
++    case KernelBytecode::kInstantiateType:
++      if (!Tagged(d, &obj_) || !obj_.IsAbstractType()) {
++        return Error(in.pc, "%s: pool[%" Pd "] is not a type", name, d);
++      }
++      return nullptr;
++    case KernelBytecode::kInstantiateTypeArgumentsTOS:
++      if (!Tagged(in.v[1], &obj_) || !(obj_.IsNull() || obj_.IsTypeArguments())) {
++        return Error(in.pc, "%s: pool[%" Pd "] is not type arguments", name, in.v[1]);
++      }
++      return nullptr;
++    case KernelBytecode::kAssertAssignable:
++      if (!Tagged(in.v[1], &obj_) || !obj_.IsSubtypeTestCache()) {
++        return Error(in.pc, "%s: pool[%" Pd "] is not a subtype test cache", name, in.v[1]);
++      }
++      return nullptr;
++    case KernelBytecode::kAllocateRecord:
++      if (!Tagged(d, &obj_) || !obj_.IsRecordType()) {
++        return Error(in.pc, "%s: pool[%" Pd "] is not a record type", name, d);
++      }
++      *record_fields = RecordType::Cast(obj_).NumFields();
++      return nullptr;
++    case KernelBytecode::kPushConstant:
++    case KernelBytecode::kNullCheck:
++      if (!Tagged(d, &obj_)) {
++        return Error(in.pc, "%s: pool[%" Pd "] is not an object", name, d);
++      }
++      return nullptr;
++    case KernelBytecode::kLoadConstant:
++      if (!Tagged(in.v[1], &obj_)) {
++        return Error(in.pc, "%s: pool[%" Pd "] is not an object", name, in.v[1]);
++      }
++      return nullptr;
++    case KernelBytecode::kMoveSpecial:
++      if (in.v[0] >= KernelBytecode::kSpecialIndexCount) {
++        return Error(in.pc, "MoveSpecial: special index %" Pd " out of range",
++                     static_cast<intptr_t>(in.v[0]));
++      }
++      return nullptr;
++    case KernelBytecode::kThrow:
++      if (in.v[0] > 1) return Error(in.pc, "Throw: invalid kind");
++      return nullptr;
++    default:
++      return nullptr;
++  }
++}
++
++const char* Verifier::Run() {
++  if (const char* e = Decode()) return e;
++  const intptr_t n = insns_.length();
++
++  // Opcodes never allowed in a module.
++  for (intptr_t k = 0; k < n; k++) {
++    const Insn& in = insns_[k];
++    intptr_t pops, pushes;
++    if (!IsCall(in.base) && in.base != KernelBytecode::kAllocateRecord &&
++        in.base != KernelBytecode::kThrow && !FixedEffect(in.base, &pops, &pushes)) {
++      return Error(in.pc, "opcode %s is not allowed in a dynamic module",
++                   KernelBytecode::NameOf(in.op));
++    }
++  }
++
++  // Frame and prologue (interpreter.cc Entry/EntryOptional/EntrySuspendable/CopyParameters).
++  const Insn& e0 = insns_[0];
++  intptr_t frame = 0;
++  intptr_t body = 1;
++  const bool suspendable = e0.base == KernelBytecode::kEntrySuspendable;
++  if (e0.base == KernelBytecode::kEntry) {
++    frame = e0.v[0];
++  } else if (e0.base == KernelBytecode::kEntryOptional || suspendable) {
++    const intptr_t reserved = suspendable ? 1 : 0;
++    const intptr_t a = e0.v[0], b = e0.v[1], c = e0.v[2];
++    if (b != 0 && c != 0) return Error(0, "both optional positional and named parameters");
++    frame = reserved + a + b + c;
++    intptr_t k = 1;
++    for (intptr_t j = 0; j < b; j++, k++) {
++      if (k >= n || insns_[k].base != KernelBytecode::kLoadConstant ||
++          insns_[k].v[0] != reserved + a + j) {
++        return Error(0, "malformed optional parameter prologue");
++      }
++    }
++    for (intptr_t j = 0; j < c; j++, k += 2) {
++      if (k + 1 >= n || insns_[k].base != KernelBytecode::kLoadConstant ||
++          insns_[k + 1].base != KernelBytecode::kLoadConstant ||
++          insns_[k].v[0] != insns_[k + 1].v[0]) {
++        return Error(0, "malformed named parameter prologue");
++      }
++    }
++    body = k;
++    if (k < n && insns_[k].base == KernelBytecode::kFrame) {
++      frame += insns_[k].v[0];
++      body = k + 1;
++    }
++  } else {
++    return Error(0, "function does not start with an Entry instruction");
++  }
++  if (body >= n) return Error(0, "function has no body");
++  const intptr_t num_params = function_.NumParameters();
++  const intptr_t min_xeg = -(kKBCParamEndSlotFromFp + num_params + 1);
++
++  // Per-instruction operand and reference checks.
++  intptr_t* record_fields = zone_->Alloc<intptr_t>(n);
++  intptr_t floor = frame;
++  for (intptr_t k = 0; k < n; k++) {
++    const Insn& in = insns_[k];
++    const char* name = KernelBytecode::NameOf(in.op);
++    record_fields[k] = 0;
++    const bool in_prologue = k < body;
++    if (!in_prologue && (in.base == KernelBytecode::kEntry ||
++                         in.base == KernelBytecode::kEntryOptional ||
++                         in.base == KernelBytecode::kEntrySuspendable ||
++                         in.base == KernelBytecode::kFrame)) {
++      return Error(in.pc, "%s outside the function prologue", name);
++    }
++    if (in.base == KernelBytecode::kSuspend && !suspendable) {
++      return Error(in.pc, "Suspend in a function without suspend state");
++    }
++    if (in.base == KernelBytecode::kSetFrame) {
++      if (in.v[0] > frame) return Error(in.pc, "SetFrame beyond the frame");
++      if (in.v[0] < floor) floor = in.v[0];
++    }
++    const OpInfo& info = kOpInfo[in.op];
++    const intptr_t count = info.enc == kEnc_0     ? 0
++                           : info.enc == kEnc_A_B_C ? 3
++                           : (info.enc == kEnc_A_E || info.enc == kEnc_A_Y ||
++                              info.enc == kEnc_D_F)
++                               ? 2
++                               : 1;
++    for (intptr_t j = 0; j < count; j++) {
++      const int64_t v = in.v[j];
++      switch (info.op[j]) {
++        case kOp_reg:
++          if (v < 0 || v >= frame) {
++            return Error(in.pc, "%s: register %" Pd64 " outside the frame (%" Pd ")",
++                         name, v, frame);
++          }
++          break;
++        case kOp_xeg:
++          if (v >= frame || v < min_xeg) {
++            return Error(in.pc, "%s: register %" Pd64 " outside the frame", name, v);
++          }
++          break;
++        case kOp_tgt:
++          if (Index(in.pc + v) < 0) {
++            return Error(in.pc, "%s: jump target is not an instruction boundary", name);
++          }
++          break;
++        default:
++          break;
++      }
++    }
++    if (const char* e = CheckPoolOperands(in, &record_fields[k])) return e;
++  }
++
++  // Exception handlers and try ranges.
++  const auto& handlers =
++      ExceptionHandlers::Handle(zone_, bytecode_.exception_handlers());
++  intptr_t* handler_entries = nullptr;
++  const intptr_t num_handlers = handlers.IsNull() ? 0 : handlers.num_entries();
++  if (num_handlers > 0) handler_entries = zone_->Alloc<intptr_t>(num_handlers);
++  for (intptr_t h = 0; h < num_handlers; h++) {
++    const intptr_t off = handlers.HandlerPCOffset(h);
++    const intptr_t k = Index(off);
++    if (k < 0) return Error(off, "exception handler is not an instruction boundary");
++    if (insns_[k].base != KernelBytecode::kSetFrame) {
++      return Error(off, "exception handler does not start with SetFrame");
++    }
++    if (k + 1 >= n) return Error(off, "exception handler has no body");
++    handler_entries[h] = k;
++  }
++  const auto& descriptors =
++      PcDescriptors::Handle(zone_, bytecode_.pc_descriptors());
++  if (!descriptors.IsNull()) {
++    PcDescriptors::Iterator iter(descriptors, UntaggedPcDescriptors::kOther);
++    while (iter.MoveNext()) {
++      const intptr_t off = static_cast<intptr_t>(iter.PcOffset());
++      if (off < 0 || off > size_ + 1) {
++        return Error(off, "try range outside the function");
++      }
++    }
++  }
++
++  // Interval stack-depth dataflow (depth = SP - FP + 1).
++  intptr_t* lo = zone_->Alloc<intptr_t>(n);
++  intptr_t* hi = zone_->Alloc<intptr_t>(n);
++  for (intptr_t k = 0; k < n; k++) lo[k] = hi[k] = -1;
++  GrowableArray<intptr_t> work(zone_, 32);
++  const intptr_t max_depth = frame + kMaxStackDepth;
++  const char* flow_error = nullptr;
++  auto flow = [&](intptr_t k, intptr_t l, intptr_t h, intptr_t from_pc) {
++    if (l < floor) {
++      flow_error = Error(from_pc, "stack underflow into the frame");
++      return;
++    }
++    if (h > max_depth) {
++      flow_error = Error(from_pc, "operand stack too deep");
++      return;
++    }
++    const intptr_t nl = (lo[k] < 0 || l < lo[k]) ? l : lo[k];
++    const intptr_t nh = (hi[k] < 0 || h > hi[k]) ? h : hi[k];
++    if (nl != lo[k] || nh != hi[k]) {
++      lo[k] = nl;
++      hi[k] = nh;
++      work.Add(k);
++    }
++  };
++  flow(body, frame, frame, 0);
++  for (intptr_t h = 0; h < num_handlers && flow_error == nullptr; h++) {
++    const intptr_t k = handler_entries[h];
++    flow(k + 1, insns_[k].v[0], insns_[k].v[0], insns_[k].pc);
++  }
++  while (!work.is_empty() && flow_error == nullptr) {
++    const intptr_t k = work.RemoveLast();
++    const Insn& in = insns_[k];
++    intptr_t pops = 0, pushes = 0;
++    if (IsCall(in.base)) {
++      pops = in.v[1] + (in.base == KernelBytecode::kUncheckedClosureCall ? 1 : 0);
++      pushes = 1;
++    } else if (in.base == KernelBytecode::kAllocateRecord) {
++      pops = record_fields[k];
++      pushes = 1;
++    } else if (in.base == KernelBytecode::kThrow) {
++      pops = in.v[0] == 0 ? 1 : 2;
++    } else {
++      FixedEffect(in.base, &pops, &pushes);
++    }
++    intptr_t l = lo[k], h = hi[k];
++    if (in.base == KernelBytecode::kSetFrame) l = h = in.v[0];
++    if (l - pops < floor) {
++      return Error(in.pc, "%s pops %" Pd " values below the frame",
++                   KernelBytecode::NameOf(in.op), pops);
++    }
++    l = l - pops + pushes;
++    h = h - pops + pushes;
++    if (kOpInfo[in.op].enc == kEnc_T) {
++      const intptr_t t = Index(in.pc + in.v[0]);
++      const intptr_t extra = in.base == KernelBytecode::kSuspend ? 1 : 0;
++      flow(t, l + extra, h + extra, in.pc);
++    }
++    const bool terminal = in.base == KernelBytecode::kReturnTOS ||
++                          in.base == KernelBytecode::kThrow ||
++                          in.base == KernelBytecode::kJump;
++    if (!terminal && flow_error == nullptr) {
++      if (k + 1 >= n) return Error(in.pc, "execution falls off the end of the function");
++      flow(k + 1, l, h, in.pc);
++    }
++  }
++  return flow_error;
++}
++
++}  // namespace
++
++const char* VerifyBytecode(Zone* zone,
++                           const Function& function,
++                           const Bytecode& bytecode) {
++  Verifier verifier(zone, function, bytecode);
++  return verifier.Run();
++}
++
++}  // namespace bytecode
++}  // namespace dart
++
++#endif  // defined(DART_DYNAMIC_MODULES)
+diff --git a/runtime/vm/bytecode_verifier.h b/runtime/vm/bytecode_verifier.h
+new file mode 100644
+index 00000000..10a16c87
+--- /dev/null
++++ b/runtime/vm/bytecode_verifier.h
+@@ -0,0 +1,48 @@
++// Copyright 2026 The Punit Authors
++// SPDX-License-Identifier: Apache-2.0
++//
++// Flutter OTA System prototype patch (Phase 3C): load-time verification of Dart bytecode in
++// dynamic modules. Not part of the upstream Dart SDK.
++
++#ifndef RUNTIME_VM_BYTECODE_VERIFIER_H_
++#define RUNTIME_VM_BYTECODE_VERIFIER_H_
++
++#include "vm/globals.h"
++
++#if defined(DART_DYNAMIC_MODULES)
++
++namespace dart {
++
++class Bytecode;
++class Function;
++class Zone;
++
++namespace bytecode {
++
++// Verifies one function's bytecode after the reader has built its object pool and exception
++// handlers, before any of the module's code can run. Returns nullptr when the bytecode is valid,
++// otherwise a zone-allocated description of the first violation.
++//
++// Checked (see docs/architecture/bytecode-verifier.md in the Flutter OTA System repository):
++//  - every opcode is a public, non-reserved opcode allowed in modules (no FfiCall, ExternalCall,
++//    Trap, RecordCoverage, VM-internal or breakpoint opcodes); no truncated instruction;
++//  - the function starts with Entry/EntryOptional/EntrySuspendable; the parameter prologue
++//    consumed by CopyParameters has the exact LoadConstant shape; Frame only in the prologue;
++//  - register operands inside the frame, signed operands inside frame/parameters;
++//  - jump and exception-handler targets on instruction boundaries; handlers start with SetFrame;
++//  - object pool operands in range and of the kind the interpreter casts them to (calls:
++//    Function/String + argument descriptor whose size equals the instruction's argument count;
++//    fields: Field and an offset equal to Field::HostOffset(); classes, types, type arguments,
++//    subtype test caches, record types, closures); constants are tagged objects;
++//  - stack depth on every path (interval dataflow): no pop below the frame floor, bounded growth,
++//    no execution past the end of the function.
++const char* VerifyBytecode(Zone* zone,
++                           const Function& function,
++                           const Bytecode& bytecode);
++
++}  // namespace bytecode
++}  // namespace dart
++
++#endif  // defined(DART_DYNAMIC_MODULES)
++
++#endif  // RUNTIME_VM_BYTECODE_VERIFIER_H_
+diff --git a/runtime/vm/interpreter.cc b/runtime/vm/interpreter.cc
+index 5045812c..2379a6d8 100644
+--- a/runtime/vm/interpreter.cc
++++ b/runtime/vm/interpreter.cc
+@@ -132,6 +132,21 @@ class InterpreterHelpers {
+ #define GET_FIELD(obj, offset_in_words)                                        \
+   GET_FIELD_T(ObjectPtr, obj, offset_in_words)
+ 
++// Flutter OTA System prototype patch: runtime guards for instructions whose memory safety depends
++// on the runtime type of a stack value (not provable by the load-time bytecode verifier). A
++// violation throws ArgumentError(index) instead of reading or writing outside an object.
++#define OTA_GUARD(cond, value)                                                 \
++  if (!(cond)) [[unlikely]] {                                                  \
++    SP[0] = Smi::New(value);                                                   \
++    goto ThrowArgumentError;                                                   \
++  }
++#define OTA_IS(obj, Class) ((obj)->IsHeapObject() && (obj)->Is##Class())
++// The word at offset_in_words must lie inside the object (header excluded).
++#define OTA_FIELD_IN_BOUNDS(obj, offset_in_words)                              \
++  ((obj)->IsHeapObject() && (offset_in_words) > 0 &&                           \
++   (static_cast<intptr_t>(offset_in_words) + 1) * kCompressedWordSize <=       \
++       (obj)->untag()->HeapSize())
++
+   DART_FORCE_INLINE static TypeArgumentsPtr GetTypeArguments(
+       Thread* thread,
+       InstancePtr instance) {
+@@ -2653,6 +2668,7 @@ SwitchDispatchNoSingleStep:
+     InstancePtr instance = Instance::RawCast(SP[0]);
+     intptr_t offset_in_words =
+         Smi::Value(field->untag()->host_offset_or_field_id());
++    OTA_GUARD(OTA_FIELD_IN_BOUNDS(SP[0], offset_in_words), offset_in_words);
+ 
+     InterpreterHelpers::SetField(instance, offset_in_words,
+                                  Object::sentinel().ptr(), thread);
+@@ -2710,6 +2726,7 @@ SwitchDispatchNoSingleStep:
+     ObjectPtr value = static_cast<ObjectPtr>(SP[0]);
+     intptr_t offset_in_words =
+         Smi::Value(field->untag()->host_offset_or_field_id());
++    OTA_GUARD(OTA_FIELD_IN_BOUNDS(SP[-1], offset_in_words), offset_in_words);
+ 
+     if (InterpreterHelpers::FieldNeedsGuardUpdate(thread, field, value)) {
+       SP[1] = 0;  // Unused result of runtime call.
+@@ -2774,6 +2791,7 @@ SwitchDispatchNoSingleStep:
+ 
+   {
+     BYTECODE(StoreContextParent, 0);
++    OTA_GUARD(OTA_IS(SP[-1], Context), 0);
+     ContextPtr instance = static_cast<ContextPtr>(SP[-1]);
+     ContextPtr value = static_cast<ContextPtr>(SP[0]);
+     SP -= 2;  // Drop instance and value.
+@@ -2784,6 +2802,9 @@ SwitchDispatchNoSingleStep:
+   {
+     BYTECODE(StoreContextVar, A_E);
+     const intptr_t index = rE;
++    OTA_GUARD(OTA_IS(SP[-1], Context) &&
++                  index < Context::RawCast(SP[-1])->untag()->num_variables_,
++              index);
+     ContextPtr instance = static_cast<ContextPtr>(SP[-1]);
+     ObjectPtr value = static_cast<ContextPtr>(SP[0]);
+     SP -= 2;  // Drop instance and value.
+@@ -2802,6 +2823,7 @@ SwitchDispatchNoSingleStep:
+ #endif
+     const uword offset_in_words =
+         static_cast<uword>(Smi::Value(Smi::RawCast(LOAD_CONSTANT(rD))));
++    OTA_GUARD(OTA_FIELD_IN_BOUNDS(SP[0], offset_in_words), offset_in_words);
+     InstancePtr instance = Instance::RawCast(SP[0]);
+     SP[0] = GET_FIELD(instance, offset_in_words);
+     DISPATCH();
+@@ -2811,6 +2833,7 @@ SwitchDispatchNoSingleStep:
+     BYTECODE(LoadTypeArgumentsField, D);
+     const uword offset_in_words =
+         static_cast<uword>(Smi::Value(Smi::RawCast(LOAD_CONSTANT(rD))));
++    OTA_GUARD(OTA_FIELD_IN_BOUNDS(SP[0], offset_in_words), offset_in_words);
+     InstancePtr instance = Instance::RawCast(SP[0]);
+     SP[0] = GET_FIELD(instance, offset_in_words);
+     DISPATCH();
+@@ -2818,6 +2841,7 @@ SwitchDispatchNoSingleStep:
+ 
+   {
+     BYTECODE(LoadContextParent, 0);
++    OTA_GUARD(OTA_IS(SP[0], Context), 0);
+     ContextPtr instance = static_cast<ContextPtr>(SP[0]);
+     SP[0] = instance->untag()->parent();
+     DISPATCH();
+@@ -2826,6 +2850,9 @@ SwitchDispatchNoSingleStep:
+   {
+     BYTECODE(LoadContextVar, A_E);
+     const intptr_t index = rE;
++    OTA_GUARD(OTA_IS(SP[0], Context) &&
++                  index < Context::RawCast(SP[0])->untag()->num_variables_,
++              index);
+     ContextPtr instance = Context::RawCast(SP[0]);
+     ASSERT(index < instance->untag()->num_variables_);
+     SP[0] = instance->untag()->element(index);
+@@ -2835,6 +2862,9 @@ SwitchDispatchNoSingleStep:
+   {
+     BYTECODE(LoadRecordField, D);
+     const intptr_t field_index = rD;
++    OTA_GUARD(OTA_IS(SP[0], Record) &&
++                  field_index < Record::NumFields(Record::RawCast(SP[0])),
++              field_index);
+     RecordPtr record = Record::RawCast(SP[0]);
+     SP[0] = record->untag()->field(field_index);
+     DISPATCH();
+@@ -3188,6 +3218,10 @@ SwitchDispatchNoSingleStep:
+ 
+   {
+     BYTECODE(StoreIndexedTOS, 0);
++    OTA_GUARD(OTA_IS(SP[-2], Array) &&
++                  InterpreterHelpers::CheckIndex(
++                      Smi::RawCast(SP[-1]), Array::RawCast(SP[-2])->untag()->length()),
++              0);
+     SP -= 3;
+     ArrayPtr array = Array::RawCast(SP[1]);
+     SmiPtr index = Smi::RawCast(SP[2]);
+@@ -3547,6 +3581,11 @@ SwitchDispatchNoSingleStep:
+ 
+   {
+     BYTECODE(LoadClosureElement, D);
++    OTA_GUARD(OTA_IS(SP[0], Closure) &&
++                  static_cast<intptr_t>(rD) <
++                      UntaggedClosure::LengthBits::decode(Smi::Value(
++                          Closure::RawCast(SP[0])->untag()->length_and_flags())),
++              rD);
+     ClosurePtr instance = Closure::RawCast(SP[0]);
+     ASSERT((0 <= rD) && (rD < UntaggedClosure::LengthBits::decode(Smi::Value(
+                                   instance->untag()->length_and_flags()))));
+@@ -3556,6 +3595,11 @@ SwitchDispatchNoSingleStep:
+ 
+   {
+     BYTECODE(StoreClosureElement, D);
++    OTA_GUARD(OTA_IS(SP[-1], Closure) &&
++                  static_cast<intptr_t>(rD) <
++                      UntaggedClosure::LengthBits::decode(Smi::Value(
++                          Closure::RawCast(SP[-1])->untag()->length_and_flags())),
++              rD);
+     ClosurePtr instance = Closure::RawCast(SP[-1]);
+     ObjectPtr value = static_cast<ObjectPtr>(SP[0]);
+     ASSERT((0 <= rD) && (rD < UntaggedClosure::LengthBits::decode(Smi::Value(
+diff --git a/runtime/vm/vm_sources.gni b/runtime/vm/vm_sources.gni
+index e54256af..8076730d 100644
+--- a/runtime/vm/vm_sources.gni
++++ b/runtime/vm/vm_sources.gni
+@@ -23,6 +23,8 @@ vm_sources = [
+   "bss_relocs.h",
+   "bytecode_reader.cc",
+   "bytecode_reader.h",
++  "bytecode_verifier.cc",
++  "bytecode_verifier.h",
+   "canonical_tables.cc",
+   "canonical_tables.h",
+   "class_finalizer.cc",
