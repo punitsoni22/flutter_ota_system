@@ -1,0 +1,22 @@
+# Copyright 2026 The Punit Authors
+# SPDX-License-Identifier: Apache-2.0
+name: bytecode_proto
+description: Phase 1 prototype host app for the Flutter OTA System bytecode patch engine.
+publish_to: none
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.13.0
+  flutter: 3.47.9
+
+dependencies:
+  flutter:
+    sdk: flutter
+  crypto: ^3.0.6
+  # Pure-Dart package that a patch can replace.
+  greeting:
+    path: packages/greeting
+  # Our wrapper around the Dart VM's dynamic-module loader. The package name must be
+  # "dynamic_modules": only that package may import dart:_internal (Dart kernel target rule).
+  dynamic_modules:
+    path: packages/dynamic_modules
