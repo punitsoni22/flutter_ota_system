@@ -17,7 +17,8 @@ const containerMagic = 'OTAPRT02';
 /// Hard limits, checked before anything is decoded (bounded parsing).
 const maxContainerBytes = 8 * 1024 * 1024;
 const maxManifestBytes = 64 * 1024;
-const maxSignatureBytes = 1024;
+// Phase 3C: the signature block can carry a key certificate and approvals.
+const maxSignatureBytes = 8 * 1024;
 
 class ContainerParts {
   ContainerParts(this.manifestBytes, this.signatureBytes, this.module);

@@ -13,6 +13,8 @@
 set -euo pipefail
 HERE=$(cd -- "$(dirname -- "$0")/.." && pwd)
 LAB=${LAB:-"$HOME/.cache/flutter-ota-lab"}
+# Canonical build directory (no user name; same path on every machine -> reproducible bytecode).
+export MODULES_DIR=${MODULES_DIR:-/tmp/flutter-ota-build}
 [[ $# == 4 ]] || { echo "usage: make_patch.sh <baseline> <module-dir> <out.otp> <sequence>" >&2; exit 2; }
 BASE=$(realpath "$1"); MOD=$(realpath "$2"); OTP=$(realpath -m "$3"); SEQ=$4
 KEY=${KEY:-p3-dev-1}
@@ -20,8 +22,8 @@ NAME=${NAME:-$(basename "$MOD")}
 export NAME
 GUARD_ARG="$HERE/tools/patch_guard/bin/patch_guard.dart"
 [[ -n ${NOGUARD:-} ]] && GUARD_ARG=""
-GUARD="$GUARD_ARG" "$HERE/../real_app_compatibility/scripts/make_module.sh" "$BASE" "$MOD" "$LAB/work/modules/$NAME.v1.otp" >/dev/null
-OUT="$LAB/work/modules/$NAME"
+GUARD="$GUARD_ARG" "$HERE/../real_app_compatibility/scripts/make_module.sh" "$BASE" "$MOD" "$MODULES_DIR/$NAME.v1.otp" >/dev/null
+OUT="$MODULES_DIR/$NAME"
 MODPKG=$(python3 -I -c 'import json,sys; print(json.load(open(sys.argv[1]))["module"])' "$OUT.rename.json")
 # shellcheck disable=SC2086
 python3 -I "$HERE/tools/sign_patch.py" sign --key "$LAB/keys/p3/$KEY.pem" --key-id "$KEY" --baseline "$BASE" \

@@ -11,8 +11,10 @@
 set -euo pipefail
 HERE=$(cd -- "$(dirname -- "$0")/.." && pwd)
 LAB=${LAB:-"$HOME/.cache/flutter-ota-lab"}
+# Canonical build directory (no user name; same path on every machine -> reproducible bytecode).
+export MODULES_DIR=${MODULES_DIR:-/tmp/flutter-ota-build}
 BASE=$(realpath "$1"); NAME=$2; OUT=$(realpath -m "$3")
-M="$LAB/work/modules/$NAME"
+M="$MODULES_DIR/$NAME"
 MODPKG=$(python3 -I -c 'import json,sys; print(json.load(open(sys.argv[1]))["module"])' "$M.rename.json")
 KEYS="$LAB/keys/p3"
 rm -rf "$OUT" && mkdir -p "$OUT/otp"
@@ -50,8 +52,14 @@ for f in "$OUT"/bc/*.bc; do
   n=$(basename "$f" .bc)
   sign "$f" "$OUT/otp/B${n}.otp" 1
 done
+# Permanent regression (R_*): the two Phase 3 modules that crashed the Dart VM, byte-exact from
+# tools/bc_verify/fixtures/malformed (mutations of patch_v1), validly signed. The Phase 3C VM
+# verifier must refuse them with a clean error before any of their code runs.
+FIX="$HERE/tools/bc_verify/fixtures/malformed"
+sign "$FIX/25_codes_opcode_1.bc" "$OUT/otp/R25_regression_B25_reserved_opcode.otp" 1
+sign "$FIX/27_codes_opcode_3.bc" "$OUT/otp/R27_regression_B27_bad_argcount.otp" 1
 # The FFI module built without the guard, validly signed (C_*).
-FFI="$LAB/work/modules/patch_ffi_noguard"
+FFI="$MODULES_DIR/patch_ffi_noguard"
 if [[ -s $FFI/module.bc ]]; then
   MP=$(python3 -I -c 'import json,sys; print(json.load(open(sys.argv[1]))["module"])' "$FFI.rename.json")
   python3 -I "$HERE/tools/sign_patch.py" sign --key "$KEYS/p3-dev-1.pem" --key-id p3-dev-1 --baseline "$BASE" \

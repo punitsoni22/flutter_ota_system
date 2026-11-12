@@ -6,7 +6,12 @@
   [bytecode-compatibility-matrix.md](../bytecode-compatibility-matrix.md)); its findings are added
   below and labelled **[Verified, Phase 2]**. Phase 3 security hardening
   ([phase-3-security-report.md](../phase-3-security-report.md)) adds findings labelled
-  **[Verified, Phase 3]**; one blocker remains open (section 12). Not approved for implementation.
+  **[Verified, Phase 3]**; one blocker remains open (section 12). Phase 3C
+  ([phase-3-final-security-report.md](../phase-3-final-security-report.md)) adds findings labelled
+  **[Implemented, Phase 3C]** and, for what was tested on the phone on 2026-11-12,
+  **[Verified, Phase 3C]**. The fix for that blocker is implemented and verified on a device for
+  B25/B27 (instruction-level); header- and section-level corruptions still abort the reader inside
+  the separate verifier process (contained). Not approved for implementation.
 - **Date:** 2026-11-12
 - **Scope:** replaces only patch **generation** and patch **execution**. Backend, database,
   device management, releases, channels, rollouts, signing, admin dashboard, artifact storage,
@@ -194,6 +199,56 @@ Both are open.
 
 **Key separation (proposal, not implemented):** the signing key must leave the server (developer
 or CI signing), with an offline root key for rotation.
+
+**Phase 3C update [Implemented, Phase 3C]; device results [Verified, Phase 3C]**
+([phase-3-final-security-report.md](../phase-3-final-security-report.md)). Device results below
+come from an Android 13 arm64 phone, release build with the patched engine, 2026-11-12.
+- **Bytecode verifier in the VM** ([bytecode-verifier.md](../bytecode-verifier.md),
+  [phase-3c-vm-investigation.md](../phase-3c-vm-investigation.md)). An engine patch adds a verifier
+  that the bytecode reader runs on every function and closure of a module, before any module code
+  runs. It checks opcodes, instruction boundaries, the prologue, registers, branch and handler
+  targets, object-pool kinds and argument counts, field offsets and stack depth. A failure is a
+  clean Dart `StateError`, not a VM abort. The patch also adds 12 interpreter runtime guards on the
+  instructions that index memory.
+  **[Verified, Phase 3C]** on the phone: the main process survived all 67 signed corpus files
+  (same pid). B25 and B27 are refused with a clean `StateError` (reserved opcode; `DirectCall`
+  argument count), never activated, the previous patch unchanged, the main loader never called. The
+  signed FFI module is refused (`opcode FfiCall is not allowed in a dynamic module`). Of 53 malformed
+  modules, 49 are refused: 9 cleanly, 40 by aborting the separate verifier process (header- and
+  section-level corruptions where the reader aborts before function verification; contained, app
+  alive). 4 are accepted but harmless (they load and behave correctly). Phase 3 had 6 accepted.
+- **Isolated-process verification, not achieved**
+  ([verification-process-isolation.md](../verification-process-isolation.md)). An Android
+  `isolatedProcess` service (separate UID, read-only file descriptor) was implemented and built
+  **[Implemented, Phase 3C]**. On the phone, Flutter cannot start in an isolated process in a
+  release build (SELinux denies the GPU device and SurfaceFlinger, the raster thread crashes, and
+  software rendering is ignored in release). The app logs this and falls back to the same-UID
+  `:otaverify` process from Phase 3. It is not a sandbox.
+- **Compiler provenance** ([compiler-provenance.md](../compiler-provenance.md)). A toolchain id,
+  computed from file contents, is compiled into the store build and copied into every signed
+  manifest; the device refuses a module from another toolchain (`wrong_toolchain`, and
+  `bad_toolchain` for a forged id; both **[Verified, Phase 3C]** on the phone). Module builds are
+  reproducible (same bytes from two different source directories, on Linux).
+- **Key separation, now prototyped** ([signing-and-key-rotation.md](../signing-and-key-rotation.md)).
+  One offline root key per app issues key certificates; the developer's signing key stays on the
+  developer's machine. The prototype supports key rotation, root-signed revocation of certificate
+  serials and required approvals. Verified on Linux with unit tests and signer/verifier interop
+  tests. On the phone the whole certificate suite passed **[Verified, Phase 3C]**: wrong
+  environment, wrong root, unauthorised rotation, uncertified key, revoked old key and a replayed
+  revocation list were refused; rotation to a new certified key worked without a new store build.
+  Approvals were tested on Linux only. The production signing protocol is unchanged.
+- **Install suite on the phone [Verified, Phase 3C].** Valid signed patches install, load and
+  confirm (state log DOWNLOADED -> VERIFIED -> PROBATIONARY -> ACTIVE). A download cut inside the
+  module gives `wrong_size`; cut inside the manifest gives `truncated`. Signature negatives are
+  rejected with the expected codes. A signed truncated module aborted the separate verifier process
+  (contained; the previous patch stayed active).
+
+Validation so far: the verifier rules were checked on Linux with the reference verifier. All 28
+valid modules of Phases 1-3 were accepted; B25, B27 and the FFI module were rejected. The engine
+with the verifier patch was then run on the phone (results above). The blocker status is therefore
+**fix implemented and verified on a device for B25/B27 (instruction-level); header/section-level
+corruptions still abort the reader inside the separate process (contained)**. Crash-state-machine
+results on the device: see [phase-3-final-security-report.md](../phase-3-final-security-report.md).
 ## 13. Rollback
 
 Unchanged server rollback/revoke and client bad-patch lists. On device: a boot-attempt marker; a
@@ -319,9 +374,20 @@ claimed. Not legal advice.
   **[Verified, Phase 2]**.
 - A correctly signed module with invalid instructions can still crash the app at run time; no
   pre-activation check in the current Dart VM detects it (open blocker, section 12)
-  **[Verified, Phase 3]**.
+  **[Verified, Phase 3]**. *Phase 3C:* an in-VM bytecode verifier and 12 runtime guards are
+  implemented (section 12) **[Implemented, Phase 3C]**. On the phone they refuse B25/B27 and the
+  FFI module cleanly; header- and section-level corruptions still abort the reader, contained in
+  the separate verifier process **[Verified, Phase 3C]**.
 - The patch-signing key is held by the server and one admin key controls uploads; key
   separation, rotation and approvals are not implemented **[Verified, Phase 3 audit]**.
+  *Phase 3C:* per-app root key certificates, local developer signing, rotation, root-signed
+  revocation and approvals are prototyped and verified on Linux **[Implemented, Phase 3C]**; the
+  certificate suite also passed on the phone (approvals Linux only) **[Verified, Phase 3C]**. The
+  production signing protocol is unchanged.
+- The bytecode verifier is not a type checker. Type confusion passed into VM runtime entries
+  remains a residual risk; it is reduced by the runtime guards, the signature and the separate
+  verifier process (same UID; an isolated process was not achieved), not removed
+  **[Implemented, Phase 3C]**.
 - Rewriting a real app so patchable packages are called through indirections, at scale (many
   packages, classes crossing the boundary, global state) is unproven.
 - Engine bytecode-reader bugs (e.g. factory constructors) may need our own VM fixes. *Phase 2:* 49

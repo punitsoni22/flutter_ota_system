@@ -141,6 +141,21 @@ class Suite:
         self.check('p3_01_signed_patch', '12.1, 3.2', 'normal signed patch: verified, isolated load OK, activated', {
             'isolated verification OK': 'ISOLATED_VERIFY status=OK' in l1,
             'installed + loaded + confirmed': all(x in l1 for x in ('INSTALLED patch #1', 'LOADED patch #1', 'CONFIRMED')),
+            'states DOWNLOADED -> VERIFIED -> PROBATIONARY -> ACTIVE': all(f'-> {x}' in l1 for x in ('DOWNLOADED', 'VERIFIED', 'PROBATIONARY', 'ACTIVE')),
+        })
+        # Phase 3C isolation evidence (probes recorded by the verifier process before loading).
+        iso = re.search(r'ISOLATION process=(\S+) probes="([^"]*)"', l1)
+        probes = dict(kv.split('=', 1) for kv in iso.group(2).split(';') if '=' in kv) if iso else {}
+        self.save('p3_isolation/probes.json', {'process': iso and iso.group(1), 'probes': probes,
+                                               'fallback': 'ISOLATION_FALLBACK' in l1})
+        self.check('p3_isolation', '3C-isolation', 'verifier ran in an Android isolated process without app data access', {
+            'isolated process used (no fallback)': iso is not None and iso.group(1) == 'otaverify_iso' and 'ISOLATION_FALLBACK' not in l1,
+            'separate UID': probes.get('uid') not in (None, probes.get('app_uid')),
+            'Process.isIsolated() true': probes.get('is_isolated') == 'true',
+            'cannot read the private patch store': probes.get('read_private_state', '').startswith('DENIED'),
+            'cannot write the private patch store': probes.get('write_private_store', '').startswith('DENIED'),
+            'cannot read the app external inbox': probes.get('read_external_inbox', '').startswith('DENIED'),
+            'cannot create a network socket': probes.get('network_socket', '').startswith('DENIED'),
         })
         l = self.run('p3_02_cold_restart', n=2)
         self.check('p3_02_cold_restart', '12.13', 'repeated activation / cold restarts re-verify and load', {
@@ -156,9 +171,10 @@ class Suite:
             ('neg_wrong_baseline', '12.4', 'built for another libapp.so (baseline)', 'wrong_baseline'),
             ('neg_wrong_engine', '3.3', 'built for another engine revision', 'wrong_runtime'),
             ('neg_expired', '3.3', 'expired patch', 'expired'),
-            ('neg_partial_download', '8.12', 'partially downloaded patch file', 'truncated|wrong_size'),
+            ('neg_partial_download', '8.12', 'half download, cut inside the module', 'wrong_size'),
+            ('neg_partial_header', '8.12', 'half download, cut inside the manifest', 'truncated'),
             ('v1', '3.3, 11', 'replayed older patch (v1 while v2 active)', 'replay'),
-            ('malformed_signed', '4, 12.7', 'validly signed MALFORMED bytecode (install path)', 'isolated_crashed'),
+            ('malformed_signed', '4, 12.7', 'validly signed MALFORMED bytecode (install path)', 'isolated_'),
             ('ffi_unguarded_signed', '5, 12.5', 'validly signed FFI module (guard bypassed)', 'isolated_'),
             ('crash_throw_init', '12.8', 'module throws during initialisation', 'isolated_rejected'),
             ('crash_abort_in_entry', '12.8', 'module aborts the process during initialisation', 'isolated_crashed'),
@@ -170,7 +186,8 @@ class Suite:
             l = self.run(f'p3_neg_{name}', push=name, wait=9)[0]
             pid_after = d.main_pid()
             self.check(f'p3_neg_{name}', part, f'{title}: rejected safely', {
-                f'rejected [{code}]': ('REJECTED' in l and any(c in l for c in code.split('|'))),
+                # exact code, or a prefix such as 'isolated_' (any isolated outcome)
+                f'rejected [{code}]': f'REJECTED incoming patch [{code}' + ('' if code.endswith('_') else ']') in l,
                 'main process alive after the check': pid_after is not None and 'FIRST_FRAME' in l,
                 'previous patch v2 still active': 'LOADED patch #2' in l,
                 'no install of the bad patch': 'INSTALLED' not in l,
@@ -232,6 +249,46 @@ class Suite:
                 'previous confirmed patch v2 restored and running': 'RESTORED_PREVIOUS' in text and 'LOADED patch #2' in l[-1],
                 'no crash loop (last start stable)': 'FIRST_FRAME' in l[-1] and 'TEST_CRASH' not in l[-1],
             })
+        # Phase 3C: failures AFTER the start was confirmed (health check passed).
+        for name, title, mode in [
+            ('crash_abort_after_confirm', 'crash after health confirmation', 'home'),
+            ('crash_abort_on_navigation', 'crash after navigation (catalogue opened)', 'catalog'),
+            ('crash_abort_in_async', 'crash during async work after confirmation', 'home'),
+        ]:
+            ok = self.ensure_v2_active(f'p3c_{name}')
+            d.sh(f'echo {mode} > {INBOX}/mode')
+            l = self.run(f'p3c_{name}', n=4, push=name, wait=14)
+            d.sh(f'echo home > {INBOX}/mode')
+            text = '\n'.join(l)
+            self.check(f'p3c_{name}', '3C-crash', f'{title}: attributed, repeated crash rolls back', {
+                'v2 active before': ok,
+                'first start confirmed (ACTIVE) before the crash': '-> ACTIVE' in l[0] and 'TEST_CRASH' in l[0],
+                'crash attributed after confirmation': 'after confirmation' in text and 'kind=crash' in text,
+                'SUSPECTED_FAILURE then ROLLED_BACK then BLACKLISTED': all(f'-> {x}' in text for x in ('SUSPECTED_FAILURE', 'ROLLED_BACK', 'BLACKLISTED')),
+                'previous confirmed patch v2 restored': 'RESTORED_PREVIOUS' in text and 'LOADED patch #2' in l[-1],
+                'restart after rollback stable': 'FIRST_FRAME' in l[-1] and 'TEST_CRASH' not in l[-1] and 'TEST_CRASH' not in l[-2],
+            })
+        # OS eviction after confirmation: SIGKILL from outside (as the low-memory killer does).
+        ok = self.ensure_v2_active('p3c_os_eviction')
+        # Needs a userdebug/emulator image ('su'); never restarts adbd as root (that would make the
+        # app's external test folders root-owned).
+        if 'uid=0' not in d.sh('su 0 id 2>&1'):
+            self.record('p3c_os_eviction', '3C-crash', 'process killed by the system (SIGKILL) after confirmation',
+                        'NOT_TESTED', 'no root (su) on this device: SIGKILL from outside cannot be simulated')
+        else:
+            d.start(7)
+            pid = d.main_pid()
+            d.sh(f'su 0 kill -9 {pid}')
+            time.sleep(2)
+            l = self.run('p3c_os_eviction', wait=7)[0]
+            self.check('p3c_os_eviction', '3C-crash', 'process killed by the system (SIGKILL) after confirmation', {
+                'v2 active before': ok, 'attributed as eviction, not counted': 'kind=osEviction' in l and 'FAILURE_COUNT' not in l,
+                'v2 still active': 'LOADED patch #2' in l})
+        # Force-stop after confirmation is not counted either.
+        l = self.run('p3c_force_stop', wait=7)[0]
+        self.check('p3c_force_stop', '3C-crash', 'force-stop after confirmation', {
+            'attributed as force-stop, not counted': 'kind=forceStop' in l and 'FAILURE_COUNT' not in l,
+            'v2 still active': 'LOADED patch #2' in l})
         # 12.5 killed before confirmation (user force-stop) is not counted.
         d.reset()
         self.push('crash_ok')
@@ -246,7 +303,41 @@ class Suite:
         self.check('p3_killed_before_confirm', '12.5', 'app force-stopped before confirmation', {
             'not counted': 'not counted' in l2 and 'FAILURE_COUNT' not in l2, 'patch confirmed next start': 'CONFIRMED' in l2})
         self.record('p3_device_restart', '8.11', 'device restarts during activation', 'NOT_TESTED',
-                    "would reboot the owner's phone; covered by design: staging/attempt files are written with fsync + rename")
+                    'phone reboot tests are excluded by the owner; staging/attempt files are written with fsync + rename')
+
+    # --- Phase 3C certificates, rotation, revocation, toolchain ----------------------------------
+    def suite_cert(self):
+        d = self.d
+        d.reset()
+        l = self.run('p3c_cert_signed', push='cert_v1_signer_a')[0]
+        self.check('p3c_cert_signed', '3C-signing', 'patch signed by a root-certified key', {
+            'installed + loaded + confirmed': all(x in l for x in ('INSTALLED patch #1', 'LOADED patch #1', 'CONFIRMED'))})
+        for name, code, title in [
+            ('cert_neg_other_env', 'wrong_environment', 'certificate for another environment'),
+            ('cert_neg_other_root', 'bad_certificate_signature', 'certificate signed by another root key'),
+            ('cert_neg_unauthorised_rotation', 'untrusted_root', 'unauthorised rotation (signer key certifies a key)'),
+            ('cert_neg_no_cert', 'unknown_key', 'new key without a certificate'),
+            ('tc_neg_other_compiler', 'wrong_toolchain', 'patch built with another compiler (consistent record)'),
+            ('tc_neg_forged_id', 'bad_toolchain', 'toolchain id does not match its fields'),
+        ]:
+            l = self.run(f'p3c_{name}', push=name, wait=8)[0]
+            self.check(f'p3c_{name}', '3C-signing', f'{title}: rejected', {
+                # exact code, or a prefix such as 'isolated_' (any isolated outcome)
+                f'rejected [{code}]': f'REJECTED incoming patch [{code}' + ('' if code.endswith('_') else ']') in l,
+                'never reached the verifier process or loader': 'ISOLATED_VERIFY' not in l,
+                'previous patch #1 still active': 'LOADED patch #1' in l and 'FIRST_FRAME' in l})
+        l = self.run('p3c_rotation', push='cert_v2_rotated_signer_b')[0]
+        self.check('p3c_rotation', '3C-signing', 'key rotation: newly certified key accepted without a new store build', {
+            'v2 by signer-b active': 'LOADED patch #2' in l and 'CONFIRMED' in l})
+        l = self.run('p3c_old_key_revoked', push='cert_neg_old_key_revoked',
+                     before=lambda: self.push('revoke_cert_101', 'revocations.otp'), wait=8)[0]
+        self.check('p3c_old_key_revoked', '3C-signing', 'old key after rotation + root-signed revocation of its certificate', {
+            'root-signed revocation applied': 'REVOCATIONS applied' in l and 'cert_serials=1' in l,
+            'old key refused [revoked_certificate]': 'REJECTED incoming patch [revoked_certificate]' in l,
+            'rotated patch #2 still active': 'LOADED patch #2' in l})
+        l = self.run('p3c_revocation_replay', before=lambda: self.push('revoke_cert_101', 'revocations.otp'))[0]
+        self.check('p3c_revocation_replay', '3C-signing', 'replayed revocation list', {
+            'refused as replay': 'REJECTED revocation list [replay]' in l})
 
     # --- malformed bytecode / security corpus (verify-only, never activated) -----------------------
     def suite_corpus(self):
@@ -277,7 +368,7 @@ class Suite:
         })
         expect_crypto = {'A01_untrusted_key': 'unknown_key', 'A02_wrong_app': 'wrong_app', 'A03_wrong_baseline': 'wrong_baseline',
                          'A04_wrong_engine': 'wrong_runtime', 'A05_expired': 'expired', 'A07_tampered_module': 'bad_hash',
-                         'A08_tampered_manifest': 'bad_signature', 'A09_truncated_download': 'truncated', 'A10_trusted_id_wrong_key': 'bad_signature'}
+                         'A08_tampered_manifest': 'bad_signature', 'A09_truncated_download': 'wrong_size', 'A10_trusted_id_wrong_key': 'bad_signature'}
         for name, r in sorted(results.items()):
             if name in ('A00_control_valid', 'A06_second_trusted_key'):
                 self.check(f'corpus:{name}', '3', f'{name}: accepted', {'crypto OK + isolated OK': r.get('crypto') == 'OK' and r.get('status') == 'OK'})
@@ -285,6 +376,13 @@ class Suite:
                 self.check(f'corpus:{name}', '3.3', f'{name}: rejected before any load', {
                     f'crypto rejected [{expect_crypto[name]}]': r.get('crypto') == 'REJECTED' and r.get('code') == expect_crypto[name],
                     'never loaded': r.get('status') == 'NOT_RUN'})
+            elif name.startswith('R'):
+                # Phase 3C permanent regression: refused by the in-VM bytecode verifier (clean
+                # error, verifier process alive until it reports), never CRASHED.
+                self.check(f'corpus:{name}', '3C', f'{name}: dangerous module refused by the VM verifier', {
+                    'crypto OK (validly signed)': r.get('crypto') == 'OK',
+                    'isolated REJECTED (not CRASHED)': r.get('status') == 'REJECTED',
+                    'reason is bytecode verification': 'Bytecode verification failed' in str(r.get('detail'))})
             else:
                 # B*/C*: validly signed, malformed or unsupported. Must never be accepted as OK.
                 st = r.get('status')
@@ -321,7 +419,7 @@ def main():
     ap.add_argument('--artifacts', required=True)
     ap.add_argument('--results', required=True)
     ap.add_argument('--serial')
-    ap.add_argument('--suites', default='install,crash,corpus')
+    ap.add_argument('--suites', default='install,crash,corpus,cert')
     ap.add_argument('--release2-apk')
     ap.add_argument('--no-install', action='store_true')
     a = ap.parse_args()

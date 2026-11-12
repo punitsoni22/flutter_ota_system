@@ -6,6 +6,7 @@
 library;
 
 export 'src/canonical.dart';
+export 'src/certs.dart';
 export 'src/container.dart';
 export 'src/manifest.dart';
 export 'src/signature.dart';

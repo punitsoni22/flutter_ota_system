@@ -6,6 +6,7 @@ import 'dart:typed_data';
 import 'package:crypto/crypto.dart';
 
 import 'canonical.dart';
+import 'certs.dart';
 import 'container.dart';
 import 'manifest.dart';
 import 'signature.dart';
@@ -21,6 +22,7 @@ class HostIdentity {
     required this.hostPackages,
     required this.hostOwnedPackages,
     required this.entryContract,
+    required this.toolchainId,
   });
   final String appId;
   final String releaseId;
@@ -32,6 +34,9 @@ class HostIdentity {
   final Set<String> hostPackages;
   final Set<String> hostOwnedPackages;
   final int entryContract;
+
+  /// SHA-256 id of the toolchain this store build accepts patches from (Phase 3C provenance).
+  final String toolchainId;
 }
 
 /// Device-side security state (from the private store).
@@ -41,14 +46,17 @@ class DeviceSecurityState {
     Set<String>? blacklist,
     Set<String>? revokedPatchIds,
     Set<String>? revokedKeyIds,
+    Set<int>? revokedCertSerials,
     this.activePatchId,
   })  : blacklist = blacklist ?? {},
         revokedPatchIds = revokedPatchIds ?? {},
-        revokedKeyIds = revokedKeyIds ?? {};
+        revokedKeyIds = revokedKeyIds ?? {},
+        revokedCertSerials = revokedCertSerials ?? {};
   int highestSequence;
   final Set<String> blacklist;
   final Set<String> revokedPatchIds;
   final Set<String> revokedKeyIds;
+  final Set<int> revokedCertSerials;
   String? activePatchId;
 }
 
@@ -70,6 +78,7 @@ VerifiedPatch verifyPatch(
   required DeviceSecurityState state,
   required DateTime now,
   bool reinstall = false,
+  CertificateTrust? trust,
 }) {
   Never reject(String code, String reason) => throw PatchRejected(code, reason);
 
@@ -97,15 +106,31 @@ VerifiedPatch verifyPatch(
   } on FormatException catch (e) {
     reject('bad_signature_block', e.message);
   }
-  if (sig.keys.toSet().difference({'alg', 'key_id', 'sig'}).isNotEmpty || sig['alg'] != 'ES256') {
+  if (sig.keys.toSet().difference({'alg', 'key_id', 'sig', 'cert', 'approvals'}).isNotEmpty || sig['alg'] != 'ES256') {
     reject('bad_signature_block', 'unsupported signature block');
   }
   if (sig['key_id'] != m.keyId) reject('key_mismatch', 'signature key id differs from the manifest');
   if (state.revokedKeyIds.contains(m.keyId)) reject('revoked_key', 'signing key ${m.keyId} is revoked');
-  if (!keys.knows(m.keyId)) reject('unknown_key', 'signing key ${m.keyId} is not trusted by this build');
-  final signature = sig['sig'];
-  if (signature is! String || !keys.verify(m.keyId, signedMessage(manifestDomain, parts.manifestBytes), signature)) {
-    reject('bad_signature', 'manifest signature does not verify');
+  if (sig.containsKey('cert')) {
+    // Phase 3C: key certified by an application root key (+ approvals).
+    if (trust == null) reject('untrusted_root', 'this build has no certificate roots');
+    verifyCertifiedSignature(sig, parts.manifestBytes,
+        manifestKeyId: m.keyId,
+        trust: trust,
+        appId: host.appId,
+        now: now.toUtc(),
+        revokedSerials: state.revokedCertSerials,
+        revokedKeyIds: state.revokedKeyIds);
+  } else {
+    if (trust != null && trust.requireCertificates) {
+      reject('certificate_required', 'this build only accepts certified signing keys');
+    }
+    if (sig.containsKey('approvals')) reject('bad_signature_block', 'approvals need a certified signer');
+    if (!keys.knows(m.keyId)) reject('unknown_key', 'signing key ${m.keyId} is not trusted by this build');
+    final signature = sig['sig'];
+    if (signature is! String || !keys.verify(m.keyId, signedMessage(manifestDomain, parts.manifestBytes), signature)) {
+      reject('bad_signature', 'manifest signature does not verify');
+    }
   }
 
   // 6-7. Module integrity (the manifest is now authentic).
@@ -129,6 +154,14 @@ VerifiedPatch verifyPatch(
   }
   if (m.hostInterface['sha256'] != host.interfaceSha256) reject('wrong_interface', 'built against another dynamic interface');
   if (m.module['entry_contract'] != host.entryContract) reject('wrong_contract', 'unsupported entry contract');
+  // Toolchain provenance: the id must be the hash of the recorded fields AND the id this build
+  // accepts. (A signed claim by the patch signer; it does not by itself prove bytecode safety.)
+  final tc = m.toolchain;
+  final fields = {for (final k in PatchManifest.toolchainFields) k: tc[k]};
+  if (sha256.convert(canonicalJson(fields)).toString() != tc['id']) {
+    reject('bad_toolchain', 'toolchain id does not match its fields');
+  }
+  if (tc['id'] != host.toolchainId) reject('wrong_toolchain', 'built with an unsupported toolchain ${tc['id']}');
 
   // 10. Freshness: blacklist, revocation, replay, expiry.
   if (state.blacklist.contains(m.patchId)) reject('blacklisted', 'patch ${m.patchId} failed before and is blacklisted');
@@ -144,14 +177,17 @@ VerifiedPatch verifyPatch(
 
 /// Signed revocation list: {release_id, sequence, revoked_patch_ids, revoked_key_ids}.
 class RevocationList {
-  RevocationList(this.releaseId, this.sequence, this.patchIds, this.keyIds);
+  RevocationList(this.releaseId, this.sequence, this.patchIds, this.keyIds, [this.certSerials = const {}]);
   final String releaseId;
   final int sequence;
   final Set<String> patchIds;
   final Set<String> keyIds;
+  final Set<int> certSerials;
 }
 
-RevocationList verifyRevocations(Uint8List file, {required HostIdentity host, required Es256Verifier keys}) {
+/// Revocation lists are signed by a directly trusted key or (Phase 3C) by an application root key.
+RevocationList verifyRevocations(Uint8List file,
+    {required HostIdentity host, required Es256Verifier keys, CertificateTrust? trust}) {
   final parts = splitContainer(file);
   final Map<String, Object?> body;
   final Map<String, Object?> sig;
@@ -161,16 +197,19 @@ RevocationList verifyRevocations(Uint8List file, {required HostIdentity host, re
   } on FormatException catch (e) {
     throw PatchRejected('bad_revocations', e.message);
   }
-  if (body.keys.toSet().difference({'type', 'release_id', 'sequence', 'revoked_patch_ids', 'revoked_key_ids'}).isNotEmpty ||
+  if (body.keys.toSet().difference({'type', 'release_id', 'sequence', 'revoked_patch_ids', 'revoked_key_ids', 'revoked_cert_serials'}).isNotEmpty ||
       body['type'] != 'revocations' || body['release_id'] != host.releaseId || body['sequence'] is! int ||
       body['revoked_patch_ids'] is! List || body['revoked_key_ids'] is! List) {
     throw PatchRejected('bad_revocations', 'invalid revocation list');
   }
   final keyId = sig['key_id'];
-  if (keyId is! String || sig['alg'] != 'ES256' || sig['sig'] is! String ||
-      !keys.verify(keyId, signedMessage(revocationDomain, parts.manifestBytes), sig['sig']! as String)) {
-    throw PatchRejected('bad_signature', 'revocation list signature does not verify');
-  }
+  final msg = signedMessage(revocationDomain, parts.manifestBytes);
+  final ok = keyId is String && sig['alg'] == 'ES256' && sig['sig'] is String &&
+      (keys.verify(keyId, msg, sig['sig']! as String) || (trust != null && trust.roots.verify(keyId, msg, sig['sig']! as String)));
+  if (!ok) throw PatchRejected('bad_signature', 'revocation list signature does not verify');
+  final serials = body['revoked_cert_serials'] ?? const <Object?>[];
+  if (serials is! List || serials.any((e) => e is! int)) throw PatchRejected('bad_revocations', 'invalid certificate serials');
   return RevocationList(host.releaseId, body['sequence']! as int,
-      (body['revoked_patch_ids']! as List).cast<String>().toSet(), (body['revoked_key_ids']! as List).cast<String>().toSet());
+      (body['revoked_patch_ids']! as List).cast<String>().toSet(), (body['revoked_key_ids']! as List).cast<String>().toSet(),
+      serials.cast<int>().toSet());
 }

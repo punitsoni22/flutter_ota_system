@@ -1,0 +1,12 @@
+id	part	status	title	detail
+p3_crash_abort_when_logged_in	12.9	PASS	crash before the first frame (state-dependent bug): passes verification, crash guard rolls back	
+p3_crash_abort_after_frame	12.10	PASS	crash after the first frame, before confirmation: passes verification, crash guard rolls back	
+p3_crash_throw_when_logged_in	8.7	PASS	exception in build() (state-dependent bug): passes verification, crash guard rolls back	
+p3c_crash_abort_after_confirm	3C-crash	PASS	crash after health confirmation: attributed, repeated crash rolls back	
+p3c_crash_abort_on_navigation	3C-crash	PASS	crash after navigation (catalogue opened): attributed, repeated crash rolls back	
+p3c_crash_abort_in_async	3C-crash	PASS	crash during async work after confirmation: attributed, repeated crash rolls back	
+p3c_os_eviction	3C-crash	NOT_TESTED	process killed by the system (SIGKILL) after confirmation	no root (su) on this device: SIGKILL from outside cannot be simulated
+p3c_force_stop	3C-crash	PASS	force-stop after confirmation	
+p3_killed_before_confirm	12.5	PASS	app force-stopped before confirmation	
+p3_device_restart	8.11	NOT_TESTED	device restarts during activation	phone reboot tests are excluded by the owner; staging/attempt files are written with fsync + rename
+apk_unchanged	-	PASS	installed APK byte-identical to the baseline APK (patches never modify it)	a466e4b36ad282d3
