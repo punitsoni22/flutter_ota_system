@@ -6,12 +6,21 @@
 //
 //   dart --packages=<dart-src>/.dart_tool/package_config.json patch_guard.dart \
 //     --root <dir with the module's packages> --package-config <module package_config.json> \
-//     --module-packages a,b,c [--original-names a=x,b=y] [--sdk <dart-sdk>] [--json <report.json>]
+//     --module-packages a,b,c [--host-packages <host_packages.json|pubspec.lock>]
+//     [--original-names a=x,b=y] [--sdk <dart-sdk>] [--json <report.json>]
 //
-// --module-packages: the packages that are COMPILED INTO the module (the module's own package and
-// the renamed copies). Everything else resolves to the host and runs AOT.
+// --module-packages: the packages DECLARED as compiled into the module (the module's own package,
+// first = entry package, and the renamed copies from module.yaml change:/external:).
+// --host-packages: the packages the host app provides (the baseline's host_packages.json, key
+// "all", or the host's pubspec.lock). When given, EVERY package in the module's package config
+// that is not a host package (flutter and sky_engine always count as host) is treated as module
+// code and scanned, in addition to --module-packages. A non-host package the module reaches that
+// is not in --module-packages is rejected (undeclared_dependency): it would be compiled into the
+// module without being declared, pinned or policy-checked. Without --host-packages (legacy mode)
+// everything outside --module-packages is assumed to resolve to the host.
 //
 // Checks (exit 4 = rejected, 0 = accepted, 2 = usage/analysis error):
+//  0. Every module file must analyse without errors (analysis_error); compile errors are rejected.
 //  1. Directive graph (imports, exports, parts, EVERY conditional-import/export configuration):
 //     module code that reaches dart:ffi, dart:mirrors or another dart:_ library is rejected, with
 //     the package chain. FFI reached only inside host packages is reported (runs AOT, not rejected).
@@ -30,11 +39,15 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:analyzer/dart/ast/visitor.dart';
 import 'package:analyzer/dart/element/element.dart';
 import 'package:analyzer/dart/element/type.dart';
+import 'package:analyzer/diagnostic/diagnostic.dart';
 import 'package:analyzer/src/dart/analysis/analysis_context_collection.dart';
+import 'package:yaml/yaml.dart';
 
 class Finding {
   Finding(this.rule, this.severity, this.package, this.file, this.line, this.message, [this.chain]);
-  final String rule; // ffi, mirrors, internal_library, dynamic_call, no_such_method, ffi_in_host
+  // ffi, mirrors, internal_library, dynamic_call, no_such_method, analysis_error,
+  // undeclared_dependency, ffi_in_host
+  final String rule;
   final String severity; // reject | warn
   final String package;
   final String file;
@@ -46,11 +59,36 @@ class Finding {
 }
 
 late Map<String, Directory> packageRoots; // package name -> lib dir
-late Set<String> modulePackages;
+late Set<String> modulePackages; // declared (--module-packages)
+Set<String>? hostPackages; // null = legacy mode (everything not declared is host)
 late Map<String, String> originalNames; // renamed -> original
 final findings = <Finding>[];
 
 String orig(String pkg) => originalNames[pkg] ?? pkg;
+
+/// Packages provided by every Flutter host (SDK packages; the graph pass never walks them).
+const sdkHostPackages = {'flutter', 'sky_engine'};
+
+/// Whether code of [pkg] is compiled into the module (and so must be checked).
+bool isModulePackage(String pkg) =>
+    modulePackages.contains(pkg) ||
+    (hostPackages != null && !hostPackages!.contains(pkg) && !sdkHostPackages.contains(pkg));
+
+/// Reads the host package list: a baseline host_packages.json ({"all": [...]} or a JSON list) or
+/// a pubspec.lock (the keys of `packages:`).
+Set<String> readHostPackages(File f) {
+  final text = f.readAsStringSync();
+  if (f.path.endsWith('.json')) {
+    final j = jsonDecode(text);
+    final list = j is Map ? j['all'] : j;
+    if (list is! List) throw FormatException('${f.path}: expected {"all": [...]} or a JSON list');
+    return list.cast<String>().toSet();
+  }
+  final y = loadYaml(text);
+  final pkgs = y is YamlMap ? y['packages'] : null;
+  if (pkgs is! YamlMap) throw FormatException('${f.path}: expected a pubspec.lock with packages:');
+  return pkgs.keys.cast<String>().toSet();
+}
 
 /// Resolves a directive URI to (package, file) or a dart: library name.
 ({String? pkg, File? file, String? dart}) resolve(String uri, File from, String fromPkg) {
@@ -97,7 +135,7 @@ List<(String, File)> graphPass(List<(String, File)> entries) {
     final key = file.absolute.path;
     if (!file.existsSync()) continue;
     final unit = parseString(content: file.readAsStringSync(), path: key, throwIfDiagnostics: false).unit;
-    final inModule = modulePackages.contains(pkg);
+    final inModule = isModulePackage(pkg);
     if (inModule) reachableModule.add((pkg, file));
     final uris = <(String, int, bool)>[];
     for (final d in unit.directives) {
@@ -271,7 +309,8 @@ Future<int> run(List<String> args) async {
     a[args[i].replaceFirst('--', '')] = args[i + 1];
   }
   if (!a.containsKey('root') || !a.containsKey('package-config') || !a.containsKey('module-packages')) {
-    stderr.writeln('usage: patch_guard --root DIR --package-config FILE --module-packages a,b [--original-names x=y] [--sdk DIR] [--json FILE]');
+    stderr.writeln('usage: patch_guard --root DIR --package-config FILE --module-packages a,b '
+        '[--host-packages host_packages.json|pubspec.lock] [--original-names x=y] [--sdk DIR] [--json FILE]');
     return 2;
   }
   final cfgFile = File(a['package-config']!).absolute;
@@ -285,6 +324,14 @@ Future<int> run(List<String> args) async {
           .replaceFirst(RegExp(r'/+$'), '')),
   };
   modulePackages = a['module-packages']!.split(',').where((s) => s.isNotEmpty).toSet();
+  if (a['host-packages'] != null) {
+    try {
+      hostPackages = readHostPackages(File(a['host-packages']!));
+    } on Object catch (e) {
+      stderr.writeln('patch_guard: cannot read host packages: $e');
+      return 2;
+    }
+  }
   originalNames = {
     for (final kv in (a['original-names'] ?? '').split(',').where((s) => s.contains('=')))
       kv.split('=')[0]: kv.split('=')[1],
@@ -305,9 +352,19 @@ Future<int> run(List<String> args) async {
   ];
   final entries = graphPass(seeds);
 
+  // Gap 2: a non-host package that the module reaches but that is not declared is compiled into
+  // the module unpinned and without the pkg_rename policy check. It is scanned (above) AND refused.
+  final reachedPackages = {for (final (p, _) in entries) p};
+  for (final p in reachedPackages.where((p) => !modulePackages.contains(p)).toList()..sort()) {
+    final first = entries.firstWhere((e) => e.$1 == p).$2.absolute.path;
+    findings.add(Finding('undeclared_dependency', 'reject', orig(p), first, 1,
+        'package $p is compiled into the module but is neither a host package nor declared in module.yaml '
+        '(change: or external:)'));
+  }
+
   // Pass 2: resolved AST of module-compiled files.
   final collection = AnalysisContextCollectionImpl(
-    includedPaths: [for (final p in modulePackages) packageRoots[p]!.absolute.path],
+    includedPaths: [for (final p in {...modulePackages, ...reachedPackages}) packageRoots[p]!.absolute.path],
     packageConfigFile: cfgFile.path,
     sdkPath: a['sdk'],
   );
@@ -318,14 +375,17 @@ Future<int> run(List<String> args) async {
     final r = await ctx.currentSession.getResolvedUnit(path);
     if (r is! ResolvedUnitResult) {
       resolveErrors++;
+      findings.add(Finding('analysis_error', 'reject', orig(pkg), path, 0, 'file could not be resolved (${r.runtimeType})'));
       continue;
     }
     if (r.isPart && r.unit.directives.whereType<PartOfDirective>().isEmpty) continue;
-    final errors = r.diagnostics.where((d) => d.severity.name == 'ERROR').toList();
+    // Gap 1: compare the enum (its name is lowercase 'error'; the old 'ERROR' check never fired).
+    final errors = r.diagnostics.where((d) => d.severity == Severity.error).toList();
     if (errors.isNotEmpty) {
       resolveErrors++;
-      for (final e in errors.take(3)) {
-        stderr.writeln('patch_guard: analysis error in $path: ${e.message}');
+      for (final e in errors) {
+        findings.add(Finding('analysis_error', 'reject', orig(pkg), path, r.lineInfo.getLocation(e.offset).lineNumber,
+            'compile error: ${e.message}'));
       }
     }
     r.unit.accept(Checker(pkg, r.unit, path));
@@ -342,12 +402,8 @@ Future<int> run(List<String> args) async {
   for (final f in findings.where((f) => f.severity == 'warn')) {
     stderr.writeln('WARNING ${f.rule}: ${f.message} (${f.package})${f.chain == null ? '' : '\n  Reached through: ${f.chain!.join(' -> ')}'}');
   }
-  if (resolveErrors > 0) {
-    stderr.writeln('PATCH REJECTED\n\nReason: the module sources do not analyse cleanly ($resolveErrors file(s)).');
-    return 4;
-  }
-  if (rejects.isEmpty) {
-    print('patch_guard: accepted (${entries.length} files in ${modulePackages.length} module packages)');
+  if (rejects.isEmpty && resolveErrors == 0) {
+    print('patch_guard: accepted (${entries.length} files in ${reachedPackages.length} module packages)');
     return 0;
   }
   final byRule = <String, List<Finding>>{};
@@ -363,6 +419,9 @@ Future<int> run(List<String> args) async {
       'internal_library' => 'Internal Dart library imported.',
       'dynamic_call' => 'Dynamic invocation detected (dynamic calls are disabled in modules).',
       'no_such_method' => 'noSuchMethod override detected.',
+      'analysis_error' => 'The module sources do not analyse cleanly ($resolveErrors file(s) with compile errors).',
+      'undeclared_dependency' => 'Undeclared dependency compiled into the module (declare it under external: '
+          'in module.yaml so it is pinned and policy-checked, or ship it in the host).',
       _ => rule,
     };
     out.writeln('\nReason: $reason\n\nPackage: ${f.package}');
@@ -372,9 +431,13 @@ Future<int> run(List<String> args) async {
     }
     if (list.length > 5) out.writeln('  … ${list.length - 5} more');
   }
-  out.writeln(byRule.keys.any((r) => r == 'ffi' || r == 'mirrors' || r == 'internal_library')
-      ? '\nThis dependency requires a full application release.'
-      : '\nRewrite this code with static types: dynamic dispatch is not supported in patches.');
+  if (byRule.keys.any((r) => r == 'ffi' || r == 'mirrors' || r == 'internal_library')) {
+    out.writeln('\nThis dependency requires a full application release.');
+  } else if (byRule.containsKey('dynamic_call') || byRule.containsKey('no_such_method')) {
+    out.writeln('\nRewrite this code with static types: dynamic dispatch is not supported in patches.');
+  } else if (byRule.containsKey('analysis_error')) {
+    out.writeln('\nFix the compile errors (and re-run code generation if generated files are stale).');
+  }
   stderr.write(out);
   return 4;
 }
