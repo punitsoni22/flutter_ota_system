@@ -8,6 +8,7 @@ import 'dart:math';
 import 'package:crypto/crypto.dart';
 import 'package:path/path.dart' as p;
 
+import '../build_support/build_copy.dart';
 import '../build_support/canonical_paths.dart';
 import '../build_support/dynamic_interface.dart';
 import '../build_support/kernel_libraries.dart';
@@ -132,6 +133,10 @@ class AndroidRelease {
   /// The store file of the current build, once flutter build has written it.
   String? _artifactPath;
 
+  /// The build copy of the current build (removed when the build ends).
+  BuildCopy? _copy;
+  bool _gradleStopped = false;
+
   void _say(String s) => ctx.out.writeln(s);
 
   Future<AndroidReleaseResult> run() async {
@@ -247,6 +252,7 @@ class AndroidRelease {
         keep = true;
         return AndroidReleaseResult(releaseId, releaseDir.path, built.artifactPath, record);
       } finally {
+        await _removeCopy(toolchainProcessEnvironment(ctx.environment, tc));
         canon.release();
         if (!keep) {
           if (releaseDir.existsSync()) releaseDir.deleteSync(recursive: true);
@@ -339,32 +345,68 @@ class AndroidRelease {
     features.graph.warnings.where((w) => !w.contains(loaderPackageName)).forEach((w) => ctx.log('warning: $w'));
     writeOtaMain(dir);
 
-    // Canonical paths: toolchain, pub cache and the app workspace are reached through symlinks
-    // below the canonical root, so link.dill records no user-specific path.
-    final packages = readPackageConfig(p.join(dir, '.dart_tool', 'package_config.json'));
+    // Canonical paths. The store build runs in a copy of the app workspace at the neutral real
+    // path <root>/project (the Flutter tool records the absolute path of the app folder, for
+    // example of the generated plugin registrant, in libapp.so). The front-end passes reach the
+    // same copy through the <root>/workspace symlink, so link.dill records exactly the paths that
+    // `patch android` links for the real workspace.
+    final realPackages = readPackageConfig(p.join(dir, '.dart_tool', 'package_config.json'));
     final tcReal = Directory(tc.root).resolveSymbolicLinksSync();
     final pubCacheDir = _pubCache();
     final pubCacheReal = Directory(pubCacheDir).existsSync() ? Directory(pubCacheDir).resolveSymbolicLinksSync() : null;
     final projectReal = Directory(dir).resolveSymbolicLinksSync();
+    final workspace = appWorkspace(
+      projectReal: projectReal,
+      packages: realPackages,
+      toolchainReal: tcReal,
+      pubCacheReal: pubCacheReal,
+      home: ctx.environment['HOME'],
+    );
+    _say('  Copying the app workspace to ${canon.projectCopy} (neutral build path)');
+    final copy = BuildCopy.create(
+      workspace: workspace,
+      app: projectReal,
+      dest: canon.projectCopy,
+      skip: [canon.path, tcReal, ?pubCacheReal],
+    );
+    _copy = copy;
+    final copyApp = copy.appDir;
+    await runChecked(
+      tc.flutterBin,
+      ['pub', 'get'],
+      workingDirectory: copyApp,
+      environment: env,
+      sink: ctx.err,
+      what: 'flutter pub get (build copy)',
+      record: commands,
+    );
+    final packages = readPackageConfig(p.join(copyApp, '.dart_tool', 'package_config.json'));
+    final copyReal = Directory(copy.root).resolveSymbolicLinksSync();
     final local = [
       for (final pkg in packages)
         if (!p.isWithin(tcReal, pkg.root) && (pubCacheReal == null || !p.isWithin(pubCacheReal, pkg.root))) pkg,
     ];
-    final workspace = commonAncestor([projectReal, ...local.map((x) => x.root)]);
-    if (workspace == p.separator || workspace == ctx.environment['HOME']) {
-      throw CliException(
-        'The app and its path packages share no folder below your home directory ($workspace).\n'
-        'Keep path packages inside one project folder.',
-      );
+    for (final pkg in local) {
+      if (!p.equals(pkg.root, copyReal) && !p.isWithin(copyReal, pkg.root)) {
+        throw CliException(
+          'Package ${pkg.name} resolves to ${pkg.root}, outside the build copy of the workspace. '
+          'Use a path dependency inside the app workspace or a published version.',
+        );
+      }
     }
     canon.link(canonToolchain, tcReal);
     if (pubCacheReal != null) canon.link(canonPubCache, pubCacheReal);
-    canon.link(canonWorkspace, workspace);
-    final mapping = PathMapping({tcReal: canon.toolchain, ?pubCacheReal: canon.pubCache, workspace: canon.workspace});
-    final linkConfig = p.join(tmp, linkPackageConfigName);
-    File(linkConfig).writeAsStringSync(canonicalPackageConfig(packages, mapping));
-    final canonProject = mapping.map(projectReal)!;
-    final canonTmp = mapping.map(Directory(tmp).resolveSymbolicLinksSync())!;
+    canon.link(canonWorkspace, copyReal);
+    final mapping = PathMapping({tcReal: canon.toolchain, ?pubCacheReal: canon.pubCache, copyReal: canon.workspace});
+    // Files the front end and flutter build read by canonical path live in the copy (same
+    // relative folder as the baseline); the baseline keeps its own copies.
+    final copyWork = Directory(p.join(copyApp, p.relative(tmp, from: dir)))..createSync(recursive: true);
+    final linkConfigText = canonicalPackageConfig(packages, mapping);
+    for (final d in [tmp, copyWork.path]) {
+      File(p.join(d, linkPackageConfigName)).writeAsStringSync(linkConfigText);
+    }
+    final canonProject = mapping.map(Directory(copyApp).resolveSymbolicLinksSync())!;
+    final canonTmp = mapping.map(copyWork.resolveSymbolicLinksSync())!;
     final canonTc = ResolvedToolchain(tc.id, tc.toolchainId, canon.toolchain);
     final entryUri = 'package:${app.packageName}/$otaMainFileName';
 
@@ -399,7 +441,9 @@ class AndroidRelease {
         if (hostAll.contains(x.name) && x.name != loaderPackageName) x.name,
     ]..sort();
     final iface = buildDynamicInterface(libs1, exclude: {entryUri});
-    File(p.join(tmp, dynamicInterfaceName)).writeAsStringSync(iface.yaml);
+    for (final d in [tmp, copyWork.path]) {
+      File(p.join(d, dynamicInterfaceName)).writeAsStringSync(iface.yaml);
+    }
     final ifaceCanon = p.join(canonTmp, dynamicInterfaceName);
 
     final runtime = {
@@ -465,16 +509,18 @@ class AndroidRelease {
     await runChecked(
       tc.flutterBin,
       buildArgs,
-      workingDirectory: dir,
+      workingDirectory: copyApp,
       environment: env,
       sink: ctx.err,
       what: 'flutter build',
       record: commands,
     );
-    await _stopGradle(dir, env);
+    await _stopGradle(copyApp, env);
+    _gradleStopped = true;
 
     _say('[5/6] Verifying the build');
-    final artifact = _findOutput(dir, started);
+    // Only the store file goes back into the developer's project (same place as a normal build).
+    final artifact = copy.copyOutputBack(_findOutput(copyApp, started));
     _artifactPath = artifact;
     final prefix = options.kind == 'aab' ? 'base/' : '';
     final zip = ZipReader.open(artifact);
@@ -556,6 +602,8 @@ class AndroidRelease {
       'flutter_ota_config': configValue,
       'link_dill_sha256': await _sha256File(linkDill),
       'canonical_build_root': canon.path,
+      // Where flutter build ran (the neutral build copy; removed after the release).
+      'build_dir': copyApp,
       'link_entry': entryUri,
       'entry_target': 'lib/$otaMainFileName',
       'loader_package_sha256': loaderSha,
@@ -575,6 +623,20 @@ class AndroidRelease {
       return kernelLibraryUrisOfFile(dill);
     } on FormatException catch (e) {
       throw CliException('Cannot read the kernel file $dill: ${e.message}');
+    }
+  }
+
+  /// Stops Gradle in the build copy (when the build did not get there) and deletes the copy. The
+  /// Gradle cache stays in the toolchain's own Gradle home.
+  Future<void> _removeCopy(Map<String, String> env) async {
+    final copy = _copy;
+    if (copy == null) return;
+    _copy = null;
+    if (!_gradleStopped) await _stopGradle(copy.appDir, env);
+    try {
+      BuildCopy.remove(copy.root);
+    } on FileSystemException catch (e) {
+      ctx.log('warning: could not remove the build copy ${copy.root}: ${e.message}');
     }
   }
 

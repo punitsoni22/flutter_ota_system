@@ -22,6 +22,9 @@ const canonToolchain = 'toolchain';
 const canonPubCache = 'pub-cache';
 const canonWorkspace = 'workspace';
 
+/// The release's build copy inside the canonical root: a real directory, never a symlink.
+const canonProjectCopy = 'project';
+
 /// The canonical build root: a directory owned by the current user that holds symlinks
 ///
 ///     <root>/toolchain  -> the resolved toolchain directory
@@ -73,6 +76,10 @@ class CanonicalBuildRoot {
   String get toolchain => p.join(path, canonToolchain);
   String get pubCache => p.join(path, canonPubCache);
   String get workspace => p.join(path, canonWorkspace);
+
+  /// The real directory that holds the release's build copy (see `build_copy.dart`). It is not a
+  /// symlink, so the Flutter tool's absolute paths of the store build are neutral.
+  String get projectCopy => p.join(path, canonProjectCopy);
 
   /// Points `<root>/<name>` at [target] (replacing an old link).
   String link(String name, String target) {
@@ -156,6 +163,31 @@ List<ConfigPackage> readPackageConfig(String packageConfigPath) {
     out.add(ConfigPackage(e['name'] as String, real, e));
   }
   return out;
+}
+
+/// The folder that holds the app ([projectReal]) and all its path packages: the common ancestor of
+/// the app and every package of [packages] that is not inside the toolchain or the pub cache.
+/// Shared by `release android` and `patch android`, which must link the same workspace.
+String appWorkspace({
+  required String projectReal,
+  required Iterable<ConfigPackage> packages,
+  required String toolchainReal,
+  required String? pubCacheReal,
+  required String? home,
+}) {
+  final local = [
+    for (final pkg in packages)
+      if (!p.isWithin(toolchainReal, pkg.root) && (pubCacheReal == null || !p.isWithin(pubCacheReal, pkg.root)))
+        pkg.root,
+  ];
+  final workspace = commonAncestor([projectReal, ...local]);
+  if (workspace == p.separator || workspace == home) {
+    throw CliException(
+      'The app and its path packages share no folder below your home directory ($workspace).\n'
+      'Keep path packages inside one project folder.',
+    );
+  }
+  return workspace;
 }
 
 /// The deepest directory that contains every path in [paths].

@@ -169,8 +169,32 @@ void main() {
 
       // flutter: pub get + build with the exact arguments and the toolchain environment.
       final calls = w.flutterCalls().map(ReleaseWorld.parseArgs).toList();
-      expect(calls.map((c) => c.take(2).join(' ')), ['pub get', 'build apk']);
-      final build = calls[1];
+      expect(calls.map((c) => c.take(2).join(' ')), ['pub get', 'pub get', 'build apk']);
+      final build = calls[2];
+
+      // Build copy: pub get in the real project (generated files, IDE), then pub get and the store
+      // build in the neutral copy <root>/project/<app>; the copy is removed afterwards and only
+      // the APK comes back to the real project's usual output folder.
+      final copyApp = p.join(w.canonRoot, 'project', 'demo_app');
+      final pwds = File(w.flutterLog).readAsLinesSync().where((l) => l.startsWith('PWD ')).toList();
+      expect(pwds, ['PWD ${w.project}', 'PWD $copyApp', 'PWD $copyApp']);
+      expect(record['build_dir'], copyApp);
+      expect(Directory(p.join(w.canonRoot, 'project')).existsSync(), isFalse, reason: 'build copy removed');
+      expect(Link(p.join(w.canonRoot, 'workspace')).existsSync(), isTrue);
+      expect(
+        File(p.join(w.project, 'build', 'app', 'outputs', 'flutter-apk', 'app-release.apk')).readAsBytesSync(),
+        File(p.join(w.dir, 'fake.apk')).readAsBytesSync(),
+      );
+      expect((record['artifact'] as Map)['path'], 'build/app/outputs/flutter-apk/app-release.apk');
+      // The generated files are in the real project (checked above) and were in the copy too.
+      final built = File(w.flutterLog).readAsLinesSync().where((l) => l.startsWith('BUILT-WITH ')).toSet();
+      expect(built, {
+        'BUILT-WITH lib/flutter_ota_main.g.dart',
+        'BUILT-WITH loader package',
+        'BUILT-WITH dynamic_modules dependency',
+        'BUILT-WITH $dynamicInterfaceName',
+        'BUILT-WITH $linkPackageConfigName',
+      });
       final define = build.firstWhere((a) => a.startsWith('--dart-define=FLUTTER_OTA_CONFIG='));
       final ifaceCanon = '${w.canonRoot}/workspace/demo_app/.flutter_ota/releases/$id/dynamic_interface.yaml';
       expect(build, [
@@ -400,6 +424,9 @@ void main() {
       final moved = p.join(w.dir, 'elsewhere', toolchainName);
       Directory(p.dirname(moved)).createSync();
       Directory(w.toolchainDir).renameSync(moved);
+      // pub get of the moved toolchain resolves flutter and sky_engine there.
+      final cfg = File(p.join(w.dir, 'package_config.json'));
+      cfg.writeAsStringSync(cfg.readAsStringSync().replaceAll(w.toolchainDir, moved));
       expect(
         await w.run(['release', 'android', '--kind', 'apk'], extraEnv: {'FLUTTER_OTA_TOOLCHAIN_DIR': moved}),
         0,
