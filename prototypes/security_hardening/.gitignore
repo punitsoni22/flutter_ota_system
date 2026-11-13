@@ -4,6 +4,9 @@ build/
 pubspec.lock
 *.otp
 *.bc
+# Exception: redacted verifier regression fixtures (see tools/bc_verify/fixtures/fixtures.json).
+!tools/bc_verify/fixtures/valid/*.bc
+!tools/bc_verify/fixtures/malformed/*.bc
 *.aot
 *.pem
 __pycache__/
