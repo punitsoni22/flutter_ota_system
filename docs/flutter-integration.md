@@ -15,7 +15,7 @@ In your Flutter project folder:
 flutter pub add flutter_ota_system
 ```
 
-The package needs Flutter 3.44.9 or newer to resolve. Your app is then **built** by the `flutter_ota` CLI with its own Flutter 3.47.9 toolchain (`flutter_ota release android`), never by your global Flutter. Install the CLI with `dart pub global activate flutter_ota_cli` (see the [quick start](quick-start.md#1-install)).
+Use Flutter 3.47.9 (Dart 3.13) for `flutter pub` and your IDE: after the first `flutter_ota release android`, the project depends on the toolchain's `dynamic_modules` package, which needs Dart 3.13. (The original `OtaClient` runtime alone works on Flutter 3.44.9+.) Your app is **built** by the `flutter_ota` CLI with its own Flutter 3.47.9 toolchain (`flutter_ota release android`), never by your global Flutter. Install the CLI with `dart pub global activate flutter_ota_cli` (see the [quick start](quick-start.md#1-install)).
 
 ## The code you write once
 
