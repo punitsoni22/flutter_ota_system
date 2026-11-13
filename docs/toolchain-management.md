@@ -84,7 +84,8 @@ checks it against the size and SHA-256 recorded there.
 
 ### 2.2 What `toolchain install` checks
 
-1. It downloads the index and checks its ES256 signature with the key built into the CLI. An
+1. It downloads the index and checks its ES256 signature with the key built into the CLI
+   (`flutter-ota-toolchain-1`, public key `BIf+3nTyIc2zDfYQtoQMMFHiBNRT5Mco/+H6Q4yiI18MopOgUiJUeVuSoMrtVF+dzWjsVagbykjJioA8s9fdm6E=`). An
    unsigned index, an unknown key or a bad signature is refused; there is no option to skip this.
 2. It refuses an index whose serial is lower than one it has already seen, so an old index
    cannot be replayed.
