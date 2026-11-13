@@ -68,24 +68,31 @@ class Rejected(Exception):
 # ---- canonical JSON ----------------------------------------------------------------------
 
 
+# Signed documents are shallow (a few levels); this bound keeps hostile input from exhausting the
+# stack. The Dart SDK uses the same limit.
+MAX_JSON_DEPTH = 32
+
+
 def canonical(value) -> bytes:
     """UTF-8, sorted keys, no whitespace, integers only. Same bytes as canonicalJson in Dart."""
 
-    def check(v):
+    def check(v, depth):
         if isinstance(v, float):
             raise ValueError("floats are not allowed in canonical JSON")
+        if isinstance(v, (dict, list)) and depth >= MAX_JSON_DEPTH:
+            raise ValueError(f"JSON is nested more than {MAX_JSON_DEPTH} levels deep")
         if isinstance(v, dict):
             for k, x in v.items():
                 if not isinstance(k, str) or not k.isascii():
                     raise ValueError("keys must be ASCII strings")
-                check(x)
+                check(x, depth + 1)
         elif isinstance(v, list):
             for x in v:
-                check(x)
+                check(x, depth + 1)
         elif not (v is None or isinstance(v, (bool, int, str))):
             raise ValueError(f"{type(v).__name__} is not allowed in canonical JSON")
 
-    check(value)
+    check(value, 0)
     return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()
 
 
@@ -105,6 +112,8 @@ def parse_canonical(data: bytes, code: str) -> dict:
             raise ValueError("not a JSON object")
         if canonical(value) != data:
             raise ValueError("not in canonical form")
+    except RecursionError as exc:  # json.loads itself on extremely deep input
+        raise Rejected(code, "JSON is nested too deeply") from exc
     except (UnicodeDecodeError, ValueError) as exc:
         raise Rejected(code, str(exc)) from exc
     return value
