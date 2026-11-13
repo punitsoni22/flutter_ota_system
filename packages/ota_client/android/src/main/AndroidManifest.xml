@@ -1,4 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Update checks and patch downloads. Merged into the app's manifest, so release builds of a
+         new `flutter create` app (which only get INTERNET in debug/profile) can reach the server. -->
+    <uses-permission android:name="android.permission.INTERNET" />
     <application>
         <!-- Runs at process start, before Application.onCreate and before any Flutter engine,
              so every engine in the process (UI, push, background work) loads the same code. -->

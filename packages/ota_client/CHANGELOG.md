@@ -17,6 +17,8 @@ First release on pub.dev. Additive; the `0.1.0-alpha.1` API, wire formats, metho
   `[::1]`) in release builds, for local tests through `adb reverse`. `OtaClient` is unchanged.
 * Robustness: malformed but root-signed certificates and revocation lists, and JSON nested more
   than 32 levels, are refused cleanly (`PatchRejected`) instead of throwing.
+* The plugin declares the `INTERNET` permission, so release builds can reach the server without
+  editing the app manifest.
 * If the system kills the verifier process for low memory, the patch is retried at a later check
   (up to 3 times) instead of being blocklisted at once.
 * Tested end to end on one Android 13 arm64 phone: store update over an active patch, feature
