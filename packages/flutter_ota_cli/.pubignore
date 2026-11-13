@@ -1,0 +1,32 @@
+# pub uses this file instead of .gitignore for the files it publishes, so it repeats the
+# .gitignore rules and adds publishing-only exclusions.
+
+# Build outputs and tool state
+.dart_tool/
+/pubspec.lock
+/build/
+/coverage/
+**/doc/api/
+
+# Not needed by users of the CLI: tests, test tools and the owner-side toolchain bundle builder
+# (used by tools/toolchain/ in the repository)
+/test/
+/tool/
+/lib/owner.dart
+/lib/src/owner/
+
+# Editors and OS files
+.idea/
+.vscode/
+.DS_Store
+*.swp
+*.log
+
+# Never publish secrets or signing material
+.env
+.env.*
+*.pem
+*.key
+*.jks
+*.keystore
+*.p12

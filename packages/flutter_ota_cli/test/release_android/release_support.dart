@@ -257,7 +257,9 @@ cp "$FAKE_DILL" "$out"
     final jar = mirrorFilesFor(engineCommit).firstWhere((m) => m.contains('arm64_v8a_release') && m.endsWith('.jar'));
     File(p.join(t, jar))
       ..parent.createSync(recursive: true)
-      ..writeAsBytesSync(makeZip({'lib/arm64-v8a/libflutter.so': fakeElf(otaEngineBuildId, padding: 8192)}, deflate: true));
+      ..writeAsBytesSync(
+        makeZip({'lib/arm64-v8a/libflutter.so': fakeElf(otaEngineBuildId, padding: 8192)}, deflate: true),
+      );
     final fields = {
       'flutter': '3.47.9',
       'dart': '3.13.7',

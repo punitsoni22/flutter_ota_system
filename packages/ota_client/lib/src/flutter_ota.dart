@@ -303,8 +303,7 @@ void _printLog(String message) {
 }
 
 class _Runtime {
-  _Runtime(this.config, this.loader, this.platform, this.log, this.overrides)
-    : registry = FeatureRegistry(log);
+  _Runtime(this.config, this.loader, this.platform, this.log, this.overrides) : registry = FeatureRegistry(log);
 
   final FlutterOtaConfig config;
   final FlutterOtaModuleLoader loader;
@@ -560,7 +559,9 @@ class _Runtime {
     final offer = r.patch;
     if (offer == null) {
       if (r.otherFormat != null) log('UPDATE_IGNORED a "${r.otherFormat}" patch is not for this runtime');
-      return restart ? const UpdateResult(UpdateStatus.rollbackRestartRequired) : const UpdateResult(UpdateStatus.upToDate);
+      return restart
+          ? const UpdateResult(UpdateStatus.rollbackRestartRequired)
+          : const UpdateResult(UpdateStatus.upToDate);
     }
     return _install(api, offer);
   }
@@ -626,15 +627,22 @@ class _Runtime {
     log('VERIFY_PROCESS status=$outcome');
     if (outcome.status == 'UNAVAILABLE') {
       // Not the module's fault (the verifier could not start): not activated, not blacklisted.
-      return UpdateResult(UpdateStatus.failed, patchNumber: p.number, message: 'verifier unavailable: ${outcome.detail}');
+      return UpdateResult(
+        UpdateStatus.failed,
+        patchNumber: p.number,
+        message: 'verifier unavailable: ${outcome.detail}',
+      );
     }
     if (outcome.status == 'EVICTED') {
       // A low-memory kill is not the module's fault: retry at a later check, a bounded number of
       // times (a module that itself exhausts memory is blacklisted after the last attempt).
       final n = store.noteVerifierEviction(v.manifest.patchId);
       if (n < maxVerifierEvictions) {
-        return UpdateResult(UpdateStatus.failed,
-            patchNumber: p.number, message: 'verifier killed for low memory ($n/$maxVerifierEvictions); retried later');
+        return UpdateResult(
+          UpdateStatus.failed,
+          patchNumber: p.number,
+          message: 'verifier killed for low memory ($n/$maxVerifierEvictions); retried later',
+        );
       }
     }
     if (!outcome.ok) {

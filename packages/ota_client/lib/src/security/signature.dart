@@ -11,14 +11,12 @@ import 'package:pointycastle/export.dart';
 const manifestDomain = 'flutter-ota-system/patch-manifest/v2\n';
 const revocationDomain = 'flutter-ota-system/revocations/v1\n';
 
-Uint8List signedMessage(String domain, Uint8List body) =>
-    Uint8List.fromList([...utf8.encode(domain), ...body]);
+Uint8List signedMessage(String domain, Uint8List body) => Uint8List.fromList([...utf8.encode(domain), ...body]);
 
 /// ES256 (ECDSA P-256 + SHA-256), raw r||s, base64; public keys are base64 uncompressed points.
 /// Same primitive and library as the production SDK (packages/ota_client/lib/src/signature.dart).
 class Es256Verifier {
-  Es256Verifier(Map<String, String> publicKeys)
-      : _keys = {for (final e in publicKeys.entries) e.key: _parse(e.value)};
+  Es256Verifier(Map<String, String> publicKeys) : _keys = {for (final e in publicKeys.entries) e.key: _parse(e.value)};
 
   final Map<String, ECPublicKey> _keys;
   static final _curve = ECCurve_secp256r1();

@@ -2,7 +2,7 @@ name: flutter_ota_system
 description: >-
   Experimental Flutter client for Flutter OTA System, a self-hosted OTA patch platform:
   signed patches, staged updates and automatic fallback. Android only.
-version: 0.1.0-alpha.1
+version: 0.2.0-alpha
 homepage: https://github.com/punitsoni22/flutter_ota_system
 repository: https://github.com/punitsoni22/flutter_ota_system/tree/main/packages/ota_client
 issue_tracker: https://github.com/punitsoni22/flutter_ota_system/issues

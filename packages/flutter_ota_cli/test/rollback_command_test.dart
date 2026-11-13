@@ -29,7 +29,7 @@ void main() {
     final out = w.out.toString();
     expect(out, contains('Patch:    2'));
     expect(out, contains('Channels: stable 20%'));
-    expect(out, contains('newest other published patch for their channel (published now: 1)'));
+    expect(out, contains('the patch they ran before it, if they still have it (published now: 1)'));
     expect(out, contains('Patch 2 is now rolled_back.'));
     expect(w.prompts, isEmpty);
   });

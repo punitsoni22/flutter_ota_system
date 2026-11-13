@@ -45,10 +45,14 @@ ContainerParts splitContainer(Uint8List file) {
   }
   final view = ByteData.sublistView(file);
   final mLen = view.getUint32(8);
-  if (mLen == 0 || mLen > maxManifestBytes) throw PatchRejected('bad_manifest_length', 'manifest length $mLen out of range');
+  if (mLen == 0 || mLen > maxManifestBytes) {
+    throw PatchRejected('bad_manifest_length', 'manifest length $mLen out of range');
+  }
   if (12 + mLen + 4 > file.length) throw PatchRejected('truncated', 'manifest extends past the end of the file');
   final sLen = view.getUint32(12 + mLen);
-  if (sLen == 0 || sLen > maxSignatureBytes) throw PatchRejected('bad_signature_length', 'signature length $sLen out of range');
+  if (sLen == 0 || sLen > maxSignatureBytes) {
+    throw PatchRejected('bad_signature_length', 'signature length $sLen out of range');
+  }
   final moduleStart = 12 + mLen + 4 + sLen;
   if (moduleStart > file.length) throw PatchRejected('truncated', 'signature extends past the end of the file');
   return ContainerParts(

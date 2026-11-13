@@ -1,6 +1,6 @@
-## Unreleased
+## 0.2.0-alpha
 
-Additive; the `0.1.0-alpha.1` API, wire formats, method channels and storage are unchanged.
+First release on pub.dev. Additive; the `0.1.0-alpha.1` API, wire formats, method channels and storage are unchanged.
 **Experimental alpha, Android arm64 only, needs the Flutter OTA System toolchain (Flutter 3.47.9).**
 
 * New bytecode runtime: `FlutterOta.initialize()`, `FlutterOta.feature<T>()`, `OtaFeature`,
@@ -15,12 +15,17 @@ Additive; the `0.1.0-alpha.1` API, wire formats, method channels and storage are
 * Android: channel `flutter_ota/runtime` and the service `FlutterOtaVerifierService`.
 * The bytecode runtime also accepts plain `http://` to loopback hosts (`127.0.0.1`, `localhost`,
   `[::1]`) in release builds, for local tests through `adb reverse`. `OtaClient` is unchanged.
-* Tested end to end on one Android 13 arm64 phone (a feature patch with a freezed model change,
-  delivered without reinstalling the APK; rollback to the store code).
+* Robustness: malformed but root-signed certificates and revocation lists, and JSON nested more
+  than 32 levels, are refused cleanly (`PatchRejected`) instead of throwing.
+* If the system kills the verifier process for low memory, the patch is retried at a later check
+  (up to 3 times) instead of being blocklisted at once.
+* Tested end to end on one Android 13 arm64 phone: store update over an active patch, feature
+  patches, crash rollback, malformed patches. Compatibility checked on Android 14, 16 and 17
+  (16 KB pages) x86_64 emulators.
 
 ## 0.1.0-alpha.1
 
-First pub.dev release of the Flutter OTA System client SDK (package `flutter_ota_system`;
+Tagged in Git only (`v0.1.0-alpha.1`; not published on pub.dev). Client SDK package `flutter_ota_system`;
 earlier versions of this code were used from the Git repository as `ota_client`).
 **Experimental, not production-ready. Android only.** Versioned independently of the Flutter OTA
 System server and platform.

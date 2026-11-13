@@ -30,8 +30,15 @@ class PatchManifest {
   /// Toolchain record fields (Phase 3C provenance). `id` = SHA-256 of the canonical JSON of all
   /// other fields; the host compares it with the toolchain id it was built for.
   static const toolchainFields = {
-    'flutter', 'dart', 'engine', 'dart_revision', 'engine_patch_sha256', 'compiler_sha256',
-    'generator_sha256', 'bytecode_format', 'build_config_sha256',
+    'flutter',
+    'dart',
+    'engine',
+    'dart_revision',
+    'engine_patch_sha256',
+    'compiler_sha256',
+    'generator_sha256',
+    'bytecode_format',
+    'build_config_sha256',
   };
 
   List<Map<String, Object?>> get assets =>
@@ -45,8 +52,21 @@ class PatchManifest {
   static final _isoUtc = RegExp(r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$');
 
   static const _top = {
-    'format', 'app_id', 'release_id', 'baseline_libapp_sha256', 'patch_id', 'sequence', 'key_id',
-    'created_at', 'expires_at', 'runtime', 'module', 'packages', 'host_interface', 'assets', 'toolchain',
+    'format',
+    'app_id',
+    'release_id',
+    'baseline_libapp_sha256',
+    'patch_id',
+    'sequence',
+    'key_id',
+    'created_at',
+    'expires_at',
+    'runtime',
+    'module',
+    'packages',
+    'host_interface',
+    'assets',
+    'toolchain',
   };
   static const _optional = {'expires_at'};
 
@@ -126,7 +146,12 @@ class PatchManifest {
     for (final a in assets) {
       final o = obj(a, 'assets[]', {'key', 'sha256', 'size'});
       final key = o['key'];
-      if (key is! String || key.isEmpty || key.length > 256 || key.startsWith('/') || key.contains('..') || key.contains('\\')) {
+      if (key is! String ||
+          key.isEmpty ||
+          key.length > 256 ||
+          key.startsWith('/') ||
+          key.contains('..') ||
+          key.contains('\\')) {
         bad('asset key is invalid');
       }
       str(o, 'sha256', _sha, 'sha256');

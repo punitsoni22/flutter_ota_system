@@ -48,10 +48,10 @@ class DeviceSecurityState {
     Set<String>? revokedKeyIds,
     Set<int>? revokedCertSerials,
     this.activePatchId,
-  })  : blacklist = blacklist ?? {},
-        revokedPatchIds = revokedPatchIds ?? {},
-        revokedKeyIds = revokedKeyIds ?? {},
-        revokedCertSerials = revokedCertSerials ?? {};
+  }) : blacklist = blacklist ?? {},
+       revokedPatchIds = revokedPatchIds ?? {},
+       revokedKeyIds = revokedKeyIds ?? {},
+       revokedCertSerials = revokedCertSerials ?? {};
   int highestSequence;
   final Set<String> blacklist;
   final Set<String> revokedPatchIds;
@@ -114,13 +114,16 @@ VerifiedPatch verifyPatch(
   if (sig.containsKey('cert')) {
     // Phase 3C: key certified by an application root key (+ approvals).
     if (trust == null) reject('untrusted_root', 'this build has no certificate roots');
-    verifyCertifiedSignature(sig, parts.manifestBytes,
-        manifestKeyId: m.keyId,
-        trust: trust,
-        appId: host.appId,
-        now: now.toUtc(),
-        revokedSerials: state.revokedCertSerials,
-        revokedKeyIds: state.revokedKeyIds);
+    verifyCertifiedSignature(
+      sig,
+      parts.manifestBytes,
+      manifestKeyId: m.keyId,
+      trust: trust,
+      appId: host.appId,
+      now: now.toUtc(),
+      revokedSerials: state.revokedCertSerials,
+      revokedKeyIds: state.revokedKeyIds,
+    );
   } else {
     if (trust != null && trust.requireCertificates) {
       reject('certificate_required', 'this build only accepts certified signing keys');
@@ -135,7 +138,9 @@ VerifiedPatch verifyPatch(
 
   // 6-7. Module integrity (the manifest is now authentic).
   if (parts.module.isEmpty) reject('missing_module', 'no module bytes');
-  if (parts.module.length != m.moduleSize) reject('wrong_size', 'module size ${parts.module.length} != ${m.moduleSize}');
+  if (parts.module.length != m.moduleSize) {
+    reject('wrong_size', 'module size ${parts.module.length} != ${m.moduleSize}');
+  }
   if (sha256.convert(parts.module).toString() != m.moduleSha256) reject('bad_hash', 'module SHA-256 mismatch');
 
   // 8. Package and dependency metadata.
@@ -145,14 +150,18 @@ VerifiedPatch verifyPatch(
     }
     if (p['module_name'] == p['name']) reject('unrenamed_package', 'package ${p['name']} is not renamed in the module');
   }
-  final missing = (m.hostInterface['host_packages']! as List).cast<String>().where((p) => !host.hostPackages.contains(p));
+  final missing = (m.hostInterface['host_packages']! as List).cast<String>().where(
+    (p) => !host.hostPackages.contains(p),
+  );
   if (missing.isNotEmpty) reject('missing_host_package', 'host lacks packages: ${missing.join(', ')}');
 
   // 9. Runtime compatibility.
   for (final e in host.runtime.entries) {
     if (m.runtime[e.key] != e.value) reject('wrong_runtime', 'runtime ${e.key} ${m.runtime[e.key]} != ${e.value}');
   }
-  if (m.hostInterface['sha256'] != host.interfaceSha256) reject('wrong_interface', 'built against another dynamic interface');
+  if (m.hostInterface['sha256'] != host.interfaceSha256) {
+    reject('wrong_interface', 'built against another dynamic interface');
+  }
   if (m.module['entry_contract'] != host.entryContract) reject('wrong_contract', 'unsupported entry contract');
   // Toolchain provenance: the id must be the hash of the recorded fields AND the id this build
   // accepts. (A signed claim by the patch signer; it does not by itself prove bytecode safety.)
@@ -186,8 +195,12 @@ class RevocationList {
 }
 
 /// Revocation lists are signed by a directly trusted key or (Phase 3C) by an application root key.
-RevocationList verifyRevocations(Uint8List file,
-    {required HostIdentity host, required Es256Verifier keys, CertificateTrust? trust}) {
+RevocationList verifyRevocations(
+  Uint8List file, {
+  required HostIdentity host,
+  required Es256Verifier keys,
+  CertificateTrust? trust,
+}) {
   final parts = splitContainer(file);
   final Map<String, Object?> body;
   final Map<String, Object?> sig;
@@ -197,23 +210,44 @@ RevocationList verifyRevocations(Uint8List file,
   } on FormatException catch (e) {
     throw PatchRejected('bad_revocations', e.message);
   }
-  if (body.keys.toSet().difference({'type', 'release_id', 'sequence', 'revoked_patch_ids', 'revoked_key_ids', 'revoked_cert_serials'}).isNotEmpty ||
-      body['type'] != 'revocations' || body['release_id'] != host.releaseId || body['sequence'] is! int ||
-      body['revoked_patch_ids'] is! List || body['revoked_key_ids'] is! List) {
+  if (body.keys.toSet().difference({
+        'type',
+        'release_id',
+        'sequence',
+        'revoked_patch_ids',
+        'revoked_key_ids',
+        'revoked_cert_serials',
+      }).isNotEmpty ||
+      body['type'] != 'revocations' ||
+      body['release_id'] != host.releaseId ||
+      body['sequence'] is! int ||
+      body['revoked_patch_ids'] is! List ||
+      body['revoked_key_ids'] is! List) {
     throw PatchRejected('bad_revocations', 'invalid revocation list');
   }
   final keyId = sig['key_id'];
   final msg = signedMessage(revocationDomain, parts.manifestBytes);
-  final ok = keyId is String && sig['alg'] == 'ES256' && sig['sig'] is String &&
-      (keys.verify(keyId, msg, sig['sig']! as String) || (trust != null && trust.roots.verify(keyId, msg, sig['sig']! as String)));
+  final ok =
+      keyId is String &&
+      sig['alg'] == 'ES256' &&
+      sig['sig'] is String &&
+      (keys.verify(keyId, msg, sig['sig']! as String) ||
+          (trust != null && trust.roots.verify(keyId, msg, sig['sig']! as String)));
   if (!ok) throw PatchRejected('bad_signature', 'revocation list signature does not verify');
   // An absent field (older lists) means none; an explicit null is invalid, as on the server.
   final serials = body.containsKey('revoked_cert_serials') ? body['revoked_cert_serials'] : const <Object?>[];
-  if (serials is! List || serials.any((e) => e is! int)) throw PatchRejected('bad_revocations', 'invalid certificate serials');
+  if (serials is! List || serials.any((e) => e is! int)) {
+    throw PatchRejected('bad_revocations', 'invalid certificate serials');
+  }
   final patchIds = body['revoked_patch_ids']! as List, keyIds = body['revoked_key_ids']! as List;
   if (patchIds.any((e) => e is! String) || keyIds.any((e) => e is! String)) {
     throw PatchRejected('bad_revocations', 'revoked ids must be strings');
   }
-  return RevocationList(host.releaseId, body['sequence']! as int, patchIds.cast<String>().toSet(),
-      keyIds.cast<String>().toSet(), serials.cast<int>().toSet());
+  return RevocationList(
+    host.releaseId,
+    body['sequence']! as int,
+    patchIds.cast<String>().toSet(),
+    keyIds.cast<String>().toSet(),
+    serials.cast<int>().toSet(),
+  );
 }

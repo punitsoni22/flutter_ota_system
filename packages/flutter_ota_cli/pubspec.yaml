@@ -2,11 +2,23 @@
 # SPDX-License-Identifier: Apache-2.0
 name: flutter_ota_cli
 description: >-
-  Experimental developer CLI (command `flutter_ota`) for Flutter OTA System: project setup,
-  configuration and the pinned OTA toolchain. Linux x64 hosts only.
-version: 0.1.0-alpha.1
-publish_to: none
+  Experimental developer CLI (command `flutter_ota`) for Flutter OTA System: builds Android
+  arm64 store releases and signed feature patches locally. Linux x64 hosts only.
+version: 0.2.0-alpha
+homepage: https://github.com/punitsoni22/flutter_ota_system
 repository: https://github.com/punitsoni22/flutter_ota_system/tree/main/packages/flutter_ota_cli
+issue_tracker: https://github.com/punitsoni22/flutter_ota_system/issues
+documentation: https://github.com/punitsoni22/flutter_ota_system/blob/main/docs/quick-start.md
+# The CLI runs on Linux x64 only (it drives a Linux-host Flutter toolchain).
+platforms:
+  linux:
+
+topics:
+  - ota
+  - code-push
+  - over-the-air
+  - self-hosted
+  - cli
 
 environment:
   sdk: ">=3.8.0 <4.0.0"

@@ -78,7 +78,17 @@ KeyCertificate verifyCertificate(
   if (body is! Map<String, Object?> || rootId is! String || sig is! String) {
     bad('bad_certificate', 'certificate has an invalid shape');
   }
-  const fields = {'type', 'app_id', 'environment', 'key_id', 'public_key', 'roles', 'serial', 'not_before', 'not_after'};
+  const fields = {
+    'type',
+    'app_id',
+    'environment',
+    'key_id',
+    'public_key',
+    'roles',
+    'serial',
+    'not_before',
+    'not_after',
+  };
   if (body.keys.toSet().difference(fields).isNotEmpty || !fields.every(body.containsKey)) {
     bad('bad_certificate', 'certificate body has unknown or missing fields');
   }
@@ -91,7 +101,9 @@ KeyCertificate verifyCertificate(
   }
   final c = KeyCertificate(body);
   if (body['app_id'] != appId) bad('wrong_app_key', 'certificate is for another application');
-  if (body['environment'] != trust.environment) bad('wrong_environment', 'certificate is for the ${body['environment']} environment');
+  if (body['environment'] != trust.environment) {
+    bad('wrong_environment', 'certificate is for the ${body['environment']} environment');
+  }
   final roles = body['roles'];
   if (roles is! List || !roles.contains(role)) bad('wrong_role', 'certificate does not allow the $role role');
   if (body['serial'] is! int) bad('bad_certificate', 'serial is not an integer');
@@ -124,25 +136,43 @@ void verifyCertifiedSignature(
   required Set<int> revokedSerials,
   required Set<String> revokedKeyIds,
 }) {
-  final cert = verifyCertificate(sigBlock['cert'],
-      trust: trust, appId: appId, role: 'signer', now: now, revokedSerials: revokedSerials, revokedKeyIds: revokedKeyIds);
+  final cert = verifyCertificate(
+    sigBlock['cert'],
+    trust: trust,
+    appId: appId,
+    role: 'signer',
+    now: now,
+    revokedSerials: revokedSerials,
+    revokedKeyIds: revokedKeyIds,
+  );
   if (cert.keyId != manifestKeyId || sigBlock['key_id'] != manifestKeyId) {
     throw PatchRejected('key_mismatch', 'certificate key id differs from the manifest');
   }
   final sig = sigBlock['sig'];
   if (sig is! String ||
-      !Es256Verifier({cert.keyId: cert.publicKey}).verify(cert.keyId, signedMessage(manifestDomain, manifestBytes), sig)) {
+      !Es256Verifier({
+        cert.keyId: cert.publicKey,
+      }).verify(cert.keyId, signedMessage(manifestDomain, manifestBytes), sig)) {
     throw PatchRejected('bad_signature', 'manifest signature does not verify');
   }
   final approvals = sigBlock['approvals'] ?? const <Object?>[];
-  if (approvals is! List || approvals.length > 16) throw PatchRejected('bad_approval', 'approvals must be a short list');
+  if (approvals is! List || approvals.length > 16) {
+    throw PatchRejected('bad_approval', 'approvals must be a short list');
+  }
   final approvers = <String>{};
   for (final a in approvals) {
     if (a is! Map || a.keys.toSet().difference({'cert', 'sig'}).isNotEmpty) {
       throw PatchRejected('bad_approval', 'approval has an invalid shape');
     }
-    final ac = verifyCertificate(a['cert'],
-        trust: trust, appId: appId, role: 'approver', now: now, revokedSerials: revokedSerials, revokedKeyIds: revokedKeyIds);
+    final ac = verifyCertificate(
+      a['cert'],
+      trust: trust,
+      appId: appId,
+      role: 'approver',
+      now: now,
+      revokedSerials: revokedSerials,
+      revokedKeyIds: revokedKeyIds,
+    );
     final asig = a['sig'];
     if (asig is! String ||
         !Es256Verifier({ac.keyId: ac.publicKey}).verify(ac.keyId, signedMessage(approvalDomain, manifestBytes), asig)) {
@@ -155,4 +185,3 @@ void verifyCertifiedSignature(
     throw PatchRejected('approval_required', '${approvers.length} of ${trust.requiredApprovals} required approvals');
   }
 }
-

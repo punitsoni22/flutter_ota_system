@@ -272,8 +272,9 @@ void main() {
 
   test('an unstripped engine library from another build is refused', () async {
     final l = await f.makeLab();
-    File(p.join(l, 'engine/engine/src/out/android_release_arm64/libflutter.so'))
-        .writeAsBytesSync(fakeElf(stockEngineBuildId, padding: 4096));
+    File(
+      p.join(l, 'engine/engine/src/out/android_release_arm64/libflutter.so'),
+    ).writeAsBytesSync(fakeElf(stockEngineBuildId, padding: 4096));
     expect(
       () => buildOverlay(
         labDir: l,

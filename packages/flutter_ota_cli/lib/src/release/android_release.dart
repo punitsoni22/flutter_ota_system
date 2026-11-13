@@ -160,7 +160,7 @@ class AndroidRelease {
     if (!app.dependsOnSdk) {
       throw CliException(
         'pubspec.yaml does not depend on $sdkPackageName. Add it:\n'
-        '  dependencies:\n    $sdkPackageName: ^0.1.0-alpha.1\n'
+        '  dependencies:\n    $sdkPackageName: ^0.2.0-alpha\n'
         'and call `await FlutterOta.initialize();` in main().',
       );
     }
@@ -754,6 +754,5 @@ List<String> nonArm64Abis(Iterable<String> entryNames, String prefix) {
     for (final name in entryNames)
       if (name.startsWith(libDir) && name.endsWith('.so'))
         if (name.substring(libDir.length).split('/') case [final abi, _, ...] when abi != 'arm64-v8a') abi,
-  }.toList()
-    ..sort();
+  }.toList()..sort();
 }
