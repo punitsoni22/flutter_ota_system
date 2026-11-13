@@ -315,6 +315,31 @@ void main() {
       expect(FlutterOta.debugPatchState(patchUuid(1)), 'DOWNLOADED');
     });
 
+    test('verifier EVICTED (low-memory kill) -> not blacklisted; a later check stages it', () async {
+      offer(1);
+      platform.forcedOutcome = const VerifyOutcome('EVICTED', 'verifier killed by the system for low memory');
+      final r = await FlutterOta.checkForUpdate();
+      expect(r.status, UpdateStatus.failed);
+      expect(r.message, contains('low memory (1/$maxVerifierEvictions)'));
+      expect(FlutterOta.pendingPatchId, isNull);
+      expect(FlutterOta.debugPatchState(patchUuid(1)), 'DOWNLOADED');
+      platform.forcedOutcome = null;
+      expect((await FlutterOta.checkForUpdate()).status, UpdateStatus.stagedRestartRequired);
+      expect(FlutterOta.pendingPatchId, patchUuid(1));
+    });
+
+    test('verifier EVICTED $maxVerifierEvictions times -> blacklisted (bounded retries)', () async {
+      offer(1);
+      platform.forcedOutcome = const VerifyOutcome('EVICTED', 'verifier killed by the system for low memory');
+      for (var i = 1; i < maxVerifierEvictions; i++) {
+        expect((await FlutterOta.checkForUpdate()).status, UpdateStatus.failed);
+      }
+      final last = await FlutterOta.checkForUpdate();
+      expect(last.status, UpdateStatus.rejected);
+      expect(last.message, contains('EVICTED'));
+      expect(FlutterOta.debugPatchState(patchUuid(1)), 'BLACKLISTED');
+    });
+
     test('the in-VM verifier refusing the module (clean error) -> REJECTED', () async {
       server.container = dbcContainer(1);
       server.number = 1; // no module registered: the fake loader fails like a verification error

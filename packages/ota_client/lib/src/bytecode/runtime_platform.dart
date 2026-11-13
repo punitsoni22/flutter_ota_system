@@ -27,15 +27,20 @@ class NativeStartupInfo {
 /// - `OK`: loaded, entry contract and feature factories checked;
 /// - `REJECTED`: a clean error (e.g. the in-VM bytecode verifier refused it, a factory threw);
 /// - `CRASHED`: the verifier process died after it took the module;
+/// - `EVICTED`: the system killed the verifier process for low memory (not the module's fault;
+///   retried a few times before the patch is treated as unusable);
 /// - `TIMEOUT`: no result in time; the verifier process was killed;
 /// - `UNAVAILABLE`: the verifier could not start or could not get the module loader. Never OK.
+/// Low-memory kills of the verifier process tolerated for one patch before it is blacklisted.
+const maxVerifierEvictions = 3;
+
 class VerifyOutcome {
   const VerifyOutcome(this.status, this.detail, {this.ms});
 
   static VerifyOutcome fromMap(Map<Object?, Object?>? m) {
     if (m == null) return const VerifyOutcome('CRASHED', 'no result');
     final status = m['status'];
-    const known = {'OK', 'REJECTED', 'CRASHED', 'TIMEOUT', 'UNAVAILABLE'};
+    const known = {'OK', 'REJECTED', 'CRASHED', 'EVICTED', 'TIMEOUT', 'UNAVAILABLE'};
     return VerifyOutcome(
       status is String && known.contains(status) ? status : 'CRASHED',
       '${m['detail'] ?? ''}',

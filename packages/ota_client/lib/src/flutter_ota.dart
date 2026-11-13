@@ -628,6 +628,15 @@ class _Runtime {
       // Not the module's fault (the verifier could not start): not activated, not blacklisted.
       return UpdateResult(UpdateStatus.failed, patchNumber: p.number, message: 'verifier unavailable: ${outcome.detail}');
     }
+    if (outcome.status == 'EVICTED') {
+      // A low-memory kill is not the module's fault: retry at a later check, a bounded number of
+      // times (a module that itself exhausts memory is blacklisted after the last attempt).
+      final n = store.noteVerifierEviction(v.manifest.patchId);
+      if (n < maxVerifierEvictions) {
+        return UpdateResult(UpdateStatus.failed,
+            patchNumber: p.number, message: 'verifier killed for low memory ($n/$maxVerifierEvictions); retried later');
+      }
+    }
     if (!outcome.ok) {
       // Authentic (signed) but unusable: never activate; blacklist so it is not tried again.
       store.blacklist(v.manifest.patchId, 'separate-process verification ${outcome.status}');

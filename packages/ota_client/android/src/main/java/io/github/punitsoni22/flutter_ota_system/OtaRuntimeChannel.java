@@ -51,7 +51,7 @@ import io.flutter.plugin.common.MethodChannel;
  *       from input), cached by APK paths + lastUpdateTime;
  *   <li>{@code verifyInProcess}: loads a candidate module in the separate {@code :flutter_ota_verify}
  *       process (same UID; Flutter cannot start in an Android isolated process in release builds).
- *       Result status: OK, REJECTED, CRASHED, TIMEOUT or UNAVAILABLE.
+ *       Result status: OK, REJECTED, CRASHED, EVICTED, TIMEOUT or UNAVAILABLE.
  * </ul>
  */
 final class OtaRuntimeChannel implements MethodChannel.MethodCallHandler {
@@ -249,6 +249,10 @@ final class OtaRuntimeChannel implements MethodChannel.MethodCallHandler {
                   if (!jobTaken[0]) {
                     // Died before it took the module: an environment failure, not the module.
                     finish.call(outcome("UNAVAILABLE", "verifier died before taking the module; exit=" + exit, start));
+                  } else if (isLowMemoryKill(exit)) {
+                    // The system reclaimed memory; says nothing about the module. Dart retries
+                    // a bounded number of times before it treats the patch as unusable.
+                    finish.call(outcome("EVICTED", "verifier killed by the system for low memory; exit=" + exit, start));
                   } else {
                     finish.call(outcome("CRASHED", why + "; exit=" + exit, start));
                   }
@@ -323,6 +327,11 @@ final class OtaRuntimeChannel implements MethodChannel.MethodCallHandler {
 
   private interface TextCallback {
     void call(String text);
+  }
+
+  /** ApplicationExitInfo.REASON_LOW_MEMORY (3), as reported by {@code lastExit}. */
+  private static boolean isLowMemoryKill(Object exit) {
+    return exit instanceof Map && Integer.valueOf(3).equals(((Map<?, ?>) exit).get("reason"));
   }
 
   private static Map<String, Object> outcome(String status, String detail, long start) {
