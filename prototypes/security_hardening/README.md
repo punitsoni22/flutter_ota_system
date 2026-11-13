@@ -19,6 +19,7 @@ security_hardening/
 ├── tools/
 │   ├── sign_patch.py          prototype signer / key generator / revocation lists
 │   ├── corpus.py              malformed-bytecode corpus generator (structure-aware + random)
+│   ├── bc_verify/             reference verifier + 16 redacted regression fixtures (incl. B25/B27)
 │   └── patch_guard/           build-time FFI / dynamic-call / mirrors guard (+ 18 fixtures)
 ├── host_overlay/              overlaid on the Phase 2 host app at build time
 │   ├── lib/patch_runtime.dart   secure runtime (verification, atomic activation, crash guard)
@@ -43,6 +44,9 @@ DART=$LAB/flutter/bin/cache/dart-sdk/bin/dart
 
 # 1. Linux: verifier unit + fuzz tests (44 tests).
 (cd packages/patch_security && $DART pub get && $DART test)
+
+# 1b. Linux: reference verifier on the 16 committed fixtures (6 OK, 9 REJECT, 1 documented accept).
+./tools/bc_verify/test/run_fixtures.sh
 
 # 2. Host app + baseline (creates test keys under $LAB/keys/p3 on the first run).
 BASE=$(./scripts/build_host.sh | tail -1)
