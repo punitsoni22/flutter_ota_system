@@ -24,10 +24,12 @@ Bytecode patches need a Flutter engine with the Dart bytecode interpreter (and o
 verifier) compiled in. A stock Flutter SDK cannot load patches. A toolchain is:
 
 - a **stock Flutter SDK** (for example 3.47.9), downloaded from the official release archive;
-- plus our **overlay**, a small archive (about 17 MB for 3.47.9) that contains:
+- plus our **overlay**, an archive (about 54 MB for 3.47.9) that contains:
   - our `gen_snapshot` (android-arm64-release, linux-x64 host), which replaces the stock one;
   - a local **Maven mirror** with our `libflutter.so` (inside the `arm64_v8a_release` jar), its POM,
-    and the unmodified official embedding jar and POM;
+    and the unmodified official embedding jar and POM. Like the official jar, it holds the engine
+    with its debug symbols: the Android Gradle plugin strips them when it builds the APK or AAB
+    (an app bundle build needs them), so the app does not grow;
   - four tool snapshots: `dart2bytecode`, `pkg_rename`, `patch_guard` and `bc_verify` (the
     reference bytecode verifier that `flutter_ota patch android` runs on every module);
   - the unchanged `dynamic_modules` package (`packages/dynamic_modules/`, from
