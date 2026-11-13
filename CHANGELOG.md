@@ -8,6 +8,12 @@ All notable changes to this project are documented here. The format follows
 
 Nothing yet.
 
+## CLI 0.2.0-alpha.1 - 2026-11-13
+
+- `flutter_ota_cli` 0.2.0-alpha could not be installed with `dart pub global activate` (a constant
+  lived in a file that is not published). Fixed in `flutter_ota_cli` 0.2.0-alpha.1; the SDK and the
+  toolchain are unchanged.
+
 ## [0.2.0-alpha] - 2026-11-13
 
 First release of the **bytecode architecture**. It is an **experimental alpha**, not

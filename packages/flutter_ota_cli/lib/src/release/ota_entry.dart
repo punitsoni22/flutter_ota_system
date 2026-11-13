@@ -8,12 +8,15 @@ import 'package:path/path.dart' as p;
 import 'package:yaml/yaml.dart';
 
 import '../errors.dart';
-import '../owner/bundle_builder.dart' show dynamicModulesPackageFiles;
 import '../toolchain/manager.dart';
 import 'app_project.dart';
 
 /// The only package name the pinned Dart lets import `dart:_internal` (the VM's module loader).
 const loaderPackageName = 'dynamic_modules';
+
+/// Files of the `dynamic_modules` package shipped in an overlay under `packages/dynamic_modules/`.
+/// (Defined here, not in the owner-side bundle builder, which is not part of the published CLI.)
+const dynamicModulesPackageFiles = ['pubspec.yaml', 'lib/dynamic_modules.dart'];
 
 /// Generated store-build entry point inside the app's `lib/` (SDK runtime doc §3).
 const otaMainFileName = 'flutter_ota_main.g.dart';
