@@ -12,10 +12,17 @@
 set -euo pipefail
 HERE=$(cd -- "$(dirname -- "$0")/.." && pwd)
 # shellcheck source=../../bytecode_engine/pins.env
-source "$HERE/../bytecode_engine/pins.env"
+# PINS_FILE selects another pin set (see bytecode_engine/pins-*.env); the default is the baseline.
+source "${PINS_FILE:-$HERE/../bytecode_engine/pins.env}"
 LAB=${LAB:-"$HOME/.cache/flutter-ota-lab"}
 DART_DIR="$LAB/engine/engine/src/flutter/third_party/dart"
+# The baseline patch is for BASE_DART_REVISION; a port for another Dart revision is named
+# 0001-dart-bytecode-verifier-<first 7 characters of that revision>.patch.
 PATCH="$HERE/engine_patch/0001-dart-bytecode-verifier.patch"
+if [[ $DART_REVISION != "$(cat "$HERE/engine_patch/BASE_DART_REVISION")" ]]; then
+  PATCH="$HERE/engine_patch/0001-dart-bytecode-verifier-${DART_REVISION:0:7}.patch"
+  [[ -f $PATCH ]] || { echo "no verifier patch for Dart $DART_REVISION" >&2; exit 1; }
+fi
 OUT="$LAB/engine/engine/src/out/android_release_arm64"
 NINJA="$LAB/engine/third_party/ninja/ninja"
 NEW_FILES=(runtime/vm/bytecode_verifier.cc runtime/vm/bytecode_verifier.h)

@@ -13,7 +13,8 @@
 set -euo pipefail
 HERE=$(cd -- "$(dirname -- "$0")/.." && pwd)
 # shellcheck source=../pins.env
-source "$HERE/pins.env"
+# PINS_FILE selects another pin set (for example pins-3.50.0.env); the default is the baseline.
+source "${PINS_FILE:-$HERE/pins.env}"
 LAB=${LAB:-"$HOME/.cache/flutter-ota-lab"}
 SDK="$LAB/flutter"
 OUT="$LAB/engine/engine/src/out/android_release_arm64"
