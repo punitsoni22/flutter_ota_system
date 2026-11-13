@@ -13,21 +13,43 @@ docker compose logs --tail=100 api             # server errors (local: ./flutter
 adb logcat | grep -E "OtaBoot|OTA:"            # Android device side
 ```
 
-In the app, log the `UpdateResult` returned by `checkForUpdate()`: its `status` and `message`
-tell you which step failed ([flutter-integration.md](flutter-integration.md#5-handle-results-and-errors)).
+Bytecode architecture (`flutter_ota`): run `flutter_ota doctor` and `flutter_ota status`, and read
+the device log with `adb logcat | grep flutter_ota`.
+
+## `flutter_ota` and the bytecode runtime
+
+| Message | Cause | Fix |
+|---|---|---|
+| `[x] flutter_ota.lock: missing` (doctor) | No toolchain pinned yet | `flutter_ota toolchain install` (after setting the toolchain index and key, see [toolchain management](toolchain-management.md#2-using-it-developer)) |
+| A toolchain error saying the toolchain is missing or changed | The pinned toolchain is not installed, or a file in it changed | `flutter_ota toolchain install --force`. The CLI never falls back to stock Flutter |
+| `No certified patch-signing key for app ...` | No signer key and certificate on this machine | `flutter_ota keys init`, or get a certificate from whoever holds the root key |
+| `... can be read by other users` | A private key file has loose permissions | `chmod 600 <the key file>` |
+| `the certificate is for the development environment, but the release is production` | Signer certificate for another environment | Create a signer certificate for the release's environment |
+| A patch is refused with "needs a new store release" (exit 3) | The change is outside feature packages, or changes dependencies, native code or assets | See [what needs a new store release](feature-patching.md#6-what-needs-a-new-store-release) |
+| `The generated code of <package> is out of date (...)` | `build_runner` was not run after a model change | `dart run build_runner build --delete-conflicting-outputs` in that package |
+| `patch_guard: ... dynamic function invocation` (exit 4) | Code calls a method on a `dynamic` value | Rewrite it with static types (casts, typed callbacks) |
+| `409 promotion_checks_failed ... has not been on a test channel` | Publishing straight to `production` | Publish to `staging` first, then `ota patch promote <patch_id>` |
+| Device log `DISABLED FLUTTER_OTA_CONFIG is not set` | The app was built with plain `flutter run` / `flutter build` | Build it with `flutter_ota release android` |
+| Device log `REJECTED offered patch N: replay: sequence ...` | The server offers an older patch than the one the device already accepted | Normal after a rollback of a newer patch; publish a new patch |
+| Device log `VERIFY_PROCESS status=REJECTED` / `CRASHED` | The verifier process refused or could not load the patch | The patch is never used. Check the patch with `flutter_ota patch android --dry-run` and report a bug |
+| The phone cannot reach a local server | Release builds accept `http://` only to loopback | `adb reverse tcp:8000 tcp:8000` and use `http://127.0.0.1:8000` |
+
+The sections below cover the server, the local stack and the **original alpha** `OtaClient` path.
+For that path, log the `UpdateResult` returned by `checkForUpdate()`: its `status` and `message`
+tell you which step failed.
 
 ## Docker and the local stack
 
 | Message / symptom | Cause | Fix |
 |---|---|---|
-| `ERROR docker not found. Install Docker Engine (Linux) or Docker Desktop…` | Docker is not installed | Install it ([installation.md](installation.md#1-prerequisites)) |
+| `ERROR docker not found. Install Docker Engine (Linux) or Docker Desktop…` | Docker is not installed | Install it ([self-hosting](self-hosting.md#1-prerequisites)) |
 | `ERROR Docker is not running, or your user cannot use it` | Daemon stopped, or your user is not in the `docker` group | `sudo systemctl start docker`; `sudo usermod -aG docker $USER`, then log out and in |
 | `ERROR Docker Compose v2 not found` | Old `docker-compose` v1 only | Install the Compose v2 plugin (`docker compose version`) |
 | `ERROR Docker Compose X is too old; Flutter OTA System needs Compose v2.20 or newer.` | Old Compose plugin | Update Docker / the Compose plugin |
 | `ERROR Required files are missing.` | Incomplete clone or download | Clone the repository again with `git clone` |
 | `ERROR .env not found. Run: ./flutter-ota-system.sh setup …` | No `.env` (a script other than `setup` was run first) | `./flutter-ota-system.sh setup` |
 | `ERROR OTA_ENV=production in .env` | The local scripts refuse production settings | Use `OTA_ENV=development` locally |
-| `Port 8000 (FLUTTER_OTA_API_PORT) is already in use on this computer.` | Another program (or another Flutter OTA System stack) uses the port | Stop it, or choose other ports ([installation.md](installation.md#ports-are-taken-or-a-second-stack)) |
+| `Port 8000 (FLUTTER_OTA_API_PORT) is already in use on this computer.` | Another program (or another Flutter OTA System stack) uses the port | Stop it, or choose other ports ([self-hosting](self-hosting.md#ports-are-taken-or-a-second-stack)) |
 | `port is already allocated` / `address already in use` | Same, detected by Docker | As above, then `./flutter-ota-system.sh up` |
 | `ERROR The stack did not become healthy.` | A container failed its health check | `./flutter-ota-system.sh logs api` (or `postgres`); see the next rows |
 | `api` stays unhealthy; logs show `Signing key not found: /data/keys/ota_signing_private.pem` | No signing key and `OTA_AUTO_GENERATE_SIGNING_KEY=false` | `./flutter-ota-system.sh up` (creates it if missing; never replaces one) |
@@ -50,7 +72,7 @@ tell you which step failed ([flutter-integration.md](flutter-integration.md#5-ha
 | App: `failed` with a cleartext / `CLEARTEXT communication not permitted` error | Android blocks plain `http://` | — | Use HTTPS, or (test builds only) `android:usesCleartextTraffic="true"` |
 | App: `failed` with `insecure URL … release builds require https://` or `… only allowed for localhost or the Android emulator` | Release builds accept `https://` only; debug builds also allow `http://localhost` and `http://10.0.2.2` | Check `OTA_SERVER_URL` and the build mode | Use `https://`; for local tests, a debug build with `adb reverse` and `http://localhost:8000` |
 | App: `rejected` with `insecure URL …`, `unsupported URL scheme` or `insecure redirect … downgrades are never followed` | The download URL (`OTA_CDN_BASE_URL`), or a redirect from it, uses plain `http://` where it is not allowed | Check `OTA_CDN_BASE_URL` in `.env`; `curl -I` the patch URL to see redirects | Use `https://` everywhere (and no https→http redirects); debug builds only: `http://localhost:8080/cdn` with `adb reverse` |
-| Code patch reported active, but the app still behaves like the store build | The Flutter version may ignore or refuse the `--aot-shared-library-name` path; the store code then runs while the client reports the patch | Compare a visible change, not just the patch number; check `logcat` | Test each Flutter version ([platform-compatibility.md](platform-compatibility.md#flutter-internals-the-code-patch-runtime-relies-on)) |
+| Code patch reported active, but the app still behaves like the store build | The Flutter version may ignore or refuse the `--aot-shared-library-name` path; the store code then runs while the client reports the patch | Compare a visible change, not just the patch number; check `logcat` | Test each Flutter version  |
 | App: `rejected` with `invalid patch id` | The update-check response named a patch id that is not a lowercase UUID | Compare the server version; check for a proxy rewriting responses | Use an unmodified Flutter OTA System server |
 | App: `failed` with `TimeoutException` (`no response`, `download stalled`, `download too slow`) | The server or file server stopped answering, or the download took over 10 minutes | Open the patch URL in the phone's browser | Fix the server/CDN; the next check retries |
 | Server won't start: `Unsafe production settings:` + list | `OTA_ENV=production` with unsafe values | `docker compose logs api` | Fix each listed setting ([configuration.md](configuration.md#production-safety-checks)) |
@@ -100,7 +122,7 @@ You can reproduce what the server decides with the same query the app sends
 | `replay: patch N is not newer than M` | The device already accepted a higher patch number | Publish a newer patch, or roll back the newer one so the server offers N as the rollback target |
 | `patch previously failed on this device` | It crashed here before | Fix it in a new patch |
 | `arch mismatch`, `runtime abi mismatch`, `unsupported format` | Patch made for another build type (e.g. a `mock-v1` release patched for a code-patch app) | Patch the right release; code-patch releases must come from `ota release android` |
-| `release id changed` | The server answered with a release id this install retired earlier (a deleted and re-created release id going back), or the app uses `ota_client` older than this fix and the release was deleted and created again | Current `ota_client` switches to a re-created release by itself and drops the old patches ([KI-1](known-issues.md#ki-1-re-creating-a-deleted-release-breaks-existing-installs), fixed). Older builds: reinstall the app. Prefer a new build number over re-creating a version |
+| `release id changed` | The server answered with a release id this install retired earlier (a deleted and re-created release id going back), or the app uses `ota_client` older than this fix and the release was deleted and created again | Current `ota_client` switches to a re-created release by itself and drops the old patches (KI-1, fixed). Older builds: reinstall the app. Prefer a new build number over re-creating a version |
 | `application id mismatch` | `OtaConfig.applicationId` is not this app's server id (or `OTA_APPLICATION_ID` was not set) | Use the `"id"` from `ota app list` (not the slug, not the Android package name) |
 
 `failed` (not `rejected`) with `download failed: HTTP 404` means the file server cannot find the
@@ -125,7 +147,7 @@ file: check `OTA_CDN_BASE_URL` and that the file server shares the storage volum
 | `Patch <id> failed verification: skipping it` in logcat | The patched `libapp.so` on disk changed or is incomplete | Nothing to do: the device skips it. A new patch will be downloaded fresh |
 | Code patch never activates in a `flutter run` session | Debug builds run Dart in JIT mode | Test with a release build of the registered release |
 
-## Flutter and engine compatibility
+## Flutter and engine compatibility (original alpha code patches)
 
 | Message | Cause | Fix |
 |---|---|---|
@@ -161,14 +183,14 @@ internals and have only been tested with the Flutter versions the maintainers us
 |---|---|---|
 | `/health/ready` fails; API logs show connection errors | Postgres down or wrong `OTA_DATABASE_URL` | `docker compose ps postgres`; `docker compose logs postgres`; fix the URL |
 | `psql: FATAL: role "ota" does not exist` locally | The local stack's user is `flutter_ota` (the single-server deploy uses `ota`) | `./flutter-ota-system.sh psql` (or `docker compose exec postgres psql -U flutter_ota -d flutter_ota`) |
-| `psql: … connection refused` on `localhost:5432` from your computer | Postgres has no host port by default | Use `./flutter-ota-system.sh psql`, or enable the port ([installation.md](installation.md#postgres-from-your-computer-optional)) |
+| `psql: … connection refused` on `localhost:5432` from your computer | Postgres has no host port by default | Use `./flutter-ota-system.sh psql`, or enable the port ([self-hosting](self-hosting.md#postgres-from-your-computer-optional)) |
 | Errors about too many connections on a small managed Postgres | Pool size × workers is too high | Lower `OTA_DB_POOL_SIZE` and/or `WEB_CONCURRENCY` |
 | Migration errors at startup | Schema changed by hand, or a downgrade | Restore from backup; never edit the schema by hand |
 
 ## Problems on iOS, macOS or Windows
 
 Flutter OTA System has been tested internally only on a **Linux** development machine and with **Android**
-apps ([testing status](../README.md#platform-support--testing-status)). iOS, macOS and Windows
+apps ([testing status](limitations.md#compatibility)). iOS, macOS and Windows
 are **not tested**, so problems there may have no entry on this page. Differences you may hit:
 other commands to find your computer's IP, Docker Desktop networking, and file paths. iOS code
 patches are not implemented. If you find a fix, please report it (see

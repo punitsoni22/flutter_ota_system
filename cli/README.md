@@ -1,8 +1,13 @@
 # flutter-ota-system-cli
 
-The `ota` command-line tool for a self-hosted [Flutter OTA System](../README.md) server: apps, releases,
-patches, rollouts and Android code patches. **Experimental (v0.1.0-alpha.1); not published to
-PyPI.**
+The `ota` admin command-line tool for a self-hosted [Flutter OTA System](../README.md) server:
+apps, releases, patches, channels, promotion, rollback and revocation, plus the
+[original alpha](../docs/releases-and-patches.md#original-alpha-patch-formats) patch flow.
+**Experimental; not published to PyPI.**
+
+App developers using the bytecode architecture use the Dart CLI
+[`flutter_ota`](../packages/flutter_ota_cli/README.md) instead; `ota` stays the server-operator tool
+(for example `ota patch promote` from staging to production).
 
 Build and install it locally:
 

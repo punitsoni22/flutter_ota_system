@@ -6,12 +6,9 @@
 > arm64 phone only. Test signing keys are generated in the lab directory, never in the
 > repository.
 
-| Document | Path |
-|---|---|
-| Report | [docs/architecture/phase-3-security-report.md](../../docs/architecture/phase-3-security-report.md) |
-| Threat model | [phase-3-threat-model.md](../../docs/architecture/phase-3-threat-model.md) |
-| Validation architecture | [bytecode-validation-architecture.md](../../docs/architecture/bytecode-validation-architecture.md) |
-| Test matrix | [phase-3-security-test-matrix.md](../../docs/architecture/phase-3-security-test-matrix.md) |
+Current security model: [docs/security.md](../../docs/security.md). Bytecode verifier:
+[docs/architecture/bytecode-verifier.md](../../docs/architecture/bytecode-verifier.md). The
+Phase 3 reports, threat model and test matrix are kept in the Git history.
 
 ## Contents
 

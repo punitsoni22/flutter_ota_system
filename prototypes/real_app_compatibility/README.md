@@ -5,8 +5,9 @@
 > upstream source with `--dart-dynamic-modules`, run on Android arm64. Tested on Linux (build)
 > and one Android 13 arm64 phone only. No signatures, no network delivery (`adb push`).
 
-Results: [docs/architecture/phase-2-compatibility-report.md](../../docs/architecture/phase-2-compatibility-report.md)
-and [docs/architecture/bytecode-compatibility-matrix.md](../../docs/architecture/bytecode-compatibility-matrix.md).
+Results are summarised in [docs/feature-patching.md](../../docs/feature-patching.md) and
+[docs/limitations.md](../../docs/limitations.md); the full Phase 2 report and compatibility matrix
+are kept in the Git history.
 
 ## What is here
 

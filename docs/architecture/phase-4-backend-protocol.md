@@ -1,10 +1,11 @@
 <!-- Copyright 2026 The Punit Authors -->
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 
-# Phase 4 backend protocol: developer-signed patches (`dbc-v1`)
+# Backend protocol: developer-signed patches (`dbc-v1`)
 
-Status: experimental alpha, milestone 4G. Android only. Decisions D4 and D5 of the
-[Phase 4 plan](phase-4-production-integration-plan.md).
+Contributor reference for the backend side of the bytecode architecture (added in Phase 4; the
+file name is kept because source comments link to it). Status: experimental alpha, Android only.
+The endpoint list is in the [API reference](../api-reference.md).
 
 ## 1. The idea in one paragraph
 

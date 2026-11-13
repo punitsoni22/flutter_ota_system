@@ -5,7 +5,7 @@
 
 > **Status update (2026-11-11):** decision 1 was **superseded in practice**. Android code patches
 > were built on **stock Flutter without an engine fork**: `OtaBoot.java` (in `ota_client`) selects
-> the patched `libapp.so` at process start ([architecture.md](../architecture.md#patch-engine-and-flutter-integration-android-code-patches)). The format name
+> the patched `libapp.so` at process start ([architecture.md](../architecture.md#original-alpha-architecture)). The format name
 > `aot-bidiff-android-v1` and the store policy gate (decision 5) are implemented. From the scope
 > list in decision 3, **Azure + CI/CD deployment and 1M-install hardening are still planned and
 > not implemented** ([roadmap](../roadmap/README.md)). A follow-up ADR should record the

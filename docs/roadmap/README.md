@@ -21,9 +21,9 @@ Nothing in Flutter OTA System is production-validated yet (see the warning in th
 
 ---
 
-## Current state (v0.1.0-alpha.1)
+## Current state
 
-### Implemented ✅
+### Implemented ✅ (original alpha, `v0.1.0-alpha.1`)
 
 - FastAPI control plane with PostgreSQL: apps, channels, releases, patches, devices, per-patch
   event counters. Alembic migrations.
@@ -31,33 +31,35 @@ Nothing in Flutter OTA System is production-validated yet (see the warning in th
 - Admin API (single shared API key) and one static admin page at `/admin`.
 - Content-addressed, immutable patch storage: local disk served by nginx, or S3-compatible
   buckets.
-- ES256 signing of a canonical patch message, verified in Dart against embedded public keys.
-- Deterministic percentage rollout, rollback and revoke (the bad-patch lists ride on every check).
-- `flutter_ota_system` Flutter package (`packages/ota_client`): check, download, size + SHA-256 +
-  signature checks, staging, boot protection, telemetry.
-- `ota` CLI, local Docker Compose stack, demo and verification scripts, GitHub Actions CI.
+- Server-side ES256 signing of a canonical patch message, verified in Dart (`mock-v1`).
+- Deterministic percentage rollout, rollback and revoke.
+- `ota` admin CLI, local Docker Compose stack, demo and verification scripts, GitHub Actions CI.
 
-### Experimental 🟡
+### Experimental 🟡 (unreleased bytecode architecture, on `main`)
 
-- **Android Dart code patches on stock Flutter** (`aot-bidiff-android-v1`): `ota release android`
-  / `ota patch android`, `OtaBoot.java`. Tested internally on a small number of devices. It loads
-  a downloaded native `libapp.so`, a significant Google Play policy risk. See
-  [releases-and-patches.md](../releases-and-patches.md) and
-  [policy/google-play.md](../policy/google-play.md).
-- **Bytecode patch engine (research prototypes, not in the SDK).** Patches compiled to Dart
-  bytecode and run by the Dart VM interpreter (Dart dynamic modules). Requires a **custom Flutter
-  engine build**. Tested on one Android 13 arm64 phone with one pinned Flutter version. See
-  [architecture/bytecode-architecture.md](../architecture/bytecode-architecture.md).
+- **Custom Flutter engine** (Flutter 3.47.9 / Dart 3.13.7) with the Dart bytecode interpreter and
+  an in-VM bytecode verifier. Android arm64 only.
+- **`flutter_ota` CLI:** automatic toolchain management, keys, doctor, local store release, feature
+  dependency analysis and generated registry, local bytecode compilation, verification and
+  signing, status, rollback.
+- **SDK runtime:** `FlutterOta.initialize()`, feature slots, separate-process verification,
+  activation at the next start, crash recovery.
+- **Backend:** developer-signed `dbc-v1` patches (the server verifies, never signs), trust roots,
+  certificates, signed revocation lists.
+- Tested end to end on one Android 13 arm64 phone ([limitations](../limitations.md)).
+- **Android code patches on stock Flutter** (original alpha, `aot-bidiff-android-v1`): loads a
+  downloaded native `libapp.so`, a significant Google Play policy risk
+  ([policy/google-play.md](../policy/google-play.md)).
 
 ### Planned 🔭 (not implemented)
 
-- **Bytecode engine productisation:** signature verification before loading a module, a patch
-  generator, SDK and backend integration (new artifact format), and **automatic local toolchain
-  management** (downloading a pinned engine/compiler bundle). None of this exists yet
-  ([ADR 0001](../architecture/adr/0001-bytecode-engine-and-developer-experience.md)).
+- **Final deep-testing phase** for the bytecode architecture: more devices and Android versions,
+  large apps (size, start-up, memory), crash recovery on device, store-release compatibility,
+  security fuzzing, a second Flutter version ([limitations](../limitations.md#not-tested-yet)).
+- **Publishing:** the packages on pub.dev and an official, signed toolchain download.
+- **Whole-app patching** (patching code outside feature packages): research only.
 - **Users, roles (RBAC), SSO and an audit log.** Today there is one shared admin API key.
-- **Key Vault / KMS / HSM signing** and key-rotation tooling. Today the signing key is a PEM file
-  or an environment variable ([signing-key-management.md](../signing-key-management.md)).
+- **Key Vault / KMS / HSM signing.** Today keys are files ([security](../security.md)).
 - **Rate limiting** on device endpoints, token refresh, idempotency keys.
 - **Targeting** by device attributes (today: channel + percentage only).
 - **Caching** of the update check (Redis or in-process); no cache exists today.
@@ -76,17 +78,17 @@ Nothing in Flutter OTA System is production-validated yet (see the warning in th
 
 Today only a **Linux** development environment and the **Android** Flutter app have been tested
 internally, on a small number of devices
-([README](../../README.md#platform-support--testing-status)). These testing tasks are 🔭
+([compatibility](../limitations.md#compatibility)). These testing tasks are 🔭
 **planned, not done**:
 
 - 🔭 **Android device and OS-version compatibility:** test on more devices, manufacturers and
   Android versions, and publish a compatibility matrix.
-- 🔭 **CPU architecture (ABI) compatibility:** test code patches and `mock-v1` on `arm64-v8a`,
-  `armeabi-v7a` and `x86_64` builds.
+- 🔭 **CPU architecture (ABI) compatibility:** the bytecode architecture supports `arm64-v8a`
+  only; other ABIs need engine builds.
 - 🔭 **Flutter version compatibility:** test `flutter_ota_system` and Android code patches across
   Flutter stable releases, and publish which versions work.
-- 🔭 **macOS development environment:** run the local Docker stack (Docker Desktop), the CLI and
-  the Android build/patch flow on macOS.
+- 🔭 **macOS development environment:** the local Docker stack, and host builds of the
+  toolchain so the `flutter_ota` CLI can run on macOS.
 - 🔭 **Windows development environment:** the same on Windows (Docker Desktop, and WSL 2 if
   needed).
 

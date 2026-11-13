@@ -22,7 +22,7 @@ in tests). The local Docker stack overrides several of them; see the next column
 | `OTA_DEVICE_TOKEN_TTL_SECONDS` | `2592000` (30 days) | default | Lifetime of a device token |
 | `OTA_ROLLOUT_HMAC_SECRET` | `dev-rollout-secret-change-me` | from `.env` | Secret for rollout buckets. **Changing it reshuffles every rollout group** |
 | `OTA_CHECK_INTERVAL_SECONDS` | `1800` | default | `next_check_after_seconds` sent to devices. The client adds ±20% jitter |
-| `OTA_PROTECTED_CHANNELS` | `production` | default | Comma-separated channels where the server enforces the promotion checks (tested on another channel first, no boot failures; see [rollouts.md](rollouts.md)). Empty = no checks |
+| `OTA_PROTECTED_CHANNELS` | `production` | default | Comma-separated channels where the server enforces the promotion checks (tested on another channel first, no boot failures; see [releases and patches](releases-and-patches.md)). Empty = no checks |
 | `OTA_STORAGE_BACKEND` | `local` | `local` | `local` (disk) or `s3` (S3-compatible buckets) |
 | `OTA_STORAGE_DIR` | `backend/data/artifacts` | `/data/artifacts` (volume) | Where `local` storage keeps files |
 | `OTA_CDN_BASE_URL` | `http://127.0.0.1:8000/cdn` | from `.env` (`http://localhost:8080/cdn`) | Public base URL devices download patches from. Download URLs are `<this>/patches/<sha256>` |
@@ -132,7 +132,28 @@ verified end to end** ([operations.md](operations.md#single-server-deployment-dr
 That compose file fixes `OTA_ENV=production`, `OTA_AUTO_GENERATE_SIGNING_KEY=false` and
 `OTA_SERVE_ARTIFACTS_LOCALLY=false`.
 
-## CLI settings
+## Developer CLI settings (`flutter_ota`)
+
+`flutter_ota.yaml` in your app contains **only** `app_id` (the server application UUID).
+Everything else is a user setting (`flutter_ota config`, stored in
+`~/.config/flutter_ota/config.yaml`, mode 0600) or an environment variable. The full list is in
+the [CLI reference](cli-reference.md#settings).
+
+| Variable | Purpose |
+|---|---|
+| `FLUTTER_OTA_SERVER_URL` | Server address (overrides `config set server-url`) |
+| `FLUTTER_OTA_ADMIN_KEY` | Admin API key for `doctor`, `keys`, `release`, `patch`, `status`, `rollback`. Never stored by `flutter_ota` |
+| `FLUTTER_OTA_TOOLCHAIN_INDEX` | Signed toolchain index URL |
+| `FLUTTER_OTA_CACHE`, `FLUTTER_OTA_CONFIG_DIR`, `FLUTTER_OTA_KEYS_DIR`, `FLUTTER_OTA_BUILD_ROOT` | Cache, config, key and build folders (for CI and tests) |
+
+## Configuration compiled into the app (bytecode architecture)
+
+`flutter_ota release android` passes one value, `--dart-define=FLUTTER_OTA_CONFIG=...`, with only
+public values (app id, server URL, release id and version, environment, public root keys,
+toolchain identity). You never set it by hand. Without it (for example `flutter run`), OTA is off.
+See [Flutter integration](flutter-integration.md#configuration).
+
+## Admin CLI settings (`ota`)
 
 Read by [`cli/ota.py`](../cli/ota.py) and [`cli/android.py`](../cli/android.py):
 
@@ -140,17 +161,16 @@ Read by [`cli/ota.py`](../cli/ota.py) and [`cli/android.py`](../cli/android.py):
 |---|---|---|
 | `OTA_API_URL` | `http://127.0.0.1:8000` | Server address |
 | `OTA_API_KEY` | `dev-admin-key` | Admin key. Must equal the server's `OTA_ADMIN_API_KEY` |
-| `FLUTTER` | `flutter` | Flutter command used by `ota release android` / `ota patch android` |
+| `FLUTTER` | `flutter` | Flutter command used by the original alpha `ota release android` / `ota patch android` |
 
-## App build settings (`--dart-define`)
+## App build settings for the original alpha (`--dart-define`)
 
-`ota_client` itself reads no environment variables: you pass everything in `OtaConfig`
-([flutter-integration.md](flutter-integration.md)). The example app and the integration helper in
-that guide use these build-time values:
+The original `OtaClient` API reads no environment variables: you pass everything in `OtaConfig`
+([Flutter integration](flutter-integration.md#original-alpha-api-otaclient)). Apps commonly pass
+these build-time values to it:
 
 | Name | Example | Purpose |
 |---|---|---|
-| `OTA_SERVER_URL` | `https://ota.example.com` | Server address. In the helper, empty = OTA off |
+| `OTA_SERVER_URL` | `https://ota.example.com` | Server address |
 | `OTA_PUBLIC_KEY` | `prod-1:BIi7…` | `<key_id>:<base64 uncompressed P-256 point>` from `ota key show` |
 | `OTA_CHANNEL` | `staging` | Channel of this build (default `production`) |
-| `OTA_APP` | `flutter-ota-system-demo` | Example app only: the application slug |

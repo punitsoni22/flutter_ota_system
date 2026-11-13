@@ -83,7 +83,7 @@ curl -X POST http://localhost:8000/v1/devices/register \
 `GET /v1/updates/check` · device token
 
 Returns patch **metadata** only; the bytes are downloaded from `download_url`. The decision is
-described in [architecture.md](architecture.md#device-registration-and-the-update-check).
+described in [architecture.md](releases-and-patches.md#patch-life-cycle).
 
 | Query parameter | Required | Rules / default |
 |---|---|---|
@@ -233,7 +233,7 @@ Example `PatchOut` (local demo):
 |---|---|---|---|
 | `POST /v1/admin/apps` | JSON `{slug, name, distribution?}`. `slug` pattern as above; `name` 1–200; `distribution` default `enterprise` | `201 AppOut`. Also creates channels `dev`, `staging`, `production` | `409 Application '<slug>' already exists`, `422` |
 | `GET /v1/admin/apps` | — | `200 [AppOut]` | — |
-| `POST /v1/admin/apps/{slug}/policy-approval` | JSON `{approved: bool, reason: string (3–1000)}`. Each call is stored with its reason and time ([KI-2](known-issues.md#ki-2-the-policy-approval-reason-is-not-stored), fixed) | `200 AppOut` | `404 Application '<slug>' not found`, `422` |
+| `POST /v1/admin/apps/{slug}/policy-approval` | JSON `{approved: bool, reason: string (3–1000)}`. Each call is stored with its reason and time | `200 AppOut` | `404 Application '<slug>' not found`, `422` |
 | `GET /v1/admin/apps/{slug}/policy-approvals` | — | `200 [{approved, reason, created_at}]`, newest first | `404` |
 | `GET /v1/admin/apps/{slug}/channels` | — | `200 ["dev","staging","production"]` | `404` |
 | `POST /v1/admin/apps/{slug}/channels` | **form** field `name`, `^[a-z0-9-]{1,64}$` | `201` list of channel names | `404`, `409 Channel already exists`, `422` |
@@ -248,7 +248,7 @@ curl -X POST -H "X-API-Key: $OTA_API_KEY" -F name=qa http://localhost:8000/v1/ad
 
 | Method and path | Body | Success | Errors |
 |---|---|---|---|
-| `POST /v1/admin/apps/{slug}/releases` | JSON `{platform, version, flutter_version?, engine_revision?, runtime_abi? (default "ota-runtime-v1"), fingerprint? (object, ≤ 256 kB), replace? (default false)}` | `201 ReleaseOut` | `404`, `409 Release <platform> <version> already exists`, `409 <n> device(s) still report <platform> <version> from a deleted release…` (send `replace: true` to register it anyway; [KI-1](known-issues.md#ki-1-re-creating-a-deleted-release-breaks-existing-installs)), `422` |
+| `POST /v1/admin/apps/{slug}/releases` | JSON `{platform, version, flutter_version?, engine_revision?, runtime_abi? (default "ota-runtime-v1"), fingerprint? (object, ≤ 256 kB), replace? (default false)}` | `201 ReleaseOut` | `404`, `409 Release <platform> <version> already exists`, `409 <n> device(s) still report <platform> <version> from a deleted release…` (send `replace: true` to register it anyway), `422` |
 | `GET /v1/admin/apps/{slug}/releases` | — | `200 [ReleaseOut]` | `404` |
 | `POST /v1/admin/releases/{release_id}/artifacts` | **form** `arch` + file `file`. The base file patches are diffed against (`libapp.so`) | `201 ReleaseOut` | `404 Release not found`, `409 Release already has a <arch> artifact` |
 | `GET /v1/admin/releases/{release_id}/artifacts/{arch}` | — | `200` file bytes (`application/octet-stream`) | `404 Release has no <arch> artifact` |
@@ -270,7 +270,7 @@ curl -X POST -H "X-API-Key: $OTA_API_KEY" -F name=qa http://localhost:8000/v1/ad
 `rollout_percent` is stored as basis points (`round(percent × 100)`), so the smallest step is
 0.01%. `publish` and `rollout` create the deployment for that channel if it does not exist yet.
 
-**Promotion checks** ([KI-4](known-issues.md#ki-4-promote-safety-checks-are-enforced-only-by-the-cli), fixed): when `channel` is protected
+**Promotion checks**: when `channel` is protected
 (`OTA_PROTECTED_CHANNELS`, default `production`) and the new percentage is higher than the
 current one, the server requires (1) a deployment above 0% on another, unprotected channel, or
 already on this channel, and (2) no `patch_boot_failed` events. Otherwise it answers `409
@@ -290,6 +290,45 @@ curl -X POST http://localhost:8000/v1/admin/patches/$PATCH_ID/rollout \
 The **public** key to embed in apps. The private key is never returned.
 
 ---
+
+## Developer-signed patches (`dbc-v1`) and trust
+
+Bytecode-architecture additions. They are additive: clients that do not ask for `dbc-v1` get
+exactly the same responses as before. Details and the full check list:
+[architecture/phase-4-backend-protocol.md](architecture/phase-4-backend-protocol.md).
+
+**Trust** (`{app}` is the app UUID or slug; all need `X-API-Key`):
+
+| Endpoint | Body | Result |
+| --- | --- | --- |
+| `GET /v1/admin/apps/{app}/trust` | — | Root keys, certificates and revocation lists of the app |
+| `POST /v1/admin/apps/{app}/trust/roots` | JSON `{key_id, public_key}` (P-256, base64 uncompressed point) | `201` new, `200` same key again, `409` same id with another key |
+| `POST /v1/admin/apps/{app}/trust/roots/{key_id}/revoke` | — | Root marked revoked |
+| `POST /v1/admin/apps/{app}/trust/certificates` | the root-signed certificate JSON | `201`. The server verifies it; it never creates certificates. `409 duplicate_serial` |
+| `POST /v1/admin/apps/{app}/trust/revocations` | multipart `file` (root-signed list, ≤ 256 KiB) | `201`. `409 stale_sequence` unless its sequence is higher than every earlier list |
+
+**Releases and patches:**
+
+- `POST /v1/admin/apps/{slug}/releases` also accepts an optional `id` (UUID chosen by the CLI) and
+  the baseline identity `toolchain_id`, `dart_revision`, `bytecode_format`, `interface_sha256`,
+  `trust_environment`.
+- `POST /v1/admin/releases/{release_id}/patches` accepts `artifact_format: "dbc-v1"` (Android).
+- `POST /v1/admin/patches/{patch_id}/artifacts` with a `dbc-v1` patch: the file is the signed
+  `OTAPRT02` container (≤ 8 MiB, `413` above). The server verifies the manifest binding (app,
+  release, baseline `libapp.so` hash, baseline identity), the certificate chain to a registered,
+  non-revoked root, the signature and approvals, the module hash, patch-id uniqueness
+  (`409 duplicate_patch_id`), the sequence (`409 replay`) and expiry. It stores the file unchanged
+  and **never signs it** (`signature` and `key_id` stay `null`).
+
+**Devices:**
+
+- `POST /v1/devices/register` accepts `application_id` (UUID) instead of, or together with, `app`
+  (slug).
+- `GET /v1/updates/check` with `dbc-v1` in `supported_formats`: the offered patch has `format`
+  `dbc-v1`, `sha256` and `size_bytes` of the container, `patch_id`, `sequence`, optional
+  `expires_at`, and `signature: null`. The response adds `revocations`
+  (`{sequence, release_id, data_base64}`), the newest signed revocation list for the device's
+  release.
 
 ## Health and pages
 

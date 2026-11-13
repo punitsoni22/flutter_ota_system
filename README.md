@@ -4,7 +4,7 @@
 
 <h1 align="center">Flutter OTA System</h1>
 
-<h3 align="center">Your Flutter OTA infrastructure. Your servers. Your control.</h3>
+<h3 align="center">Your OTA infrastructure. Your servers. Your signing keys. Your control.</h3>
 
 <p align="center">
   An open-source, self-hosted over-the-air (OTA) update platform for Flutter applications.
@@ -12,439 +12,202 @@
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue" alt="License: Apache-2.0"></a>
-  <a href="#current-status"><img src="https://img.shields.io/badge/status-experimental%20alpha-orange" alt="Status: experimental alpha"></a>
-  <a href="#why-flutter-ota-system"><img src="https://img.shields.io/badge/deployment-self--hosted-4f46e5" alt="Deployment: self-hosted"></a>
-  <a href="https://github.com/punitsoni22/flutter_ota_system/releases"><img src="https://img.shields.io/github/v/release/punitsoni22/flutter_ota_system?include_prereleases&label=release" alt="Latest release"></a>
+  <a href="#status"><img src="https://img.shields.io/badge/status-experimental%20alpha-orange" alt="Status: experimental alpha"></a>
+  <a href="docs/self-hosting.md"><img src="https://img.shields.io/badge/deployment-self--hosted-4f46e5" alt="Deployment: self-hosted"></a>
   <a href="https://github.com/punitsoni22/flutter_ota_system/actions/workflows/ci.yml"><img src="https://github.com/punitsoni22/flutter_ota_system/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI"></a>
   <br>
-  <img src="https://img.shields.io/badge/Flutter-%E2%89%A53.44.9-02569B?logo=flutter&logoColor=white" alt="Flutter 3.44.9 or newer">
-  <img src="https://img.shields.io/badge/Python-3.13%20%C2%B7%20FastAPI-3776AB?logo=python&logoColor=white" alt="Python 3.13, FastAPI">
-  <img src="https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white" alt="Docker Compose">
+  <img src="https://img.shields.io/badge/Android-arm64-3DDC84?logo=android&logoColor=white" alt="Android arm64">
+  <img src="https://img.shields.io/badge/Flutter-3.47.9%20(custom%20engine)-02569B?logo=flutter&logoColor=white" alt="Flutter 3.47.9 with a custom engine">
+  <img src="https://img.shields.io/badge/backend-FastAPI%20%C2%B7%20PostgreSQL-3776AB?logo=python&logoColor=white" alt="FastAPI and PostgreSQL">
 </p>
 
 <p align="center">
-  <a href="#quick-start">Quick start</a> ·
-  <a href="docs/why-flutter-ota-system.md">Why self-hosted?</a> ·
-  <a href="#flutter-ota-system-vs-shorebird">vs Shorebird</a> ·
-  <a href="docs/community/testing-guide.md">Help us test</a> ·
-  <a href="docs/index.md">Docs</a>
+  <a href="docs/quick-start.md">Quick start</a> ·
+  <a href="docs/architecture.md">How it works</a> ·
+  <a href="docs/self-hosting.md">Self-hosting</a> ·
+  <a href="docs/limitations.md">Limitations</a> ·
+  <a href="docs/index.md">All docs</a>
 </p>
 
+## What it does
+
+You change Flutter feature code, run **one command** on your own machine, and the apps already installed on your users' phones get the new code at their next start. There is no new store release.
+
+- **Everything is built and signed on your machine.**
+- **Your own server** stores and delivers the patch.
+- **Nobody else** compiles your code or holds your signing keys.
+
+Flutter OTA System started with an Android approach that patched the compiled app binary (`libapp.so`). That is the [original alpha](#original-alpha-v010-alpha1). It has since moved to an **experimental Dart bytecode architecture**:
+- A **custom Flutter engine** with a Dart bytecode interpreter runs signed, verified patch code.
+- The original compiled app code (`libapp.so`) is never replaced.
+
+## Status
+
 > [!WARNING]
-> **Experimental alpha (v0.1.0-alpha.1).** Flutter OTA System has been tested internally on
-> **Linux** and a **small number of Android devices** only. It has **not** been independently
-> security-audited, load-tested or validated in production. It distributes code that your app
-> will run: a mistake in how you operate it, or a bug in it, can break apps in the field. **Do not
-> use it for production OTA delivery** until you have validated its security, reliability,
-> compatibility, rollback, signing and recovery for your own apps. Use at your own risk
-> ([Apache-2.0](LICENSE), sections 7 and 8: no warranty, no liability).
+> **Experimental alpha. Not production-ready.**
+> - The bytecode architecture has been tested on Linux (development) and **one Android 13 arm64 phone**.
+> - It has not been independently security-audited, load-tested or validated in production.
+> - No app store has reviewed or approved it.
+> - Packages are **not yet on pub.dev**, and the custom toolchain is **not yet published** (you build it locally for now).
+>
+> Read [limitations](docs/limitations.md) and [security](docs/security.md) before you try it. Use at your own risk ([Apache-2.0](LICENSE), no warranty).
 
-> [!CAUTION]
-> Flutter OTA System is an experimental, self-hosted OTA platform. Its Android AotPatchRuntime
-> modifies executable application code and presents significant platform-policy and security
-> considerations. It has not been independently security-audited or validated for production use.
-> Developers must evaluate applicable app-store policies and deployment risks before integrating it
-> into distributed applications. See [Google Play](docs/policy/google-play.md),
-> [Apple App Store](docs/policy/apple-app-store.md), [security](docs/security.md) and
-> [privacy and data handling](docs/privacy-and-data-handling.md). No store has reviewed or
-> approved this project.
+## Capabilities
 
-## Why Flutter OTA System?
+**On your machine:**
+- **Custom Flutter toolchain, managed automatically.** You never build or configure the engine; the CLI downloads, verifies, caches and pins it. Your global Flutter installation is never used or changed.
+- **Dart developer CLI** (`flutter_ota`): `init`, `doctor`, `release android`, `patch android`, `status`, `rollback`, and more.
+- **Local builds:** the store APK/AAB and the bytecode patches are built on your machine. Source code is never uploaded.
+- **Feature patching:** API logic, feature models, entities, repositories, controllers, UI and **freezed / json_serializable generated code**, inside feature packages. Dependency analysis and the feature registry are automatic.
+- **Developer-owned signing:** an offline root key per app and a certified signer key on your machine. The server only verifies; it never signs.
 
-A Flutter fix normally needs a new store build, a store review and users who update. OTA patches
-shorten that loop. They also put a server in charge of **what code runs in your users' apps**,
-and that server receives a request from every install that checks for updates.
+**On your server:**
+- **Self-hosted backend:** FastAPI + PostgreSQL. Apps, releases, channels, staged rollouts, rollback and revocation.
 
-If that server belongs to a third party, so do some important decisions:
+**On the phone:**
+- **Checks before a patch runs:**
+  - signature, certificate and hash checks;
+  - compatibility with the exact store build and toolchain;
+  - replay protection;
+  - a bytecode verifier inside the engine;
+  - test-loading in a separate process before activation.
+- **Crash recovery:** a patch that makes the app crash is rolled back automatically, and the previous working version runs.
 
-- where update-check data goes;
-- where your builds and patches are stored;
-- how rollouts behave;
-- how much you pay as your install count grows.
+## Real-device proof
 
-For many teams, a managed service is the right trade. Flutter OTA System is for teams that need
-those pieces **on their own infrastructure**:
+This was tested on **one Android 13 arm64 phone** with the [demo app](packages/ota_client/example/README.md).
 
-- 🏠 **Self-hosted deployment.** One command starts the server, database and file server with
-  Docker Compose. It runs on your machine or server, and there is no hosted service.
-- 🔐 **Infrastructure ownership.** Your FastAPI server, your PostgreSQL database, your disk or
-  S3-compatible bucket, and your ES256 signing key, which never leaves your server.
-- 📊 **Data control.** Devices talk only to the URLs you configure. Update checks, device
-  records and patch counters stay in your database.
-- 🛠️ **A backend you can change.** The update-check rules, rollout bucketing and promotion
-  checks are short, readable Python. Fork them and adapt them to your requirements.
-- 📖 **Open-source freedom.** Apache-2.0: use it, fork it, modify it and integrate it. There is
-  no subscription, but you pay for and operate your own infrastructure.
+**The change**, all inside the app's `products` feature package:
+- new API endpoint and parsing logic;
+- a new `rating` field in a freezed model, with `.freezed.dart` / `.g.dart` regenerated by `build_runner`;
+- updated entity and repository;
+- updated UI.
 
-Longer explanation, including when **not** to use it:
-[docs/why-flutter-ota-system.md](docs/why-flutter-ota-system.md).
+**What happened:**
+1. The developer ran `flutter_ota patch android`. It detected the changes, checked the generated code, compiled, verified, signed locally and uploaded in about 9 seconds.
+2. On the next start the app downloaded and verified the patch. On the restart after that, it showed the new feature.
+3. **The APK was not reinstalled.** The installed APK and its original `libapp.so` were byte-identical before and after.
+4. Rolling the patch back on the server returned the app to the store version.
 
-## Flutter OTA System vs Shorebird
+**Start-up time:**
 
-[Shorebird](https://shorebird.dev/) is the established code push solution for Flutter. It is
-mature, supports more platforms, and is run as a managed service. Several of its parts are open
-source: the CLI, the client libraries, the updater and its Flutter fork. Its hosted backend is
-not offered for self-hosting. The two projects take **different architectural approaches**:
+| Situation | Time |
+| --- | --- |
+| No patch | about 110 ms |
+| Patch active | 200–260 ms |
+| Loading the patch module itself | 3.8 ms |
 
-| | Flutter OTA System | Shorebird |
-|---|---|---|
-| **Self-hosted deployment** | ✅ The only option (Docker Compose) | ❌ "No plans to offer on-premises or self-hosted versions" ([FAQ](https://docs.shorebird.dev/code-push/faq/)) |
-| **Managed hosting** | ❌ None. You run it | ✅ Hosted on Google Cloud, US regions by default ([architecture](https://docs.shorebird.dev/code-push/system-architecture/)) |
-| **Backend ownership** | Your server; source in this repo (Apache-2.0) | Operated by Shorebird. CLI, updater and client libraries are open source (Apache-2.0/MIT) ([GitHub](https://github.com/shorebirdtech/shorebird)) |
-| **Database ownership** | Your PostgreSQL | Shorebird's hosted database |
-| **Artifact storage** | Your disk + nginx, or your S3-compatible bucket | Shorebird's storage; patches served through its global CDN |
-| **Backend customisation** | Modify update-check, rollout and targeting code | Configured through its console, CLI and tracks |
-| **Patch signing** | ES256; key on your server (file or env var; no KMS yet) | RSA; managed in Google Cloud KMS by default, or your own key ([docs](https://docs.shorebird.dev/code-push/guides/patch-signing/)) |
-| **Percentage rollouts** | Built in, deterministic, with server-side promotion checks | Built from tracks plus your own app logic ([guide](https://docs.shorebird.dev/code-push/guides/percentage-based-rollouts/)) |
-| **Pricing model** | Free software; you pay for your servers, storage and time | Free tier (5,000 patch installs/month), then $20, $400 or custom per month ([pricing](https://shorebird.dev/pricing), 2026-11-11) |
-| **Flutter patch engine** | Stock Flutter, Android only: swaps the AOT library at start (experimental) | Flutter fork; compiled patches on Android/desktop, a Dart interpreter on iOS ([architecture](https://docs.shorebird.dev/code-push/system-architecture/)) |
-| **Platforms** | Android code patches; iOS **not** implemented | Android, iOS, macOS, Windows, Linux ([FAQ](https://docs.shorebird.dev/code-push/faq/)) |
-| **Maturity** | Alpha (v0.1.0-alpha.1), no security audit | 1.0 since April 2024; company-backed, with customer stories on its website ([shorebird.dev](https://shorebird.dev/)) |
-| **Platform testing** | Linux + a small number of Android 13 devices | Production use reported by the vendor |
-
-**Choose Shorebird** if you need iOS, a production-proven service, or don't want to run servers.
-**Consider Flutter OTA System** if your OTA infrastructure must run on servers you control and
-you can validate and operate it yourself. Shorebird facts were checked against its official
-pages on 2026-11-11; [tell us](https://github.com/punitsoni22/flutter_ota_system/issues) if
-something changed.
-
-## Key features
-
-| Feature | What it does | Status |
-|---|---|---|
-| **Release management** | Register each store build (`android 1.0.0+1`); a patch belongs to exactly one release and never crosses versions | ✅ Tested |
-| **Signed patches** | The server signs a canonical message (app, release, patch number, platform, arch, format, hashes, size) with ES256. The app verifies it **before** downloading, then checks size and SHA-256 | ✅ Tested |
-| **Channels** | `dev`, `staging`, `production`; add your own through the API | ✅ Tested |
-| **Staged rollouts** | Deterministic, sticky percentage buckets: raising 1% → 10% keeps the first 1% | ✅ Tested |
-| **Promotion checks** | The server refuses to grow a patch on `production` unless it ran on another channel first without boot failures. Overrides need a logged reason | ✅ Tested |
-| **Rollback and revoke** | Roll back to the previous patch, or revoke one permanently, from the server | ✅ Tested |
-| **Boot protection** | A patch that does not confirm a successful start is skipped; the app returns to its last good code, and the server stops offering that patch to the device | ✅ Tested |
-| **Compatibility checks** | Release, platform, CPU architecture and patch format are matched before any rollout decision; no older patch is offered unless the current one is bad | ✅ Tested |
-| **Device registration and telemetry** | Devices register per app; per-patch counters (downloaded, staged, boot ok/failed) and a device summary per release, channel and patch | ✅ Tested (counters only; no dashboards) |
-| **Android Dart code patches** | Change Dart code, run `ota patch android`, and phones run it after the next restart. Stock Flutter, no engine fork; non-Dart changes are refused | 🟡 Experimental |
-| **Config patches (`mock-v1`)** | Signed JSON or other files that the app reads at start | ✅ Tested |
-| **Self-hosting** | `./flutter-ota-system.sh`: setup, status, logs, backup/restore, demo, reset | ✅ Linux · 🟡 single-server `deploy/` not verified |
-| **Admin page and CLI** | A static admin page at `/admin`; the `ota` CLI for apps, releases, patches and rollouts | 🟢 Admin page partially tested · ✅ CLI |
-
-✅ implemented and tested (automated tests and/or the CI end-to-end demo) · 🟢 implemented,
-partially tested · 🟡 experimental · Not implemented: iOS code patches, RBAC/SSO/audit log,
-KMS/HSM signing, rate limiting, dashboards and alerts
-([roadmap](docs/roadmap/README.md#planned--not-implemented)).
-
-## Architecture
-
-```mermaid
-flowchart LR
-  subgraph yours["Your infrastructure"]
-    direction TB
-    api["Flutter OTA System API<br/>FastAPI · signs patches (ES256)"]
-    db[("PostgreSQL<br/>apps · releases · patches<br/>channels · devices · counters")]
-    files[["Patch files<br/>disk + nginx, or S3-compatible<br/>content-addressed by SHA-256"]]
-    key{{"Signing key<br/>PEM file or env var"}}
-    api --- db
-    api -- "stores" --> files
-    key -.-> api
-  end
-  dev["Developer / CI<br/>ota CLI · admin page"] -- "admin API (X-API-Key)<br/>releases, patches, rollouts" --> api
-  subgraph device["User's device"]
-    app["Your Flutter app<br/>ota_client + Android loader"]
-  end
-  app -- "register · check for update<br/>report counters" --> api
-  app -- "download patch" --> files
-```
-
-- **Control plane:** the API decides which patch a device gets and signs patch metadata. It never
-  streams patch bytes.
-- **Data plane:** immutable patch files on your disk (served by nginx) or in your S3-compatible
-  bucket.
-- **Client:** `ota_client` verifies, stages and activates patches, and falls back to the last good
-  code. On Android, a small Java class points Flutter's loader at the verified Dart library at
-  process start.
-
-Details: [docs/architecture.md](docs/architecture.md) · terms: [docs/concepts.md](docs/concepts.md).
+These numbers come from one small demo app on one phone. They are not a benchmark.
 
 ## How it works
 
-```mermaid
-flowchart TB
-  A["1. Change Dart code"] --> B["2. Build and register the store release<br/>ota release android"]
-  B --> C["3. Generate the patch<br/>ota patch android: rebuild, refuse non-Dart changes, binary diff per ABI"]
-  C --> D["4. Sign: the server signs each patch artifact when it is uploaded (ES256)"]
-  D --> E["5. Publish to a channel at a percentage<br/>staging → promote → production"]
-  E --> F["6. Device checks for an update"]
-  F --> G["7. Verify the signature, then download the patch"]
-  G --> H["8. Check size + SHA-256, rebuild and stage the patch"]
-  H --> I["9. Next start: activate; confirm after a stable start, otherwise fall back"]
+```text
+YOUR MACHINE                          YOUR SERVER                    USER'S PHONE
+flutter_ota CLI                       FastAPI + PostgreSQL           your app + custom engine
+ ├─ custom toolchain (auto)           ├─ apps, releases              ├─ verify signature/hashes
+ ├─ release android → APK/AAB ───┐    ├─ verify signed patches       ├─ verify in a separate process
+ │  (you upload it to the store) │    ├─ store and deliver           ├─ activate at next start
+ └─ patch android → compile,     └──► ├─ channels, staged rollouts ◄─┤  (Dart bytecode interpreter)
+    verify, SIGN LOCALLY ───────────► └─ rollback, revocation        └─ crash → automatic rollback
 ```
 
-1. **Change code** in your app. A store release is the exact APK/AAB that `ota release android`
-   built and registered. You ship that file through the store as usual.
-2. **Generate a patch** with `ota patch android`. The CLI rebuilds your app and compares it with
-   the release fingerprint. It refuses changes to native libraries, `.dex` code, the manifest,
-   resources, assets or the Flutter version. It then uploads one binary diff of `libapp.so` per
-   ABI.
-3. **Sign:** the server stores each file under its SHA-256 and signs its metadata.
-4. **Publish** to a channel at a percentage, then promote and raise the rollout.
-5. **The device** checks, verifies the signature against the public keys compiled into the app,
-   and downloads the file. It checks size and SHA-256, rebuilds and stages the patch, and
-   activates it on the next start.
-6. **Something wrong?** If a patched start is not confirmed, the app falls back by itself. You can
-   also `rollback` or `revoke` from the server.
-
-Config patches (`mock-v1`) follow the same path, with `ota patch create` and a file instead of
-steps 1–2. Full walkthrough: [docs/releases-and-patches.md](docs/releases-and-patches.md).
+More: [architecture](docs/architecture.md) · [security](docs/security.md) · [feature patching](docs/feature-patching.md).
 
 ## Quick start
 
-Requires Linux with Git, curl and Docker with Compose v2.20+, and free ports 8000 and 8080.
-Takes about 10 minutes. macOS and Windows are not tested.
+Requirements:
+- Linux x64 with Git and Docker;
+- an Android arm64 test phone;
+- the Flutter OTA toolchain (built locally today: see [toolchain management](docs/toolchain-management.md)).
 
-```bash
-git clone https://github.com/punitsoni22/flutter_ota_system.git
-cd flutter_ota_system
-./flutter-ota-system.sh setup     # creates .env (random LOCAL secrets), builds, creates a LOCAL dev signing key,
-                                  # starts the stack, waits for health checks, prints the URLs
-./flutter-ota-system.sh demo      # demo app + release android 1.0.0+1, a signed mock-v1 test patch on
-                                  # 100% of dev, then end-to-end checks (exits non-zero on any failure)
-```
+1. **Run your own server.**
+   ```bash
+   git clone https://github.com/punitsoni22/flutter_ota_system.git
+   cd flutter_ota_system
+   ./flutter-ota-system.sh setup     # local Docker stack: API, PostgreSQL, CDN
+   ```
 
-Expected last line:
+2. **Add the SDK and install the CLI.** Once published to pub.dev:
+   ```bash
+   flutter pub add flutter_ota_system
+   dart pub global activate flutter_ota_cli
+   ```
+   Until then, use the Git and path installs in the [quick start](docs/quick-start.md#1-install).
 
-```
-RESULT: all checks passed (artifact pipeline; mock-v1 does not execute code)
-```
+3. **Connect your app.** This writes `flutter_ota.yaml`, containing only `app_id: <server app UUID>`:
+   ```bash
+   flutter_ota init
+   ```
 
-Then:
+4. **Call `initialize()` once in `main.dart`:**
+   ```dart
+   Future<void> main() async {
+     WidgetsFlutterBinding.ensureInitialized();
+     await FlutterOta.initialize();
+     runApp(const MyApp());
+   }
+   ```
 
-- open the admin page at <http://localhost:8000/admin> (key: `OTA_ADMIN_API_KEY` from `.env`);
-- open the API docs at <http://localhost:8000/docs>;
-- see the patch arrive on an Android phone with the official demo app
-  ([`packages/ota_client/example`](packages/ota_client/example/README.md)), and try rollback,
-  crash protection and rollouts: [docs/installation.md](docs/installation.md).
+5. **Release, then patch:**
+   ```bash
+   flutter_ota keys init                   # your signing keys, on your machine
+   flutter_ota doctor                      # checks everything
+   flutter_ota release android             # store build: upload the AAB to Google Play yourself
+   # ...change your feature code...
+   flutter_ota patch android --channel staging
+   flutter_ota status
+   flutter_ota rollback                    # if something goes wrong
+   ```
 
-`./flutter-ota-system.sh setup` is safe to re-run: it never overwrites `.env`, the database or the
-signing key. Other commands:
+The full walkthrough is in [docs/quick-start.md](docs/quick-start.md).
 
-- `./flutter-ota-system.sh help` lists every command;
-- `./flutter-ota-system.sh stop` stops the stack and keeps everything;
-- `./flutter-ota-system.sh reset` deletes the local database, files and dev key after you confirm.
+## Compatibility
 
-### In your app and on your machine
+| Component | Status |
+| --- | --- |
+| Android | Experimental (arm64 only) |
+| Developer machine | Linux x64 only |
+| Flutter / Dart | 3.47.9 / 3.13.7 with the Flutter OTA custom engine |
+| iOS, macOS, Windows, web apps | Not implemented |
 
-```dart
-final client = OtaClient(OtaConfig(
-  serverUrl: 'https://ota.example.com',
-  appSlug: 'my-app',
-  applicationId: '<"id" from `ota app list`>',             // the server's id for this app
-  releaseVersion: '${info.version}+${info.buildNumber}',   // from package_info_plus
-  publicKeys: {'prod-1': '<uncompressed_point_base64 from `ota key show`>'},
-  runtime: AotPatchRuntime(),
-));
-await client.boot();                                        // bad patches never make it throw
-client.markBootSuccessfulAfterFirstFrame(stableFor: const Duration(seconds: 5));
-await client.checkForUpdate();                              // never throws; returns an UpdateResult
-```
+**Adopting the custom engine needs a new store release of your app.** Only code in **feature packages** can be patched. Patched code runs in an interpreter, so CPU-heavy code is slower, and the store binary is larger. Details: [limitations](docs/limitations.md).
 
-```bash
-ota app create my-app "My App"
-ota release android my-app -- --dart-define=OTA_SERVER_URL=https://ota.example.com …   # store build
-# change Dart code, then:
-ota patch android my-app --channel staging --note "fix checkout total"
-ota patch promote <patch_id> --percent 1                                              # canary
-ota patch rollout <patch_id> --channel production --percent 100
-ota patch rollback <patch_id>                                                         # undo
-```
+## Original alpha (v0.1.0-alpha.1)
 
-Full guide: [docs/flutter-integration.md](docs/flutter-integration.md).
+The tagged release `v0.1.0-alpha.1` contains the **original** design:
+- server-signed patches that replace the compiled `libapp.so` (Android, binary diff);
+- the Python admin CLI `ota`;
+- the `OtaClient` API on stock Flutter.
 
-## Community testing
-
-> ### 🧪 Help us build an open-source alternative for self-hosted Flutter OTA updates.
->
-> We have tested on one Linux setup and a few Android 13 phones. **Your machine, your phone and
-> your Flutter version** are exactly what we have not seen yet.
-
-You can help by:
-
-1. **Installing Flutter OTA System** with the [quick start](#quick-start).
-2. **Testing the Android OTA workflow** with the
-   [testing guide](docs/community/testing-guide.md). It has 13 areas, from a fresh Docker install
-   to device registration, patch generation, signature checks, activation, crash recovery and
-   rollback.
-3. **Reporting what happened** with a
-   [Test report](https://github.com/punitsoni22/flutter_ota_system/issues/new?template=test_report.yml).
-   "Everything worked on my Pixel 6 / Android 14 / Flutter 3.x" is a valuable report.
-4. **Reporting bugs** with the
-   [Bug report](https://github.com/punitsoni22/flutter_ota_system/issues/new?template=bug_report.yml)
-   form, with your environment and logs (secrets removed).
-5. **Suggesting features** with a
-   [feature request](https://github.com/punitsoni22/flutter_ota_system/issues/new?template=feature_request.yml).
-6. **Improving the documentation**: unclear steps are bugs too.
-7. **Submitting pull requests**: start with [CONTRIBUTING.md](CONTRIBUTING.md).
-
-Especially wanted:
-
-- Android versions other than 13, and other manufacturers;
-- `armeabi-v7a` and `x86_64` builds;
-- other Flutter versions;
-- macOS or Windows hosts;
-- other Linux distributions;
-- your own app with `ota_client`.
-
-## Current status
-
-- **Experimental alpha** (v0.1.0-alpha.1). APIs, the database schema and patch formats may change
-  before 1.0, without migration paths.
-- **Internally tested on Linux and Android only**, on a small number of devices.
-- **iOS, macOS and Windows: not tested.** iOS code patches are not implemented.
-- **Not production-validated.** Independent security review, device-compatibility testing and
-  scalability testing are still required. No load tests have been run, and no capacity is
-  claimed.
-- **No store approval.** Neither Google Play nor Apple has reviewed or approved this project.
-- **Android is the only implemented client platform.** Testing evidence covers only the devices
-  and Flutter versions named in this README and in
-  [docs/platform-compatibility.md](docs/platform-compatibility.md).
-
-### Next patch engine (research, not in the SDK)
-
-The project is researching a **bytecode patch engine**: changed Dart packages are compiled to
-Dart bytecode and run by the Dart VM interpreter, instead of downloading native code. It is
-**research only**:
-
-- it uses **Dart dynamic modules**, an experimental upstream Dart feature;
-- it needs a **custom Flutter engine build** (from upstream source with an official build flag);
-- it was tested in [research prototypes](prototypes/README.md) on **one Android 13 arm64 phone**
-  with one pinned Flutter version (3.47.9);
-- **automatic local toolchain management**, the patch generator, signature checks before loading
-  and SDK/backend integration are **planned, not implemented**;
-- known unsafe cases (FFI in a module, malformed bytecode) abort the app process and must be
-  blocked before release.
-
-Summary and evidence: [docs/architecture/bytecode-architecture.md](docs/architecture/bytecode-architecture.md).
-
-## Platform Support & Testing Status
-
-> [!NOTE]
-> Code that may support a platform is not the same as a tested platform. Anything not marked
-> "Internally tested" below is untested and used at your own risk.
-
-| Platform | Testing status | Notes |
-|---|---|---|
-| Linux development environment | Internally tested | Ubuntu, Docker Engine + Compose v2. Backend, CLI and `scripts/verify_demo.sh` |
-| Android Flutter application | Internally tested | `mock-v1` config patches and experimental Android Dart code patches, on a small number of devices |
-| iOS | Not supported | Not implemented: the Flutter SDK declares Android only, and nothing has been tested on iOS |
-| macOS | Not tested | Neither as a development machine nor as a Docker Desktop host |
-| Windows | Not tested | Neither as a development machine nor as a Docker Desktop host |
-
-Android testing does **not** establish compatibility with every Android device, OS version, CPU
-architecture (ABI) or Flutter version. No device compatibility matrix is published.
-
-Flutter: devices were tested with Flutter 3.44.9 (Dart 3.12.2); CI runs analysis and unit tests
-with the current stable. The SDK (`flutter_ota_system`) requires Flutter `>=3.44.9` and Dart
-`^3.12.2`. Full matrix and the Flutter internals code patches depend on:
-[docs/platform-compatibility.md](docs/platform-compatibility.md).
-
-| Area | State in v0.1.0-alpha.1 |
-|---|---|
-| Control plane (FastAPI + PostgreSQL) | Working, internally tested, automated tests |
-| Signed patch metadata (ES256) + SHA-256 | Working, covered by tests and `scripts/verify_demo.sh` |
-| Channels, percentage rollout, rollback, revoke | Working, internally tested |
-| `mock-v1` config patches | Working; used by the local demo |
-| Android Dart code patches (`aot-bidiff-android-v1`, stock Flutter) | **Experimental.** Internally tested on a small number of devices |
-| iOS code patches | **Not implemented.** iOS is not tested at all |
-| Local Docker stack | Working; tested by the maintainers on Linux only (macOS/Windows not tested) |
-| Single-server Docker deployment (`deploy/`) | **Draft, not yet verified end to end** |
-| Storage | Local disk + nginx, or S3-compatible buckets. **No Azure Blob** |
-| Signing key | Local PEM file or env var. **No Key Vault / KMS / HSM** |
-| Users, roles (RBAC), audit log | **Not implemented**: one shared admin API key |
-| Redis / caching | **Not used** |
-| Scale | **No load tests.** 1M active installs is a roadmap design goal only, not a tested capacity |
-
-Full breakdown: [docs/limitations.md](docs/limitations.md) · roadmap:
-[docs/roadmap/](docs/roadmap/README.md).
-
-## Technology stack
-
-| Part | Technology |
-|---|---|
-| Server | Python 3.13, FastAPI, Uvicorn, SQLAlchemy 2, Alembic, PyJWT, `cryptography`, boto3 |
-| Database | PostgreSQL 17 (SQLite only for tests) |
-| File serving | nginx (local disk) or any S3-compatible bucket; Caddy for HTTPS in the single-server setup |
-| Client | Dart / Flutter package `flutter_ota_system` (in `packages/ota_client`; `crypto`, `pointycastle`, `http`, `path_provider`) + an Android part in Java 17 |
-| Tooling | Python CLI `ota` (`httpx`, `bsdiff4`), Bash scripts, Docker Compose, GitHub Actions |
-
-## Repository layout
-
-```
-backend/                     FastAPI control plane, migrations, tests, /admin page
-cli/                         `ota` admin CLI and Android code-patch tooling
-packages/ota_client/         Flutter SDK (pub.dev package `flutter_ota_system`)
-packages/ota_client/example/ The official demo app (the only demo app)
-scripts/, docker/, deploy/   Local setup, demo and verification scripts; nginx; single-server draft
-docs/                        Documentation (start at docs/index.md)
-prototypes/                  Research prototypes of the bytecode engine (not demos, not shipped)
-```
+This path is still in the code. It is **not** the bytecode architecture described above, which is unreleased (see [CHANGELOG](CHANGELOG.md)). See [releases and patches](docs/releases-and-patches.md#original-alpha-patch-formats).
 
 ## Documentation
 
-Everything is indexed in [docs/index.md](docs/index.md):
+| I want to... | Read |
+| --- | --- |
+| Try it end to end | [Quick start](docs/quick-start.md) |
+| Integrate the SDK | [Flutter integration](docs/flutter-integration.md) |
+| Look up a command | [CLI reference](docs/cli-reference.md) |
+| Patch feature code (freezed, APIs, UI) | [Feature patching](docs/feature-patching.md) |
+| Understand the custom toolchain | [Toolchain management](docs/toolchain-management.md) |
+| Run the server | [Self-hosting](docs/self-hosting.md) · [Operations](docs/operations.md) |
+| Understand signing and verification | [Security](docs/security.md) |
+| Know what is not supported | [Limitations](docs/limitations.md) |
 
-| | |
-|---|---|
-| Tutorial | [Installation](docs/installation.md) · [Testing guide](docs/community/testing-guide.md) |
-| How-to | [Flutter integration](docs/flutter-integration.md) · [Releases and patches](docs/releases-and-patches.md) · [Rollouts](docs/rollouts.md) · [Operations](docs/operations.md) · [Troubleshooting](docs/troubleshooting.md) |
-| Reference | [API](docs/api-reference.md) · [CLI](docs/cli-reference.md) · [Configuration](docs/configuration.md) |
-| Explanation | [Why Flutter OTA System?](docs/why-flutter-ota-system.md) · [Concepts](docs/concepts.md) · [Architecture](docs/architecture.md) · [Bytecode engine (research)](docs/architecture/bytecode-architecture.md) · [Security](docs/security.md) · [Limitations](docs/limitations.md) · [Roadmap](docs/roadmap/README.md) |
-| Security, privacy and policy | [Signing keys and trust model](docs/signing-key-management.md) · [Privacy and data handling](docs/privacy-and-data-handling.md) · [Platform compatibility](docs/platform-compatibility.md) · [Google Play](docs/policy/google-play.md) · [Apple App Store](docs/policy/apple-app-store.md) |
-
-## Known limitations
-
-- Alpha: the API, database schema and patch formats may change without migration paths.
-- Android code patches:
-  - change Dart code only;
-  - need the exact registered store build and the same Flutter version;
-  - depend on Flutter internals.
-
-  There are no iOS code patches.
-- Only Linux (development) and Android (app) are internally tested
-  ([details](#platform-support--testing-status)).
-- Android code patches download and load native code (`libapp.so`): a significant Google Play
-  policy risk ([docs/policy/google-play.md](docs/policy/google-play.md)). No store approval is
-  claimed.
-- One shared admin API key; no users, roles, SSO or audit log.
-- Device registration is open, and there is no rate limiting. Patch files are public by hash, so
-  never put secrets in patches.
-- The signing key is a file or an environment variable. There is no Key Vault, KMS or HSM, and no
-  key-rotation tooling.
-- Devices learn about patches, rollbacks and revocations only when the app checks.
-- No dashboards, alerts or automatic rollout pausing; no load tests.
-- The Flutter SDK's Android code uses the Java package `io.github.punitsoni22.flutter_ota_system`.
-  The demo app (`packages/ota_client/example`) still uses the application ID `dev.flutterota.ota_example`;
-  ownership of `flutterota.dev` has **not** been confirmed. Use your own application ID in your
-  apps.
-
-More: [docs/limitations.md](docs/limitations.md). Known bugs: [docs/known-issues.md](docs/known-issues.md).
+Everything else is in the [documentation index](docs/index.md).
 
 ## Security
 
-Read [docs/security.md](docs/security.md) and
-[docs/signing-key-management.md](docs/signing-key-management.md) before deploying anything.
-Report vulnerabilities privately as described in [SECURITY.md](SECURITY.md), **never in public
-issues**.
+Report vulnerabilities privately as described in [SECURITY.md](SECURITY.md), **never in public issues**.
 
-This documentation is provided for technical guidance and is not legal advice. Platform policies
-can change. Developers are responsible for independently reviewing the policies applicable to
-their applications and distribution channels.
+Store policies are your responsibility: see [Google Play](docs/policy/google-play.md) and [Apple App Store](docs/policy/apple-app-store.md). This documentation is not legal advice.
 
 ## Contributing
 
-Contributions are welcome: test reports, bug reports, tests, documentation and careful fixes.
-Read [CONTRIBUTING.md](CONTRIBUTING.md) and the [Code of Conduct](CODE_OF_CONDUCT.md).
+Test reports, bug reports, tests, documentation and careful fixes are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md), the [Code of Conduct](CODE_OF_CONDUCT.md) and the [testing guide](docs/community/testing-guide.md).
 
 ## Licence
 
-Apache License 2.0. See [LICENSE](LICENSE), [NOTICE](NOTICE) and
-[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Copyright The Punit Authors.
+Apache License 2.0. See [LICENSE](LICENSE), [NOTICE](NOTICE) and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Copyright The Punit Authors.
 
-Flutter OTA System is not affiliated with or endorsed by Google, the Flutter project or Shorebird.
-"Flutter" is a trademark of Google LLC.
+Flutter OTA System is not affiliated with or endorsed by Google, the Flutter project or Shorebird. "Flutter" is a trademark of Google LLC.

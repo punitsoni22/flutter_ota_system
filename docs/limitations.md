@@ -1,166 +1,97 @@
-# Limitations and project status
+# Compatibility and limitations
 
-Flutter OTA System v0.1.0-alpha.1 is an **experimental, self-hosted** open-source project. It has been tested
-internally by its maintainers, but it has **not** been comprehensively validated in production,
-has **not** had an independent security audit, and has **no** published load tests.
+Flutter OTA System is an **experimental alpha**:
+- It has been tested internally only: Linux for development, and Android phones.
+- It is **not production-ready**.
+- It has **not** been independently security-audited or load-tested.
+- **No app store has reviewed or approved it.** Never assume store approval; see [Google Play](policy/google-play.md) and [Apple App Store](policy/apple-app-store.md).
 
-## Status of features
+## Compatibility
 
-| Mark | Meaning |
-|---|---|
-| ✅ Tested | Implemented and covered by automated tests (backend: 24, Flutter SDK `flutter_ota_system`: 84) and/or `scripts/verify_demo.sh` (32 checks), which also run in CI |
-| 🟢 Implemented | In the code, used internally, without dedicated automated tests |
-| 🟡 Experimental | Works in internal testing on a small number of devices; expect problems |
-| 🔭 Planned | Not implemented ([roadmap](roadmap/README.md)) |
-| ❌ Unsupported | Not possible or out of scope today |
+| Component | Status |
+| --- | --- |
+| Android | **Experimental**. The bytecode architecture was tested end to end on **one Android 13 arm64 phone** |
+| ABI | **arm64-v8a** only |
+| Developer machine (CLI, toolchain, builds) | **Linux x64** only. The toolchain's host binaries exist only for Linux |
+| Flutter / Dart | **3.47.9 / 3.13.7**, with the Flutter OTA custom engine (engine `89c39edf`, Dart `416e33b`). No other version |
+| Stock Flutter engine | Cannot load bytecode patches |
+| iOS | Not implemented |
+| macOS, Windows, Linux, web **apps** | Not implemented |
+| Backend | Linux Docker stack tested. The single-server deploy (`deploy/`, Caddy) is a draft and not verified end to end |
+| Packages on pub.dev | `flutter_ota_system` and `flutter_ota_cli` are **not published yet**. Use the Git and path installs from the [quick start](quick-start.md) |
+| Toolchain distribution | **Not published yet**: no official download and no official signing key. Build it yourself ([toolchain management](toolchain-management.md#6-building-the-toolchain-yourself)) |
 
-### Server
+The original alpha (`v0.1.0-alpha.1`, server-signed `libapp.so` patches) runs on stock Flutter 3.44.9+. It has its own limits, listed [below](#original-alpha-limitations).
 
-| Feature | Status |
-|---|---|
-| Apps, channels, releases, patches (create, list, delete test releases) | ✅ |
-| Release ↔ patch version isolation; newest-patch selection; arch matching | ✅ |
-| ES256 signing; signature verifies with the published public key | ✅ |
-| Channels; percentage rollout that is deterministic and sticky | ✅ |
-| Rollback, revoke, bad-patch lists in every response; anti-downgrade | ✅ |
-| Skipping patches that crashed on a device | ✅ |
-| Store-policy gate for `public_store` code patches | ✅ |
-| Event counters per patch; device summary | ✅ |
-| Private store-build storage; S3 storage keeps patches public and releases private | ✅ |
-| Production startup safety checks | ✅ |
-| Alembic migrations on startup | ✅ (run in every local stack and CI start) |
-| Admin page `/admin` | 🟢 (one smoke test) |
-| Local Docker stack | ✅ on Linux; macOS/Windows not tested |
-| Single-server production deploy (`deploy/`, Caddy) | 🟡 Draft, not verified end to end |
-| S3-compatible storage against real providers | 🟢 Used internally; tests use a mock |
-| Backup script / restore | 🟢 / restore not tested |
+## Bytecode architecture limitations
 
-### Client and tooling
+**Adopting it**
+- **Custom engine.** Your app must be built with the Flutter OTA toolchain. Adopting it, or moving to a new toolchain, needs a **new store release**.
+- **One Flutter version.** Only Flutter 3.47.9 is supported today. Each new Flutter version needs an engine and toolchain build by the project owner.
 
-| Feature | Status |
-|---|---|
-| `mock-v1` flow: check → verify → download → stage → activate → confirm | ✅ |
-| Crash protection (unconfirmed start falls back) | ✅ |
-| Tampered file / forged signature rejection | ✅ |
-| Server rollback, store-version change, corrupted file on disk | ✅ |
-| Runtime channel switching | ✅ |
-| `OTADIF01` diff: Python → Dart round trip | ✅ |
-| Android code patches (`aot-bidiff-android-v1`) end to end | 🟡 Experimental. Native boot logic is unit-tested in Dart with a fake native side; the real Android path was tested manually on a small number of devices |
-| `ota release android` / `ota patch android` | 🟡 Experimental |
-| iOS (any patch type) | ❌ Not tested. Code patches not implemented |
+**What can be patched**
+- **Feature packages only.** Only code in local feature packages can be patched. Anything else needs a new store release:
+  - the app package itself;
+  - shared packages;
+  - `pubspec.lock` changes;
+  - native code and assets;
+  - new local packages;
+  - dependencies that are not in the store build.
 
-## Platform limitations
+  See [feature patching](feature-patching.md).
+- **No whole-app patching.** Patching arbitrary code without feature packages is a research topic. It is not supported or promised.
+- **Store-build libraries only.** A patch can only use Flutter, Dart and package libraries that the store build already contains.
 
-Code that may support a platform is not the same as a tested platform. Only these environments
-were tested internally (same table as the
-[README](../README.md#platform-support--testing-status)):
+**Performance and size**
+- **Performance.** Patched code runs in the bytecode interpreter. UI and normal app logic worked well in testing (patch load 3.8 ms, start-up 200–260 ms with a patch, on one phone). **CPU-heavy code is much slower** than compiled code: up to 165× in earlier measurements.
+- **Binary size.** The store build must include everything a patch might use, so `libapp.so` grows. It was about 22–26 MB for small test apps. The cost for large apps is **not measured**.
 
-| Platform | Testing status |
-|---|---|
-| Linux development environment | Internally tested |
-| Android Flutter application | Internally tested |
-| iOS | Not tested |
-| macOS | Not tested |
-| Windows | Not tested |
+**Security**
+- The verifier process is not a sandbox (same Linux user).
+- Some malformed patches are contained rather than rejected cleanly.
+- The verifier is not a type checker.
 
-Android testing does not establish compatibility with every Android device, OS version, CPU
-architecture (ABI) or Flutter version. Full matrix, tested versions and the Flutter internals the
-code-patch runtime depends on: [platform-compatibility.md](platform-compatibility.md).
+See [security](security.md#known-security-limitations).
 
-What each app platform can do:
+**Tooling**
+- Promotion from staging to production uses the Python `ota` CLI or the API; `flutter_ota` has no promote command.
+- `flutter_ota rollback --reason` is not stored, because the API has no reason field.
+- Every store release rebuilds the Android project from scratch, because it builds from a neutral copy.
+- A partly failed release registration has no automatic resume.
+- Approvals (extra approver signatures) are tested on Linux only.
 
-| Platform | Status |
-|---|---|
-| Android code patches | 🟡 Release builds only. Requires the exact registered APK/AAB and the same Flutter version |
-| Android `mock-v1` | ✅ |
-| iOS code patches | ❌ Apple forbids running downloaded native code. No iOS work is planned ([Apple App Store](policy/apple-app-store.md)) |
-| iOS `mock-v1` | ❌ Not tested. The plugin declares only Android |
-| Web, desktop | ❌ Not supported |
+## Not tested yet
 
-## Flutter version compatibility
+These are planned for the final testing phase:
+- more Android devices, versions and manufacturers;
+- large real apps: binary size, start-up, memory, frame timing;
+- crash-recovery paths with the production SDK on a device (they were tested on a device with the earlier prototype runtime);
+- OS eviction and phone reboots during activation;
+- AAB delivery through Google Play internal testing (to test compatibility, not to claim approval);
+- toolchain upgrades to a second Flutter version;
+- security fuzzing of uploads and of the device verifier;
+- load and scale testing of the backend.
 
-- Requirements of `flutter_ota_system`: Dart `^3.12.2`, Flutter `>=3.44.9`. Devices were tested
-  only with Flutter 3.44.9.
-- Analysis and unit tests ran with Flutter 3.44 stable (CI uses the current stable).
-- Android code patches depend on Flutter's internal loader option
-  (`--aot-shared-library-name`). They were tested only with the Flutter versions the maintainers
-  used. **No Flutter compatibility matrix is published.** A future Flutter release could break
-  them.
-- A patch must be built with exactly the Flutter version of its release. Every Flutter upgrade
-  needs a new store release.
+## Original alpha limitations
 
-## Native code and patch-engine limitations
+`v0.1.0-alpha.1`, with `mock-v1` and `aot-bidiff-android-v1` patches:
+- **The server holds the patch-signing key.** One key covers all apps, with no rotation tooling. See [security](security.md#original-alpha-server-held-key).
+- **The code patch replaces `libapp.so`.** It is experimental, tested manually on a few devices, and carries store-policy considerations.
+- Flutter **3.44.9 or newer** on Android.
+- The native start re-checks the patch hash, but not its signature, and `boot.json` is not signed.
 
-- A code patch can change **only Dart code** (including pure-Dart packages). Plugins with native
-  code, native libraries, Java/Kotlin, the manifest, resources and assets need a store release.
-- A patch is a binary diff against one store build. A rebuilt APK/AAB is a different build.
-- Patch size depends on how much compiled code changes. No size benchmarks are published.
-- Activation needs an app restart; running code is never swapped live.
-- Crashes after a patch was confirmed, or in native code before the boot hook, are not detected
-  automatically.
-- Debug builds ignore code patches.
-- Google Play's Device and Network Abuse policy forbids downloading executable code "such as dex,
-  JAR, .so files" outside Google Play; code patches produce and load a new `libapp.so`. This is a
-  significant policy risk, and the decision is yours ([policy/google-play.md](policy/google-play.md)).
-  iOS is not supported ([policy/apple-app-store.md](policy/apple-app-store.md)).
-- Android code patches were last tested on a device before the PR #17/#18 changes and have not
-  been independently validated end to end ([platform-compatibility.md](platform-compatibility.md#what-has-been-tested)).
+## Server and operations
 
-## Operational limitations
+- **One shared admin API key.** No users, roles (RBAC), MFA or audit log.
+- **No rate limiting.** Device registration is open, and device tokens cannot be revoked one by one.
+- **No short-lived download URLs.** Patch URLs are public and permanent; integrity comes from signatures.
+- **Restore is not tested.** Backups (`./flutter-ota-system.sh backup`, `deploy/backup.sh`) are not encrypted.
+- **Channels can be created only through the API** (`POST /v1/admin/apps/{slug}/channels`). The CLI has no command for it.
 
-- No push: devices learn about patches, rollbacks and revocations only when the app calls
-  `checkForUpdate()`. The client has no timer.
-- No automatic rollout pausing, alerts, dashboards, scheduling or targeting beyond
-  channel/release/arch/percentage.
-- Telemetry is counts per patch only; no per-device history.
-- No structured logs, metrics endpoint or tracing.
-- Release identity (KI-1) and server-side promotion checks (KI-4) are fixed in v0.1.0-alpha.1.
-  Both are covered by automated tests and were checked on one Android phone
-  ([known-issues.md](known-issues.md)).
-- Channels can be created only through the API; they cannot be renamed or deleted
-  ([KI-3](known-issues.md#ki-3-channels-can-be-created-only-through-the-api)).
+## Known issues
 
-All known bugs, with priorities: [known-issues.md](known-issues.md).
-- API, schema and patch formats may change without migration paths before v1.0.
-
-## Security status
-
-- **No independent security audit.**
-- One shared admin API key: no users, roles (RBAC), SSO, MFA or audit log.
-- Signing key in a local file or environment variable; no Key Vault, KMS or HSM; no rotation
-  tooling.
-- No short-lived signed download URLs; patch files are public by hash.
-- Open device registration, no rate limiting, no per-token revocation.
-- `boot.json` is not signed and native start does not repeat the signature check; patch ids,
-  download URLs and rollback instructions are not signed (protocol v1)
-  ([signing-key-management.md](signing-key-management.md#known-limitations-verified-in-the-code)).
-
-Details: [security.md](security.md).
-
-## Performance and scale
-
-**No load tests have been run, and Flutter OTA System makes no capacity claim.** In particular, reliability at
-**1 million active installs has not been established**. That number appears in the roadmap only
-as a design goal.
-
-What the design does to keep the hot path cheap (not measured): the update check is a few indexed
-queries, device rows are written at most hourly unless something changes, patch files are
-immutable and cacheable, and rollout needs no per-device state. What it lacks for large fleets:
-any cache (every check reads PostgreSQL), rate limiting, and measured numbers.
-
-## Production testing gaps
-
-Before relying on Flutter OTA System, someone needs to:
-
-- run the server under realistic load and measure it;
-- test the single-server deploy, backups, restores and upgrades;
-- test Android code patches across Flutter versions, Android versions, ABIs and devices;
-- build and test the app side on iOS (needs macOS + Xcode);
-- test the development environment and Docker stack on macOS and Windows;
-- review the security model independently;
-- test failure modes (network loss during download, full disk, server outage during rollout).
-
-## What is planned
-
-See the [roadmap](roadmap/README.md) and the list of
-[installation improvements](roadmap/installation-improvements.md).
+| Issue | Effect | Workaround |
+| --- | --- | --- |
+| A failed `ota patch android` (original alpha) leaves an empty draft patch | The patch number is used up; publishing it fails with `422 Patch has no artifacts` | Delete it, or ignore it and run the command again |
+| Stale patch display after a rollback | The admin page still shows the old rollout of a rolled-back patch; the demo app shows "none" before the restart | Cosmetic; restart the app |
+| `/health/ready` returns 500 instead of 503 while the database restarts | Monitors see an error, not "not ready" | It recovers by itself when the database is back |

@@ -1,82 +1,38 @@
 # flutter_ota_system
 
-The Flutter client SDK of **[Flutter OTA System](https://github.com/punitsoni22/flutter_ota_system)**:
-an experimental, open-source, **self-hosted** over-the-air (OTA) patch system for Flutter apps.
+The Flutter SDK of **[Flutter OTA System](https://github.com/punitsoni22/flutter_ota_system)**, an open-source, **self-hosted** over-the-air (OTA) update platform for Flutter apps. Your servers, your signing keys, your control.
 
 > [!WARNING]
-> **Experimental alpha (0.1.0-alpha.1). Not production-ready.** Tested internally only, with
-> Android apps on a small number of devices. **Android is the only supported platform.** iOS,
-> macOS, Windows, Linux and web are not supported or tested. Testing on some Android devices
-> does not establish compatibility with every device, OS version, ABI or Flutter version.
+> **Experimental alpha. Not production-ready.**
+> - Android only. The bytecode runtime is **Android arm64 only**, with the Flutter OTA custom engine (Flutter 3.47.9), and was tested end to end on **one Android 13 phone**.
+> - iOS, macOS, Windows, Linux and web are not supported.
+> - No independent security audit, and no app-store approval of any kind.
+> - This package is **not yet published on pub.dev**.
 
-> [!CAUTION]
-> Flutter OTA System is an experimental, self-hosted OTA platform. Its Android AotPatchRuntime
-> modifies executable application code and presents significant platform-policy and security
-> considerations. It has not been independently security-audited or validated for production use.
-> Developers must evaluate applicable app-store policies and deployment risks before integrating it
-> into distributed applications.
->
-> Read first: [Google Play policy considerations](https://github.com/punitsoni22/flutter_ota_system/blob/main/docs/policy/google-play.md) ·
-> [Apple App Store](https://github.com/punitsoni22/flutter_ota_system/blob/main/docs/policy/apple-app-store.md) ·
-> [security](https://github.com/punitsoni22/flutter_ota_system/blob/main/docs/security.md) ·
-> [signing keys](https://github.com/punitsoni22/flutter_ota_system/blob/main/docs/signing-key-management.md) ·
-> [privacy and data handling](https://github.com/punitsoni22/flutter_ota_system/blob/main/docs/privacy-and-data-handling.md) ·
-> [platform compatibility](https://github.com/punitsoni22/flutter_ota_system/blob/main/docs/platform-compatibility.md)
+Read first:
+- [compatibility and limitations](https://github.com/punitsoni22/flutter_ota_system/blob/main/docs/limitations.md);
+- [security](https://github.com/punitsoni22/flutter_ota_system/blob/main/docs/security.md);
+- [Google Play policy notes](https://github.com/punitsoni22/flutter_ota_system/blob/main/docs/policy/google-play.md);
+- [privacy and data handling](https://github.com/punitsoni22/flutter_ota_system/blob/main/docs/privacy-and-data-handling.md).
 
-## What it is and why it exists
+## What it does
 
-Flutter OTA System lets you ship fixes to an installed Flutter app without a new store release,
-using **your own server**: you run the backend (FastAPI + PostgreSQL + file storage), keep the
-signing key, and decide who gets which patch. There is no hosted service.
+The package contains two independent runtimes. **Use one per app.**
 
-This package is the part that runs inside your app. It:
+| Runtime | API | Status |
+| --- | --- | --- |
+| **Bytecode runtime** (new, unreleased) | `FlutterOta`, `OtaFeature` | Experimental. Patched feature code runs as Dart bytecode in the custom engine's interpreter. The store `libapp.so` is never replaced |
+| **Original alpha runtime** (`0.1.0-alpha.1`) | `OtaClient`, `OtaConfig`, `AotPatchRuntime`, `MockPatchRuntime` | Experimental. Server-signed patches; Android code patches replace `libapp.so` (binary diff). Stock Flutter 3.44.9+ |
 
-- registers the installation with your server and asks it for patches (per channel and
-  percentage rollout);
-- downloads a patch and verifies its **size**, **SHA-256** and **ES256 signature** against
-  public keys compiled into your app, before it is ever used;
-- **stages** it and activates it on the **next app start** (running code is never swapped
-  live);
-- protects the start: a new patch that never confirms a successful start is skipped next time,
-  and the last good patch or the store build runs (**automatic fallback**);
-- applies server-side **rollbacks and revocations**, and reports boot success/failure counters.
+## Install
 
-Two runtimes decide what a patch is:
-
-| Runtime | Format | What a patch changes | Status |
-|---|---|---|---|
-| `MockPatchRuntime` | `mock-v1` | An inert data file (e.g. JSON config) that your app reads at start. No code runs | Tested on Android |
-| `AotPatchRuntime` | `aot-bidiff-android-v1` | The app's compiled Dart code (`libapp.so`), Android release builds only | **Experimental** |
-
-## How it connects to your server
-
-```
-your app ── flutter_ota_system ──HTTPS──▶ Flutter OTA System server (/v1/devices/register,
-                                          /v1/updates/check, /v1/events/batch)
-                         ◀── signed patch files from your file server / CDN / bucket
-```
-
-You publish patches with the project's `ota` CLI; the server signs them with your key. See the
-[installation guide](https://github.com/punitsoni22/flutter_ota_system/blob/main/docs/installation.md)
-and the [Flutter integration guide](https://github.com/punitsoni22/flutter_ota_system/blob/main/docs/flutter-integration.md).
-
-## Prerequisites
-
-- A running Flutter OTA System server you control, reachable over **HTTPS** from release builds.
-- From the server, for your app: the **app slug**, the **application id** (`ota app list`,
-  field `"id"`), and the **public signing key** (`ota key show --dart`).
-- Flutter **3.44.9** or newer (Dart 3.12.2+). Only Flutter 3.44.9 has been tested.
-- Android: `minSdk` 21 or higher, Java 17. The app needs the `INTERNET` permission.
-
-## Installation
-
-After the first pub.dev publication (not published yet):
+Once published on pub.dev:
 
 ```bash
 flutter pub add flutter_ota_system
 ```
 
-Until then, use the Git repository:
+Today, use a Git dependency:
 
 ```yaml
 dependencies:
@@ -86,148 +42,67 @@ dependencies:
       path: packages/ota_client
 ```
 
-The Android part registers itself (a content provider in the plugin's manifest); no
-`MainActivity` changes are needed.
+The bytecode runtime also needs the `flutter_ota` CLI and its toolchain, which build and sign everything on your machine. See the [quick start](https://github.com/punitsoni22/flutter_ota_system/blob/main/docs/quick-start.md).
 
-## Configuration
+## Bytecode runtime
 
 ```dart
+import 'package:flutter/widgets.dart';
 import 'package:flutter_ota_system/flutter_ota_system.dart';
-
-final config = OtaConfig(
-  serverUrl: 'https://ota.example.com',
-  appSlug: 'shop-app',
-  applicationId: '12ebc1fd-abb9-4ee3-83c3-78deb9fadaa8',
-  releaseVersion: '1.0.0+1',
-  publicKeys: const {'prod-1': 'BIi7De…'},
-  runtime: MockPatchRuntime(),
-);
-```
-
-| Field | Required | Meaning |
-|---|---|---|
-| `serverUrl` | yes | Your server. Release builds: `https://` only. Debug builds may also use `http://localhost` (e.g. `adb reverse`) and `http://10.0.2.2` (emulator) |
-| `appSlug` | yes | The app's slug on the server (`ota app create <slug> …`) |
-| `applicationId` | yes | The app's **server id** (UUID, `"id"` in `ota app list`). **Not** the Android package name. Responses and patches of any other application are refused |
-| `releaseVersion` | yes | This store build's version **with build number**, exactly as registered, e.g. `'${info.version}+${info.buildNumber}'` from `package_info_plus` |
-| `publicKeys` | yes | Trusted keys, `{key id: base64 P-256 point}` from `ota key show --dart`. Several keys allow rotation |
-| `runtime` | yes | `MockPatchRuntime()` or `AotPatchRuntime()` |
-| `channel` | no | Default channel of this build (default `production`) |
-| `httpClient` | no | Custom `package:http` client (proxy, certificate pinning). URL rules still apply |
-
-## Basic initialization
-
-With `MockPatchRuntime`, boot **before** `runApp` so the active payload is ready for the first
-screen:
-
-```dart
-final runtime = MockPatchRuntime();
-late final OtaClient ota;
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  ota = OtaClient(OtaConfig(/* … */ runtime: runtime));
-  await ota.boot();                              // picks store build / last good / new patch
-  final payload = runtime.activePayload;         // null = store build
-  runApp(MyApp(configBytes: payload));
-  ota.markBootSuccessfulAfterFirstFrame();       // confirms the start after 10 s
-  unawaited(ota.checkForUpdate());               // never block startup on the network
+  await FlutterOta.initialize();
+  runApp(const MyApp());
 }
 ```
 
-With `AotPatchRuntime`, the code to run is chosen natively before Dart starts, so you can also
-create the client and call `boot()` after the first frame.
-
-## Update-check flow
+Patchable code lives in **feature packages**. Each has one entry class:
 
 ```dart
-final result = await ota.checkForUpdate();   // never throws
-switch (result.status) {
-  case UpdateStatus.stagedRestartRequired:   // downloaded + verified; runs after a restart
-  case UpdateStatus.rollbackRestartRequired: // current patch rolled back/revoked; fallback after a restart
-  case UpdateStatus.upToDate:
-  case UpdateStatus.rejected:                // refused: see result.message (signature, hash, URL, …)
-  case UpdateStatus.failed:                  // network/server problem or timeout
+class ProductsFeature extends OtaFeature {
+  @override
+  Widget build(BuildContext context, [Object? arguments]) => const ProductsScreen();
 }
 ```
 
-`checkForUpdate` respects the server's check interval unless you pass `force: true`, and
-concurrent calls share one check. The client has no timer: call it when it suits your app (for
-example at start and when the app resumes). Testers can switch channels with
-`ota.setChannel('staging')`.
+The app shows features through the registry that `flutter_ota release android` generates: `OtaFeatures.products.build(context)`.
 
-## Patch activation
+**What `initialize()` does:**
+- **It never throws, and makes no network request at start.** It verifies the stored patch (signature, certificate, release, toolchain, hashes, revocations), loads it and returns.
+- **It confirms the start and checks for updates.** After the first frame it confirms the start, then checks for a new patch in the background.
+- **New patches are tested first.** A new patch is test-loaded in a separate process, then runs from the next start.
+- **Crashes trigger rollback.** A patch that crashes the app is rolled back automatically.
+- **It is off without the CLI's build config.** Without the build configuration from the CLI (for example a plain `flutter run`), OTA is off and the store code runs.
 
-A staged patch becomes active on the **next cold start**. The new patch must then be
-confirmed with `markBootSuccessful()` (or `markBootSuccessfulAfterFirstFrame()`, which calls it
-after a delay that starts when you call it). If the app dies before that, the next start skips
-the patch and runs the last good patch or the store build, and the server is told
-(`patch_boot_failed`). `ota.activePatch` / `ota.activePatchNumber` tell you what runs now.
+Full reference: [Flutter integration](https://github.com/punitsoni22/flutter_ota_system/blob/main/docs/flutter-integration.md) · [feature patching](https://github.com/punitsoni22/flutter_ota_system/blob/main/docs/feature-patching.md).
 
-## Android requirements
+## Original alpha runtime
 
-- `minSdk` 21+, Java 17, `INTERNET` permission.
-- Code patches (`AotPatchRuntime`) work only in **release** builds, only for the exact store
-  build registered with `ota release android`, built with the same Flutter version, and only
-  for changes in Dart code. Debug builds run Dart in JIT mode and accept no code patches.
-- Android 9+ blocks plain HTTP by default; release builds of this SDK refuse it anyway.
-- **Not compatible** with apps or plugins that call `FlutterInjector.setInstance(...)`: once a
-  code patch is active, the plugin reads the Flutter injector at process start.
+```dart
+final client = OtaClient(OtaConfig(
+  serverUrl: 'https://ota.example.com',
+  appSlug: 'my-app',
+  applicationId: '<server app UUID>',
+  releaseVersion: '1.0.0+1',
+  publicKeys: {'prod-1': '<public key from `ota key show`>'},
+  runtime: AotPatchRuntime(),           // or MockPatchRuntime() for config-only test patches
+));
+await client.boot();                     // never throws
+client.markBootSuccessfulAfterFirstFrame();
+await client.checkForUpdate();           // never throws; returns an UpdateResult
+```
 
-## Troubleshooting
+The server signs these patches; the app trusts the public keys you compile in. `AotPatchRuntime` loads a downloaded native `libapp.so`, which has significant store-policy implications. See [releases and patches](https://github.com/punitsoni22/flutter_ota_system/blob/main/docs/releases-and-patches.md#original-alpha-patch-formats).
 
-| Result | Likely cause |
-|---|---|
-| `failed`, `insecure URL … release builds require https://` | Release builds need an `https://` server URL |
-| `rejected`, `application id mismatch` | `applicationId` is not this app's server id (check `ota app list`) |
-| `rejected`, `unknown signing key …` / `signature invalid` | The app trusts a different key than the server signs with |
-| `rejected`, `invalid patch id` / `insecure redirect …` | The response or a redirect is not from an unmodified, HTTPS-served server |
-| `failed`, `TimeoutException …` | Server or file server not answering; the next check retries |
-| Patch staged but never active | The app was not fully restarted, or the new patch was never confirmed and was skipped |
+## Requirements
 
-More: [troubleshooting guide](https://github.com/punitsoni22/flutter_ota_system/blob/main/docs/troubleshooting.md).
-
-## Security considerations
-
-- Patches are accepted only with a valid **ES256 signature** from a key compiled into the app,
-  the exact **SHA-256** and size, for this application, release, CPU ABI and runtime, and with a
-  patch number higher than any accepted before (anti-replay; server rollbacks excepted).
-- Release builds use **HTTPS only**; redirects are checked hop by hop, never downgraded to HTTP,
-  and the device token is not forwarded to another host. Downloads time out.
-- The server holds the private signing key and signs what an admin uploads: protect the server
-  and its admin key like the key itself. See the
-  [security documentation](https://github.com/punitsoni22/flutter_ota_system/blob/main/docs/security.md).
-- **Store policies:** Flutter OTA System's experimental AotPatchRuntime modifies executable
-  application code through an OTA patching mechanism. Its use in applications distributed through
-  Google Play presents a significant policy risk under Google Play's Device and Network Abuse
-  policy. Do not assume that the runtime is permitted for Play-distributed applications.
-  Independently review the current policy and obtain appropriate guidance before using it in a
-  distributed application ([details](https://github.com/punitsoni22/flutter_ota_system/blob/main/docs/policy/google-play.md)). iOS is not
-  supported ([details](https://github.com/punitsoni22/flutter_ota_system/blob/main/docs/policy/apple-app-store.md)). No store has reviewed or
-  approved this project.
-- **Data:** the SDK sends a random installation id, the app version, platform, CPU ABI, channel,
-  current patch number and boot/download events to **your** server, and your servers see the
-  device's IP address. Declare this in your app's privacy disclosures (e.g. Google Play Data
-  safety) as applicable: [field-by-field inventory](https://github.com/punitsoni22/flutter_ota_system/blob/main/docs/privacy-and-data-handling.md).
-- **Trust model:** the native start-up check does not repeat the signature verification, and
-  patch ids, download URLs and rollback instructions are not signed (protocol v1):
-  [limitations](https://github.com/punitsoni22/flutter_ota_system/blob/main/docs/signing-key-management.md#known-limitations-verified-in-the-code).
-
-This documentation is provided for technical guidance and is not legal advice. Platform policies
-can change. Developers are responsible for independently reviewing the policies applicable to
-their applications and distribution channels.
-
-## Current limitations
-
-- Android only; no iOS code patches; experimental code patches.
-- No background timer, no live code swap, no restart API: patches apply on the next cold start.
-- A patch that crashes **after** being confirmed is not rolled back automatically; use a
-  server-side rollback. Rollback and revocation reach a device only when the running code calls
-  `checkForUpdate()`, so never ship a patch that removes the OTA calls.
-- Patch ids and download URLs are not covered by the signature (protocol v1); the client
-  validates them strictly instead. Signing them is planned for protocol v2.
-- See [limitations](https://github.com/punitsoni22/flutter_ota_system/blob/main/docs/limitations.md)
-  and [known issues](https://github.com/punitsoni22/flutter_ota_system/blob/main/docs/known-issues.md).
+| | Bytecode runtime | Original alpha runtime |
+| --- | --- | --- |
+| Flutter | 3.47.9 with the Flutter OTA toolchain (installed by `flutter_ota`) | 3.44.9 or newer |
+| Platform | Android arm64 | Android |
+| Server | A self-hosted Flutter OTA System server | Same |
+| Network | `https://` in release builds (`http://` only to loopback, for local testing) | `https://` in release builds |
 
 ## Development
 
@@ -237,12 +112,12 @@ From `packages/ota_client` in the repository:
 flutter pub get && flutter analyze && flutter test
 ```
 
-The Android code has JVM unit tests (`android/src/test`). They are not run in CI; run them
-locally through the package's example app, which hosts the plugin (needs JDK 17 or newer):
+The tests cover both runtimes, including the ported patch-security tests.
+
+The Android code has JVM unit tests (`android/src/test`). To run them through the example app (JDK 17+):
 
 ```bash
-cd example
-flutter build apk --config-only          # creates android/gradlew and local.properties
+cd example && flutter build apk --config-only
 cd android && ./gradlew :flutter_ota_system:testDebugUnitTest
 ```
 
@@ -252,6 +127,4 @@ cd android && ./gradlew :flutter_ota_system:testDebugUnitTest
 - Issues: <https://github.com/punitsoni22/flutter_ota_system/issues>
 - Security reports: see [SECURITY.md](https://github.com/punitsoni22/flutter_ota_system/blob/main/SECURITY.md)
 
-Apache License 2.0, Copyright The Punit Authors. Contains an implementation of the bspatch
-algorithm by Colin Percival (BSD-2-Clause); see `lib/src/bsdiff.dart` and
-[THIRD_PARTY_NOTICES.md](https://github.com/punitsoni22/flutter_ota_system/blob/main/THIRD_PARTY_NOTICES.md).
+Apache License 2.0, Copyright The Punit Authors. Contains an implementation of the bspatch algorithm by Colin Percival (BSD-2-Clause); see `lib/src/bsdiff.dart` and [THIRD_PARTY_NOTICES.md](https://github.com/punitsoni22/flutter_ota_system/blob/main/THIRD_PARTY_NOTICES.md).

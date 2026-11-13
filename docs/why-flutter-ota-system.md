@@ -98,22 +98,22 @@ Flutter's creator ([shorebird.dev](https://shorebird.dev/)) and reached 1.0 in A
 
 ## 3. What you control with Flutter OTA System
 
-Everything in this list is in the v0.1.0-alpha.1 code. It runs on your infrastructure.
+Everything in this list is in the code on `main`. It runs on your infrastructure or your machine.
 
 | Part | What runs where | Status |
 |---|---|---|
 | Update server | FastAPI service (`backend/`) in your Docker Compose stack | ✅ Tested (automated tests + CI end-to-end demo) |
 | Database | Your PostgreSQL 17 (releases, patches, channels, devices, counters) | ✅ Tested |
 | Patch files | Your disk served by nginx, or your S3-compatible bucket; content-addressed, immutable | ✅ Disk tested; 🟢 S3 used internally, tests use a mock |
-| Store builds (for code patches) | Private release artifacts on your storage | ✅ Tested |
-| Signing key | ES256 key as a PEM file or environment variable on your server | ✅ Tested; no KMS/HSM support |
+| Builds and patch compilation | On **your** machine (or CI) with the `flutter_ota` CLI and the custom toolchain. No source code is uploaded | 🟡 Experimental (bytecode architecture) |
+| Signing keys | **Bytecode architecture:** an offline root key and a certified signer key on your machine; the server only verifies. **Original alpha:** an ES256 key on your server | 🟡 Experimental / ✅ Tested; no KMS/HSM support |
 | Update-check rules | Readable Python in [`backend/app/updates.py`](../backend/app/updates.py) | ✅ Tested |
 | Rollout logic | HMAC bucketing in [`backend/app/bucket.py`](../backend/app/bucket.py), server-side promotion checks | ✅ Tested |
 | Device traffic | Devices talk only to the URLs you configure (`serverUrl` and your file server or bucket) | ✅ Tested |
-| Client | `ota_client` Dart package and the Android loader class, in this repository | ✅ `mock-v1`; 🟡 Android code patches experimental |
+| Client | The `flutter_ota_system` package (in this repository) with the Flutter OTA custom engine | 🟡 Experimental: bytecode patches tested on one Android 13 phone |
 
 ✅ = implemented and tested · 🟢 = implemented, partially tested · 🟡 = experimental.
-Full table: [limitations.md](limitations.md#status-of-features).
+Details: [limitations](limitations.md).
 
 ## 4. Advantages of self-hosting
 
@@ -122,8 +122,8 @@ Full table: [limitations.md](limitations.md#status-of-features).
   channel and current patch number.
 - **Your network, your rules.** Run the server on a private network, behind your VPN or WAF,
   or in your region. Devices only need to reach the URLs you configure.
-- **Your key.** The private signing key never leaves your server, and the app trusts only the
-  public keys you compiled into it.
+- **Your keys.** In the bytecode architecture, the private signing keys never leave your machine:
+  the server only verifies, and the app trusts only the root keys compiled into it.
 - **No per-install pricing.** The software is free (Apache-2.0). You pay for your own servers,
   storage, bandwidth and time instead (see [section 7](#7-cost-and-operational-responsibility)).
 - **No dependency on a vendor's roadmap or availability.** You can fork the project and keep it
@@ -142,8 +142,9 @@ Full table: [limitations.md](limitations.md#status-of-features).
   adapter** yet.
 - **Backups:** `./flutter-ota-system.sh backup` / `restore` covers the database, patch files,
   signing key and `.env`, with checksums. Restore refuses a damaged backup.
-- **Signing:** you generate and hold the key (`scripts/generate_dev_signing_key.sh` for local
-  use). Keep a protected backup: whoever has it can ship code to your apps.
+- **Signing:** you generate and hold the keys (`flutter_ota keys init`; for the original alpha,
+  the server key from `scripts/generate_dev_signing_key.sh`). Keep a protected offline backup of
+  the root key: whoever has your keys can ship code to your apps.
 
 ## 6. Customisation possibilities
 
@@ -157,7 +158,7 @@ then maintain your fork.
   ([`bucket.py`](../backend/app/bucket.py)). Promotion checks for `production` live on the
   server ([`routers/admin.py`](../backend/app/routers/admin.py)).
 - **Device targeting.** Today you can target by application, release, platform, architecture,
-  channel and percentage ([rollouts.md](rollouts.md#device-targeting)). There is no targeting by
+  channel and percentage ([releases and patches](releases-and-patches.md#staged-rollout)). There is no targeting by
   model, OS version, country or user yet. Because the server is yours, you can add such rules
   yourself.
 - **Integrations.** The admin API is plain REST with an OpenAPI page at `/docs`, so CI pipelines,
@@ -204,31 +205,31 @@ Consider Flutter OTA System if:
   cloud account, your own region, or an air-gapped environment;
 - you need to **read, audit and modify** the server, rollout and signing logic;
 - you want **built-in** deterministic percentage rollouts and server-enforced promotion checks;
-- **Android** (Dart code patches) or signed config patches (`mock-v1`) cover your needs;
+- **Android arm64** and patches to code in **feature packages** cover your needs;
 - you are able and willing to operate the stack yourself and to **validate it** (security,
   devices, Flutter versions) before relying on it;
 - you want to contribute to an open-source, self-hosted option for the Flutter ecosystem.
 
 Not sure? Run both on a test app. Flutter OTA System's local stack starts with one command
-([installation.md](installation.md)).
+([self-hosting](self-hosting.md)).
 
 ## 10. Current technical limitations
 
-| Area | Status in v0.1.0-alpha.1 |
+| Area | Status |
 |---|---|
 | Maturity | Experimental alpha; APIs, schema and patch formats may change before 1.0 |
-| Platforms tested | Linux (development) and a small number of Android 13 / arm64-v8a devices |
-| iOS | Code patches **not implemented**; nothing tested on iOS |
-| macOS / Windows | Not tested as development machines or Docker hosts |
-| Code patches | Android only, Dart code only; the same Flutter version and exact store build are required; depends on Flutter's loader behaviour |
+| Platforms tested | Linux (development) and Android 13 / arm64-v8a phones (the bytecode architecture on one phone) |
+| iOS | **Not implemented** |
+| macOS / Windows | Not supported as development machines; not tested as Docker hosts |
+| Code patches | Android arm64, Dart code in feature packages only, Flutter 3.47.9 with the custom engine; the exact store build is required; interpreted code is slower for CPU-heavy work |
+| Distribution | Packages not yet on pub.dev; custom toolchain not yet published |
 | Security | No independent audit; one shared admin API key; no RBAC, SSO or audit log; open device registration; no rate limiting |
-| Signing | PEM file or environment variable; no KMS/HSM; no key-rotation tooling |
+| Signing | Developer-owned keys with rotation and revocation (bytecode); server key for the original alpha; no KMS/HSM |
 | Deployment | Local stack tested; single-server `deploy/` setup not verified |
 | Scale | No load tests and no capacity claim |
 | Monitoring | Per-patch counters and a device summary; no dashboards or alerts |
 
-Details: [limitations.md](limitations.md) · [known-issues.md](known-issues.md) ·
-[security.md](security.md).
+Details: [limitations](limitations.md) · [security](security.md).
 
 ---
 

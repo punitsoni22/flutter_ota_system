@@ -123,5 +123,5 @@ for that actual implementation. See [policy/apple-app-store.md](policy/apple-app
 ## Related
 
 - [security.md](security.md): security model and limitations
-- [signing-key-management.md](signing-key-management.md): signing keys and the trust model
+- [security](security.md): signing keys and the trust model
 - [policy/google-play.md](policy/google-play.md): Google Play policy considerations
