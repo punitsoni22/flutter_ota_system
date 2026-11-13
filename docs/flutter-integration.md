@@ -2,10 +2,20 @@
 
 How an app uses the `flutter_ota_system` package. The setup steps are in the [quick start](quick-start.md).
 
-**Status: experimental alpha.**
+**Status: experimental alpha (`v0.2.0-alpha`).**
 - Supports Android arm64, with the Flutter OTA toolchain (Flutter 3.47.9 plus our custom engine).
-- The bytecode runtime was tested on one Android 13 phone.
+- The bytecode runtime was tested end to end on one Android 13 arm64 phone.
 - A normal Flutter SDK cannot load patches.
+
+## Install
+
+In your Flutter project folder:
+
+```bash
+flutter pub add flutter_ota_system
+```
+
+The package needs Flutter 3.44.9 or newer to resolve. Your app is then **built** by the `flutter_ota` CLI with its own Flutter 3.47.9 toolchain (`flutter_ota release android`), never by your global Flutter. Install the CLI with `dart pub global activate flutter_ota_cli` (see the [quick start](quick-start.md#1-install)).
 
 ## The code you write once
 
@@ -87,10 +97,10 @@ There is never a private key in it.
    - toolchain, runtime and interface;
    - signed revocation lists;
    - replay (sequence number) and expiry.
-4. **Test-load.** It loads the patch once in a **separate process** (`:flutter_ota_verify`). The engine's bytecode verifier checks every function there. If that process refuses the patch or crashes, the patch is never used.
+4. **Test-load.** It loads the patch once in a **separate process** (`:flutter_ota_verify`). The engine's bytecode verifier checks every function there. If that process refuses the patch or crashes, the patch is never used. If Android kills it for low memory, the check is retried at a later update check (at most 3 times per patch).
 5. **Store.** The patch is stored and runs from the **next app start**. Running code is never swapped live.
 6. **Re-check.** At every start, the stored patch is verified again before it loads.
-7. **Crash recovery.** A patch that crashes the app twice is rolled back and blocklisted. The last confirmed patch, or the store code, runs instead. Force-stops and low-memory kills are not counted as crashes.
+7. **Crash recovery.** A patch that crashes the app twice is rolled back and blocklisted. The last confirmed patch, or the store code, runs instead. Force-stops and low-memory kills are not counted as crashes. The server still offers the patch to other devices: roll it back there too (`flutter_ota rollback`).
 
 ## Useful getters
 

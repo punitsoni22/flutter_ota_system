@@ -4,59 +4,44 @@ This guide takes a Flutter app from zero to a working OTA patch with the bytecod
 
 > [!WARNING]
 > **Experimental alpha.**
-> - Supported: Android arm64 apps, built on a Linux x64 machine.
-> - The `flutter_ota_system` package and the `flutter_ota_cli` tool are **not yet on pub.dev**, and the custom toolchain is **not yet published**.
-> - This guide shows the commands that work today, and the planned commands for after publication.
+> - Release `v0.2.0-alpha`: Android **arm64** apps, built on a **Linux x64** machine with Flutter **3.47.9** and our custom engine.
+> - Not production-ready, no independent security audit, no app-store approval of any kind.
 
 You need:
-- Linux x64 with Git, Docker (for the server) and about 10 GB of free disk;
+- Linux x64 with Git, Docker (for the server), Flutter 3.44.9 or newer (to create and edit your app; the OTA builds use their own Flutter) and about 10 GB of free disk;
 - an Android arm64 phone for testing;
 - your app's feature code in **feature packages** (see step 6).
 
 ## 1. Install
 
-**SDK (in your app).** Once published:
+**SDK.** In your Flutter project folder:
 
 ```bash
 flutter pub add flutter_ota_system
 ```
 
-Today, add it as a Git dependency in `pubspec.yaml`:
-
-```yaml
-dependencies:
-  flutter_ota_system:
-    git:
-      url: https://github.com/punitsoni22/flutter_ota_system.git
-      path: packages/ota_client
-```
-
-**CLI (on your machine).** Once published:
+**CLI (on your machine):**
 
 ```bash
 dart pub global activate flutter_ota_cli
 ```
 
-Today, from a clone of this repository:
-
-```bash
-git clone https://github.com/punitsoni22/flutter_ota_system.git
-dart pub global activate --source path flutter_ota_system/packages/flutter_ota_cli
-```
-
 Make sure `~/.pub-cache/bin` is on your `PATH`, then check:
 
 ```bash
-flutter_ota --version
+export PATH="$PATH:$HOME/.pub-cache/bin"     # add this line to ~/.bashrc to keep it
+flutter_ota --help
 ```
 
 ## 2. Run your server
 
-Follow [self-hosting](self-hosting.md). For a local test stack:
+Follow [self-hosting](self-hosting.md). For a local test stack, in a separate folder:
 
 ```bash
+git clone https://github.com/punitsoni22/flutter_ota_system.git
 cd flutter_ota_system
 ./flutter-ota-system.sh setup
+export OTA_ADMIN_API_KEY=$(grep '^OTA_ADMIN_API_KEY=' .env | cut -d= -f2-)   # the admin key setup created
 ```
 
 **Create your app on the server.** Note its `id`, a UUID:
@@ -76,7 +61,7 @@ Run these in your Flutter project folder.
 ```bash
 flutter_ota init --app-id <server app UUID>
 flutter_ota config set server-url https://ota.example.com    # or http://127.0.0.1:8000 for a local test
-export FLUTTER_OTA_ADMIN_KEY=<admin API key>                  # never stored in files by flutter_ota
+export FLUTTER_OTA_ADMIN_KEY=<admin API key>                  # OTA_ADMIN_API_KEY from step 2; never stored in files
 ```
 
 `flutter_ota.yaml` contains **only** the app id:
@@ -91,14 +76,17 @@ This is the **server's application UUID**. It is not the slug, the Android appli
 
 The CLI downloads, verifies and caches its own Flutter SDK, together with our custom engine. You never build or configure the engine, and your global Flutter install is never used or changed.
 
-**Today** there is no official toolchain download yet. Point the CLI at a toolchain mirror (one you built with the [owner tool](toolchain-management.md#6-building-the-toolchain-yourself), or one a teammate built) and trust its signing key:
-
 ```bash
-flutter_ota config set toolchain-index-url file:///path/to/mirror/index.json
-flutter_ota config add-toolchain-key <key_id> <public_key_base64>
 flutter_ota toolchain install      # also writes flutter_ota.lock: commit it
 flutter_ota toolchain doctor
 ```
+
+What `install` does:
+- reads the toolchain index of this CLI version (a GitHub release asset), and checks its ES256 signature against the key built into the CLI;
+- downloads the official Flutter 3.47.9 SDK archive from Google (about 1.6 GB) and our overlay (about 54 MB) from the GitHub release, and checks the size and SHA-256 of both;
+- resumes an interrupted download when you run it again.
+
+The first `release android` also downloads about 2 GB of Android build tools into the toolchain cache. To use your own mirror instead, see [toolchain management](toolchain-management.md).
 
 ## 5. Create your signing keys
 
@@ -204,13 +192,15 @@ The command:
 
 It refuses with a clear reason if a change needs a new store release.
 
-**Promote it to production.** After testing on staging, use the Python admin CLI:
+**Promote it to production.** After testing on staging, use the Python admin CLI from your server folder (`flutter_ota status` shows the patch id):
 
 ```bash
-ota patch promote <patch_id> --percent 10              # staging → production, 10% of devices
+cd flutter_ota_system
+./flutter-ota-system.sh cli                                         # once: installs the ota tool
+./flutter-ota-system.sh ota patch promote <patch_id> --percent 10   # staging → production, 10% of devices
 ```
 
-The server refuses production without staging first. `flutter_ota` has no promote command yet.
+The server refuses production without staging first. `flutter_ota` has no promote command. For a server that is not the local stack, see the [CLI reference](cli-reference.md#admin-cli-ota).
 
 **What the phones do:**
 - At the next app start, the phone downloads and verifies the patch.

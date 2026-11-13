@@ -4,10 +4,10 @@ The Flutter SDK of **[Flutter OTA System](https://github.com/punitsoni22/flutter
 
 > [!WARNING]
 > **Experimental alpha. Not production-ready.**
-> - Android only. The bytecode runtime is **Android arm64 only**, with the Flutter OTA custom engine (Flutter 3.47.9), and was tested end to end on **one Android 13 phone**.
-> - iOS, macOS, Windows, Linux and web are not supported.
+> - Android only. The bytecode runtime is **Android arm64 only**, with the Flutter OTA custom engine (Flutter 3.47.9), and was tested end to end on **one Android 13 arm64 phone**.
+> - Apps are built on **Linux x64** machines with the `flutter_ota` CLI.
+> - iOS, macOS, Windows, Linux and web apps are not supported.
 > - No independent security audit, and no app-store approval of any kind.
-> - This package is **not yet published on pub.dev**.
 
 Read first:
 - [compatibility and limitations](https://github.com/punitsoni22/flutter_ota_system/blob/main/docs/limitations.md);
@@ -21,28 +21,18 @@ The package contains two independent runtimes. **Use one per app.**
 
 | Runtime | API | Status |
 | --- | --- | --- |
-| **Bytecode runtime** (new, unreleased) | `FlutterOta`, `OtaFeature` | Experimental. Patched feature code runs as Dart bytecode in the custom engine's interpreter. The store `libapp.so` is never replaced |
+| **Bytecode runtime** (new in `0.2.0-alpha`) | `FlutterOta`, `OtaFeature` | Experimental. Patched feature code runs as Dart bytecode in the custom engine's interpreter. The store `libapp.so` is never replaced |
 | **Original alpha runtime** (`0.1.0-alpha.1`) | `OtaClient`, `OtaConfig`, `AotPatchRuntime`, `MockPatchRuntime` | Experimental. Server-signed patches; Android code patches replace `libapp.so` (binary diff). Stock Flutter 3.44.9+ |
 
 ## Install
 
-Once published on pub.dev:
+In your Flutter project folder:
 
 ```bash
 flutter pub add flutter_ota_system
 ```
 
-Today, use a Git dependency:
-
-```yaml
-dependencies:
-  flutter_ota_system:
-    git:
-      url: https://github.com/punitsoni22/flutter_ota_system.git
-      path: packages/ota_client
-```
-
-The bytecode runtime also needs the `flutter_ota` CLI and its toolchain, which build and sign everything on your machine. See the [quick start](https://github.com/punitsoni22/flutter_ota_system/blob/main/docs/quick-start.md).
+The bytecode runtime also needs the [`flutter_ota_cli`](https://pub.dev/packages/flutter_ota_cli) tool (`dart pub global activate flutter_ota_cli`). It downloads the custom toolchain, and builds and signs everything on your machine. See the [quick start](https://github.com/punitsoni22/flutter_ota_system/blob/main/docs/quick-start.md).
 
 ## Bytecode runtime
 
@@ -99,8 +89,9 @@ The server signs these patches; the app trusts the public keys you compile in. `
 
 | | Bytecode runtime | Original alpha runtime |
 | --- | --- | --- |
-| Flutter | 3.47.9 with the Flutter OTA toolchain (installed by `flutter_ota`) | 3.44.9 or newer |
+| Flutter | 3.44.9 or newer to add the package; the app is built with Flutter 3.47.9 / Dart 3.13.7 and the Flutter OTA custom engine (downloaded by `flutter_ota`) | 3.44.9 or newer |
 | Platform | Android arm64 | Android |
+| Developer machine | Linux x64 | Linux (the only tested host) |
 | Server | A self-hosted Flutter OTA System server | Same |
 | Network | `https://` in release builds (`http://` only to loopback, for local testing) | `https://` in release builds |
 

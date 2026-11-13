@@ -1,7 +1,7 @@
 # Compatibility and limitations
 
-Flutter OTA System is an **experimental alpha**:
-- It has been tested internally only: Linux for development, and Android phones.
+Flutter OTA System `v0.2.0-alpha` is an **experimental alpha**:
+- It has been tested internally only: Linux x64 for development, one Android 13 arm64 phone end to end, and Android emulators.
 - It is **not production-ready**.
 - It has **not** been independently security-audited or load-tested.
 - **No app store has reviewed or approved it.** Never assume store approval; see [Google Play](policy/google-play.md) and [Apple App Store](policy/apple-app-store.md).
@@ -12,14 +12,14 @@ Flutter OTA System is an **experimental alpha**:
 | --- | --- |
 | Android | **Experimental**. The bytecode architecture was tested end to end on **one Android 13 arm64 phone**, plus compatibility runs on Android 14, 16 and 17 (16 KB memory pages) **emulators**. Those were x86_64 emulators running arm64 code through translation: not proof for real arm64 devices or other manufacturers |
 | ABI | **arm64-v8a** only |
-| Developer machine (CLI, toolchain, builds) | **Linux x64** only. The toolchain's host binaries exist only for Linux |
+| Developer machine (CLI, toolchain, builds) | **Linux x64** only. The toolchain's host binaries exist only for Linux x64 (no Linux arm64, macOS or Windows hosts) |
 | Flutter / Dart | **3.47.9 / 3.13.7**, with the Flutter OTA custom engine (engine `89c39edf`, Dart `416e33b`). No other version |
 | Stock Flutter engine | Cannot load bytecode patches |
 | iOS | Not implemented |
 | macOS, Windows, Linux, web **apps** | Not implemented |
 | Backend | Linux Docker stack tested. The single-server deploy (`deploy/`, Caddy) is a draft and not verified end to end |
-| Packages on pub.dev | `flutter_ota_system` and `flutter_ota_cli` are **not published yet**. Use the Git and path installs from the [quick start](quick-start.md) |
-| Toolchain distribution | **Not published yet**: no official download and no official signing key. Build it yourself ([toolchain management](toolchain-management.md#6-building-the-toolchain-yourself)) |
+| Packages | `flutter_ota_system` (SDK) and `flutter_ota_cli` (CLI), both `0.2.0-alpha` on pub.dev. The SDK package resolves with Flutter 3.44.9 or newer; apps are built with the toolchain |
+| Toolchain distribution | `flutter-3.47.9-ota.1`, downloaded and verified by the CLI from the `v0.2.0-alpha` GitHub release ([toolchain management](toolchain-management.md)) |
 
 The original alpha (`v0.1.0-alpha.1`, server-signed `libapp.so` patches) runs on stock Flutter 3.44.9+. It has its own limits, listed [below](#original-alpha-limitations).
 
