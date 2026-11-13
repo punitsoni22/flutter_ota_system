@@ -74,6 +74,10 @@ jobs:
   flutter:
     # The job name is a required status check in the branch ruleset: keep it unchanged. The
     # example app now lives in packages/ota_client/example.
+    # The SDK (ota_client) is always analysed and fully tested, including its security tests.
+    # The example app is a demo, not the product: it is analysed only when its own code or
+    # configuration changes (not for Markdown-only edits), or when the workflow is started by hand
+    # (workflow_dispatch).
     name: Flutter (ota_client + example_app)
     runs-on: ubuntu-latest
     steps:
@@ -84,7 +88,24 @@ jobs:
       - name: ota_client analyze + test
         working-directory: packages/ota_client
         run: flutter pub get && flutter analyze && flutter test
+      - name: Did the example app change?
+        id: example
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD: ${{ github.sha }}
+        run: |
+          if [ "$EVENT" = "workflow_dispatch" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"; echo "Manual run: checking the example app."
+          elif [ -z "$BASE" ] || ! { git fetch -q --no-tags --depth=1 origin "$BASE" 2>/dev/null && git cat-file -e "$BASE^{commit}"; }; then
+            echo "run=true" >> "$GITHUB_OUTPUT"; echo "Base commit unknown: checking the example app to be safe."
+          elif git diff --name-only "$BASE" "$HEAD" -- packages/ota_client/example ':(exclude)*.md' | grep -q .; then
+            echo "run=true" >> "$GITHUB_OUTPUT"; echo "The example app changed: checking it."
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"; echo "The example app did not change: skipping its check."
+          fi
       - name: example app analyze
+        if: steps.example.outputs.run == 'true'
         working-directory: packages/ota_client/example
         run: flutter pub get && flutter analyze
 
