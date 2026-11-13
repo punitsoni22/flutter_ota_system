@@ -239,6 +239,17 @@ class PatchStore {
 
   // ---- crash state machine -------------------------------------------------------------------
 
+  /// Counts a low-memory kill of the separate verifier while it checked [id] (persisted, so the
+  /// limit also holds across restarts). Returns the new count.
+  int noteVerifierEviction(String id) {
+    final counts = {...?(_s['verifier_evictions'] as Map?)?.cast<String, Object?>()};
+    final n = ((counts[id] is int ? counts[id]! as int : 0)) + 1;
+    counts[id] = n;
+    _s['verifier_evictions'] = counts;
+    save();
+    return n;
+  }
+
   void blacklist(String id, String why) {
     _s['blacklist'] = {..._strings('blacklist'), id}.toList();
     _to(id, 'BLACKLISTED', why);
