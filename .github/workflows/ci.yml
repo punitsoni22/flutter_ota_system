@@ -109,6 +109,45 @@ jobs:
         working-directory: packages/ota_client/example
         run: flutter pub get && flutter analyze
 
+  cli-dart:
+    # Not yet a required check. Flutter is pinned to the toolchain version (3.47.9, Dart 3.13.7),
+    # the same SDK the guard job uses, so both share one cache entry. The three opt-in lab tests
+    # (FLUTTER_OTA_LAB_TESTS, FLUTTER_OTA_TEST_LINK_DILL) stay skipped: they need the local lab.
+    name: Developer CLI (flutter_ota_cli tests)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: { persist-credentials: false }
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with: { channel: stable, flutter-version: 3.47.9, cache: true }
+      - name: Test inputs (demo app package config, patch_security dependencies)
+        # Without them two tests skip themselves: the demo registry test and the signing interop
+        # test with the reference verifier.
+        run: |
+          (cd packages/ota_client/example && flutter pub get)
+          (cd prototypes/security_hardening/packages/patch_security && dart pub get)
+      - name: flutter_ota_cli analyze + test
+        working-directory: packages/flutter_ota_cli
+        run: dart pub get && dart analyze && dart test
+
+  patch-guard:
+    # Not yet a required check. Runs every patch_guard fixture case (fixtures/cases.tsv and
+    # fixtures/host_cases.tsv) with the analyzer version pinned in tools/patch_guard/pubspec.yaml.
+    # The dart2bytecode validator ground truth (scripts/run_guard_tests.sh) needs the lab and stays
+    # a local release gate.
+    name: Security guard (patch_guard cases)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: { persist-credentials: false }
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with: { channel: stable, flutter-version: 3.47.9, cache: true }
+      - name: patch_guard fixture cases
+        working-directory: prototypes/security_hardening
+        run: ./tools/patch_guard/test/run_ci_cases.sh "$RUNNER_TEMP/patch_guard"
+
   e2e:
     name: Docker build + local end-to-end smoke test
     runs-on: ubuntu-latest
