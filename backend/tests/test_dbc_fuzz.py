@@ -309,9 +309,6 @@ def test_revocation_upload_mutation_fuzz(client):
 
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "known bug: JSON nested about 1000 levels deep raises RecursionError in dbc.canonical() and "
-    "the server answers 500 instead of 4xx (dbc-v1 upload, revocation upload, certificate upload)"))
 def test_deep_nesting_is_refused_cleanly(client):
     dev = Dev(client)
     good = dev.patch_file()
@@ -331,3 +328,29 @@ def test_deep_nesting_is_refused_cleanly(client):
                  content=raw_json(dict(dev.cert, body=dict(dev.cert["body"], environment=nested)))),
     ]
     assert [r.status_code for r in results] == [422, 422, 422], [r.text[:80] for r in results]
+    assert all("nested" in r.json()["detail"] for r in results[:2]), [r.text[:80] for r in results]
+
+
+def test_extremely_deep_raw_json_is_refused_cleanly(client):
+    """Deep enough that json.loads itself gives up (RecursionError), before canonical() runs."""
+    dev = Dev(client)
+    deep = b'{"a":' * 10_000 + b"0" + b"}" * 10_000  # an object (lists are refused earlier); fits 64 KiB
+    raw = TestClient(app, raise_server_exceptions=False)
+    r = raw.post(f"/v1/admin/apps/{dev.app_id}/trust/revocations", headers=ADMIN,
+                 files={"file": ("r.otp", io.BytesIO(container(deep, b"{}", b"")))})
+    assert r.status_code == 422, r.text[:80]
+    assert r.json()["detail"].startswith("bad_revocations:"), r.text[:80]
+
+
+def test_nesting_limit_boundary():
+    from app.dbc import MAX_JSON_DEPTH, canonical as server_canonical
+
+    def nest(depth):
+        v = 0
+        for _ in range(depth):
+            v = [v]
+        return v
+
+    assert server_canonical(nest(MAX_JSON_DEPTH)) == b"[" * MAX_JSON_DEPTH + b"0" + b"]" * MAX_JSON_DEPTH
+    with pytest.raises(ValueError, match="nested"):
+        server_canonical(nest(MAX_JSON_DEPTH + 1))

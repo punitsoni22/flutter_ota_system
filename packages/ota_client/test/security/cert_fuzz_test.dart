@@ -8,15 +8,12 @@
 // wrongly typed fields, and deeply nested JSON. Invariant: every input either verifies or throws
 // PatchRejected; any other exception or error is a bug, and nothing changed is ever accepted.
 //
-// Known bugs found by this file (Phase 5, not fixed yet; see the skipped tests at the end):
-//  K1  a ROOT-SIGNED certificate whose key_id is not a string throws a TypeError (certs.dart
-//      KeyCertificate.keyId cast) instead of PatchRejected;
-//  K2  a ROOT-SIGNED revocation list whose patch/key id entries are not strings throws a
-//      TypeError (verifier.dart cast<String>().toSet()); revoked_cert_serials: null is accepted
-//      as "absent" (the server refuses it);
-//  K3  a manifest nested about 32 000 levels deep (fits in 64 KiB, parsed BEFORE any signature
-//      check) throws StackOverflowError in canonicalJson instead of PatchRejected.
-// The fuzz loops count K1/K2 separately ("known") and fail on anything else.
+// Bugs found by this file in Phase 5 and fixed (regression tests in the last group):
+//  K1  a ROOT-SIGNED certificate whose key_id or public_key is not a string threw a TypeError;
+//  K2  a ROOT-SIGNED revocation list whose patch/key id entries are not strings threw a
+//      TypeError, and revoked_cert_serials: null was accepted as "absent" (the server refuses it);
+//  K3  a manifest nested about 32 000 levels deep (parsed BEFORE any signature check) threw
+//      StackOverflowError instead of PatchRejected.
 
 import 'dart:convert';
 import 'dart:math';
@@ -111,31 +108,19 @@ Object nested(int depth) {
 }
 
 /// Runs [body]; returns the PatchRejected code, or records a failure for anything else.
-/// [known] classifies a documented bug (label, error or null when accepted) instead.
-String outcome(String label, Object? Function() body, List<String> failures,
-    {required bool mayAccept, bool Function(String label, Object? error)? known}) {
+String outcome(String label, Object? Function() body, List<String> failures, {required bool mayAccept}) {
   try {
     body();
     if (mayAccept) return 'accepted';
-    if (known != null && known(label, null)) return 'KNOWN accepted';
     failures.add('$label: ACCEPTED');
     return 'ACCEPTED';
   } on PatchRejected catch (e) {
     return e.code;
   } catch (e) {
-    if (known != null && known(label, e)) return 'KNOWN ${e.runtimeType}';
     failures.add('$label: ${e.runtimeType}: ${e.toString().split('\n').first}');
     return 'error ${e.runtimeType}';
   }
 }
-
-/// K1: TypeError for a root-signed certificate body whose key_id is not a string.
-bool knownK1(String label, Object? e) => e is TypeError && RegExp(r'^case \d+ \w+ key_id(=| |$)').hasMatch(label);
-
-/// K2: TypeError for non-string revoked ids; null revoked_cert_serials accepted.
-bool knownK2(String label, Object? e) =>
-    (e is TypeError && RegExp(r'^case \d+ \w+ revoked_(patch|key)_ids').hasMatch(label)) ||
-    (e == null && label.endsWith('revoked_cert_serials=null'));
 
 void count(Map<String, int> m, String k) => m[k] = (m[k] ?? 0) + 1;
 
@@ -190,7 +175,7 @@ void main() {
       final c = {'body': edited, 'root_key_id': root.id, 'sig': root.sign(signedMessage(keyCertDomain, bodyBytes))};
       final b = Map<String, Object?>.from(block)..['cert'] = c;
       final f = buildContainer(manifestBytes, canonicalJson(b), module);
-      count(stats, outcome('case $i $label', () => verify(f), failures, mayAccept: false, known: knownK1));
+      count(stats, outcome('case $i $label', () => verify(f), failures, mayAccept: false));
     }
     print('certificate-body fuzz: $stats');
     expect(failures, isEmpty, reason: failures.take(20).join('\n'));
@@ -217,7 +202,7 @@ void main() {
       final f = buildContainer(body, canonicalJson({'alg': 'ES256', 'key_id': root.id,
         'sig': root.sign(signedMessage(revocationDomain, body))}), Uint8List(0));
       count(stats, outcome('case $i $label', () => verifyRevocations(f, host: host(), keys: verifierFor([]), trust: trust()),
-          failures, mayAccept: false, known: knownK2));
+          failures, mayAccept: false));
     }
     print('revocation-list fuzz: $stats');
     expect(failures, isEmpty, reason: failures.take(20).join('\n'));
@@ -241,25 +226,66 @@ void main() {
     expect(failures, isEmpty, reason: failures.join('\n'));
   });
 
-  group('known bugs (skipped until fixed; each asserts the CORRECT behaviour)', () {
-    test('K1: root-signed certificate with a non-string key_id is PatchRejected', () {
-      final body = Map<String, Object?>.from((block['cert']! as Map)['body']! as Map)..['key_id'] = 7;
+  group('fixed bugs (regression tests)', () {
+    Uint8List withCert(Map<String, Object?> body) {
       final c = {'body': body, 'root_key_id': root.id, 'sig': root.sign(signedMessage(keyCertDomain, canonicalJson(body)))};
-      final f = buildContainer(manifestBytes, canonicalJson(Map<String, Object?>.from(block)..['cert'] = c), module);
-      expect(() => verify(f), throwsA(isA<PatchRejected>()));
-    }, skip: 'K1 known bug (Phase 5 security fuzz): TypeError instead of PatchRejected');
+      return buildContainer(manifestBytes, canonicalJson(Map<String, Object?>.from(block)..['cert'] = c), module);
+    }
 
-    test('K2: root-signed revocation list with non-string ids is PatchRejected', () {
-      final body = canonicalJson({'type': 'revocations', 'release_id': releaseId, 'sequence': 3,
-        'revoked_patch_ids': [1], 'revoked_key_ids': <String>[]});
-      final f = buildContainer(body, canonicalJson({'alg': 'ES256', 'key_id': root.id,
+    Uint8List rootSignedList(Map<String, Object?> list) {
+      final body = canonicalJson({'type': 'revocations', 'release_id': releaseId, 'sequence': 3, ...list});
+      return buildContainer(body, canonicalJson({'alg': 'ES256', 'key_id': root.id,
         'sig': root.sign(signedMessage(revocationDomain, body))}), Uint8List(0));
-      expect(() => verifyRevocations(f, host: host(), keys: verifierFor([]), trust: trust()), throwsA(isA<PatchRejected>()));
-    }, skip: 'K2 known bug (Phase 5 security fuzz): TypeError instead of PatchRejected');
+    }
+
+    RevocationList revocations(Map<String, Object?> list) =>
+        verifyRevocations(rootSignedList(list), host: host(), keys: verifierFor([]), trust: trust());
+
+    final rejected = isA<PatchRejected>().having((e) => e.code, 'code', 'bad_certificate');
+    final badList = isA<PatchRejected>().having((e) => e.code, 'code', 'bad_revocations');
+    final certBody = (block['cert']! as Map)['body']! as Map;
+
+    test('K1: root-signed certificate with a non-string key_id or public_key is bad_certificate', () {
+      for (final field in ['key_id', 'public_key']) {
+        for (final value in <Object?>[7, null, true, <Object?>[], <String, Object?>{}]) {
+          final body = Map<String, Object?>.from(certBody)..[field] = value;
+          expect(() => verify(withCert(body)), throwsA(rejected), reason: '$field=$value');
+        }
+      }
+    });
+
+    test('K2: root-signed revocation list with non-string ids is bad_revocations', () {
+      for (final field in ['revoked_patch_ids', 'revoked_key_ids']) {
+        for (final value in <Object?>[1, null, true, <Object?>[], <String, Object?>{}]) {
+          final list = {'revoked_patch_ids': <Object?>[], 'revoked_key_ids': <Object?>[], field: [value]};
+          expect(() => revocations(list), throwsA(badList), reason: '$field=[$value]');
+        }
+      }
+    });
+
+    test('K2: revoked_cert_serials: null is bad_revocations; absent still means none', () {
+      expect(() => revocations({'revoked_patch_ids': <Object?>[], 'revoked_key_ids': <Object?>[], 'revoked_cert_serials': null}),
+          throwsA(badList));
+      final older = revocations({'revoked_patch_ids': ['p1'], 'revoked_key_ids': ['k1']});
+      expect(older.patchIds, {'p1'});
+      expect(older.keyIds, {'k1'});
+      expect(older.certSerials, isEmpty);
+      final full = revocations({'revoked_patch_ids': ['p1'], 'revoked_key_ids': ['k1'], 'revoked_cert_serials': [4]});
+      expect(full.certSerials, {4});
+    });
 
     test('K3: a manifest nested 32 000 levels deep is PatchRejected', () {
       final bytes = Uint8List.fromList(utf8.encode('{"a":${'[' * 32000}0${']' * 32000}}'));
-      expect(() => verify(buildContainer(bytes, goodParts.signatureBytes, module)), throwsA(isA<PatchRejected>()));
-    }, skip: 'K3 known bug (Phase 5 security fuzz): StackOverflowError instead of PatchRejected');
+      expect(() => verify(buildContainer(bytes, goodParts.signatureBytes, module)),
+          throwsA(isA<PatchRejected>().having((e) => e.reason, 'reason', contains('nested'))));
+    });
+
+    test('K3: the nesting limit is $maxJsonDepth levels, and brackets inside strings do not count', () {
+      Uint8List nested(int depth) => Uint8List.fromList(utf8.encode('{"a":${'[' * (depth - 1)}0${']' * (depth - 1)}}'));
+      expect(parseCanonicalObject(nested(maxJsonDepth)), isA<Map<String, Object?>>());
+      expect(() => parseCanonicalObject(nested(maxJsonDepth + 1)), throwsFormatException);
+      final brackets = '[{' * 100;
+      expect(parseCanonicalObject(canonicalJson({'s': '$brackets\\"$brackets'}))['s'], '$brackets\\"$brackets');
+    });
   });
 }

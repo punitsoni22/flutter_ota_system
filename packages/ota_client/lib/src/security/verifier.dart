@@ -207,9 +207,13 @@ RevocationList verifyRevocations(Uint8List file,
   final ok = keyId is String && sig['alg'] == 'ES256' && sig['sig'] is String &&
       (keys.verify(keyId, msg, sig['sig']! as String) || (trust != null && trust.roots.verify(keyId, msg, sig['sig']! as String)));
   if (!ok) throw PatchRejected('bad_signature', 'revocation list signature does not verify');
-  final serials = body['revoked_cert_serials'] ?? const <Object?>[];
+  // An absent field (older lists) means none; an explicit null is invalid, as on the server.
+  final serials = body.containsKey('revoked_cert_serials') ? body['revoked_cert_serials'] : const <Object?>[];
   if (serials is! List || serials.any((e) => e is! int)) throw PatchRejected('bad_revocations', 'invalid certificate serials');
-  return RevocationList(host.releaseId, body['sequence']! as int,
-      (body['revoked_patch_ids']! as List).cast<String>().toSet(), (body['revoked_key_ids']! as List).cast<String>().toSet(),
-      serials.cast<int>().toSet());
+  final patchIds = body['revoked_patch_ids']! as List, keyIds = body['revoked_key_ids']! as List;
+  if (patchIds.any((e) => e is! String) || keyIds.any((e) => e is! String)) {
+    throw PatchRejected('bad_revocations', 'revoked ids must be strings');
+  }
+  return RevocationList(host.releaseId, body['sequence']! as int, patchIds.cast<String>().toSet(),
+      keyIds.cast<String>().toSet(), serials.cast<int>().toSet());
 }

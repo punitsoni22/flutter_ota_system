@@ -33,6 +33,7 @@ Map<String, Object?> parseCanonicalObject(Uint8List bytes) {
   } on FormatException {
     throw const FormatException('manifest is not UTF-8');
   }
+  if (!_withinDepth(bytes)) throw const FormatException('manifest is nested more than $maxJsonDepth levels deep');
   final Object? value;
   try {
     value = jsonDecode(text);
@@ -45,6 +46,34 @@ Map<String, Object?> parseCanonicalObject(Uint8List bytes) {
     throw const FormatException('manifest is not in canonical form');
   }
   return value;
+}
+
+/// Signed documents are shallow (a few levels). Hostile input nested thousands of levels deep would
+/// overflow the stack in the recursive decoder and encoder, so it is refused before parsing. The
+/// server uses the same limit.
+const maxJsonDepth = 32;
+
+/// Counts `[`/`{` nesting without recursion, skipping string contents.
+bool _withinDepth(Uint8List bytes) {
+  var depth = 0, inString = false, escaped = false;
+  for (final b in bytes) {
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+      } else if (b == 0x5c) {
+        escaped = true; // backslash
+      } else if (b == 0x22) {
+        inString = false;
+      }
+    } else if (b == 0x22) {
+      inString = true;
+    } else if (b == 0x5b || b == 0x7b) {
+      if (++depth > maxJsonDepth) return false;
+    } else if (b == 0x5d || b == 0x7d) {
+      depth--;
+    }
+  }
+  return true;
 }
 
 bool _equal(Uint8List a, Uint8List b) {

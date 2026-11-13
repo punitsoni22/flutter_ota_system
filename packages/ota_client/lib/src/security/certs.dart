@@ -95,6 +95,9 @@ KeyCertificate verifyCertificate(
   final roles = body['roles'];
   if (roles is! List || !roles.contains(role)) bad('wrong_role', 'certificate does not allow the $role role');
   if (body['serial'] is! int) bad('bad_certificate', 'serial is not an integer');
+  if (body['key_id'] is! String || body['public_key'] is! String) {
+    bad('bad_certificate', 'key_id and public_key must be strings');
+  }
   if (revokedSerials.contains(c.serial)) bad('revoked_certificate', 'certificate ${c.serial} is revoked');
   if (revokedKeyIds.contains(c.keyId)) bad('revoked_key', 'key ${c.keyId} is revoked');
   final notBefore = _time(body['not_before'], 'not_before');
