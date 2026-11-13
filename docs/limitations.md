@@ -10,7 +10,7 @@ Flutter OTA System is an **experimental alpha**:
 
 | Component | Status |
 | --- | --- |
-| Android | **Experimental**. The bytecode architecture was tested end to end on **one Android 13 arm64 phone** |
+| Android | **Experimental**. The bytecode architecture was tested end to end on **one Android 13 arm64 phone**, plus compatibility runs on Android 14, 16 and 17 (16 KB memory pages) **emulators**. Those were x86_64 emulators running arm64 code through translation: not proof for real arm64 devices or other manufacturers |
 | ABI | **arm64-v8a** only |
 | Developer machine (CLI, toolchain, builds) | **Linux x64** only. The toolchain's host binaries exist only for Linux |
 | Flutter / Dart | **3.47.9 / 3.13.7**, with the Flutter OTA custom engine (engine `89c39edf`, Dart `416e33b`). No other version |
@@ -44,7 +44,12 @@ The original alpha (`v0.1.0-alpha.1`, server-signed `libapp.so` patches) runs on
 
 **Performance and size**
 - **Performance.** Patched code runs in the bytecode interpreter. UI and normal app logic worked well in testing (patch load 3.8 ms, start-up 200–260 ms with a patch, on one phone). **CPU-heavy code is much slower** than compiled code: up to 165× in earlier measurements.
-- **Binary size.** The store build must include everything a patch might use, so `libapp.so` grows. It was about 22–26 MB for small test apps. The cost for large apps is **not measured**.
+- **Binary size.** The store build must include everything a patch might use, so `libapp.so` grows a lot:
+  - the example app: about 36 MB;
+  - a generated test app with 34 feature packages (about 65,000 lines of Dart): `libapp.so` 41.3 MB instead of 6.6 MB with stock Flutter, and the arm64 release APK 54.5 MB instead of 19.2 MB.
+
+  Google Play delivers the arm64 split of an app bundle, so users download about that size.
+- **Patch build time.** On one Linux x64 development machine, a patch of one feature built in 1–2.5 minutes. A patch that changed all 34 feature packages of the test app (1.5 MB of bytecode) took about 17 minutes and 4 GB of memory, while other work ran on the same machine.
 
 **Security**
 - The verifier process is not a sandbox (same Linux user).
