@@ -37,7 +37,13 @@ Future<void> main(List<String> argv) async {
         ..addOption('sdk-url', mandatory: true)
         ..addOption('sdk-sha256', mandatory: true)
         ..addOption('sdk-size', mandatory: true)
-        ..addOption('sdk-unpacked-size'),
+        ..addOption('sdk-unpacked-size')
+        ..addFlag(
+          'release-layout',
+          help:
+              'GitHub Releases layout: every file flat in --out-dir (toolchain-index.json, the '
+              'overlay, toolchain-manifest.json, SHA256SUMS).',
+        ),
     )
     ..addCommand(
       'verify',
@@ -110,8 +116,9 @@ Future<void> _build(ArgResults c) async {
     'LICENSE.flutter-ota-system': p.join(repo, 'LICENSE'),
     'NOTICE.flutter-ota-system': p.join(repo, 'NOTICE'),
   };
-  Directory(p.join(outDir, 'overlays')).createSync(recursive: true);
-  final rel = 'overlays/$name-linux-x64.tar.gz';
+  final releaseLayout = c['release-layout'] as bool;
+  final rel = releaseLayout ? '$name-linux-x64.tar.gz' : 'overlays/$name-linux-x64.tar.gz';
+  Directory(p.dirname(p.join(outDir, rel))).createSync(recursive: true);
   final overlay = await buildOverlay(
     labDir: lab,
     outFile: p.join(outDir, rel),
@@ -146,7 +153,7 @@ Future<void> _build(ArgResults c) async {
     },
   );
   // Keep the other entries of an existing index signed by the same key; bump the serial.
-  final indexFile = File(p.join(outDir, 'index.json'));
+  final indexFile = File(p.join(outDir, releaseLayout ? 'toolchain-index.json' : 'index.json'));
   var serial = 1;
   final entries = <Object?>[];
   if (indexFile.existsSync()) {
@@ -162,4 +169,49 @@ Future<void> _build(ArgResults c) async {
   stdout.writeln('index: ${indexFile.path} (serial $serial, signed by $keyId)');
   stdout.writeln('toolchain_id: ${overlay.toolchainId}');
   stdout.writeln('public key ($keyId): ${key.publicKeyBase64}');
+  if (releaseLayout) {
+    await _writeReleaseFiles(outDir, indexFile, serial, keyId, key.publicKeyBase64, entry, overlay);
+  }
+}
+
+/// Human-readable manifest and checksums for a GitHub release. The signed index stays the only
+/// file the CLI trusts; these let a person check the assets by hand.
+Future<void> _writeReleaseFiles(
+  String outDir,
+  File indexFile,
+  int serial,
+  String keyId,
+  String publicKey,
+  Map<String, Object?> entry,
+  OverlayBuildResult overlay,
+) async {
+  final artifacts = entry['artifacts']! as Map;
+  final manifest = {
+    'format': 1,
+    'toolchain': entry['id'],
+    'toolchain_id': entry['toolchain_id'],
+    'flutter': entry['flutter'],
+    'dart': entry['dart'],
+    'engine_commit': entry['engine'],
+    'engine_build_id': overlay.engineBuildId,
+    'host': entry['host'],
+    'target': entry['target'],
+    'flutter_sdk': artifacts['flutter_sdk'],
+    'overlay': {'file': p.basename(overlay.path), 'sha256': overlay.sha256, 'size': overlay.size},
+    'index': {
+      'file': p.basename(indexFile.path),
+      'serial': serial,
+      'signed_by': keyId,
+      'public_key': publicKey,
+      'sha256': await sha256OfFile(indexFile.path),
+    },
+  };
+  final manifestFile = File(p.join(outDir, 'toolchain-manifest.json'))
+    ..writeAsStringSync('${const JsonEncoder.withIndent('  ').convert(manifest)}\n');
+  final sums = StringBuffer();
+  for (final f in [p.basename(overlay.path), p.basename(indexFile.path), p.basename(manifestFile.path)]) {
+    sums.writeln('${await sha256OfFile(p.join(outDir, f))}  $f');
+  }
+  File(p.join(outDir, 'SHA256SUMS')).writeAsStringSync(sums.toString());
+  stdout.writeln('release files: toolchain-manifest.json, SHA256SUMS (engine build ID ${overlay.engineBuildId})');
 }

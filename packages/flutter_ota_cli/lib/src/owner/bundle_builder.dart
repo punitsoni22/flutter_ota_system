@@ -25,12 +25,16 @@ import '../toolchain/records.dart';
 ///     <lab>/work/tools/{dart2bytecode,pkg_rename,patch_guard,bc_verify}.aot
 ///     <lab>/work/toolchain.json                  content-hash toolchain record
 class OverlayBuildResult {
-  OverlayBuildResult(this.path, this.sha256, this.size, this.unpackedSize, this.toolchainId);
+  OverlayBuildResult(this.path, this.sha256, this.size, this.unpackedSize, this.toolchainId, {this.engineBuildId});
   final String path;
   final String sha256;
   final int size;
   final int unpackedSize;
   final String toolchainId;
+
+  /// ELF GNU build ID of the arm64 `libflutter.so` in the overlay (the same in the stripped
+  /// library that ends up in apps).
+  final String? engineBuildId;
 }
 
 /// Files of the `dynamic_modules` package shipped in an overlay under `packages/dynamic_modules/`.
@@ -77,17 +81,20 @@ Future<OverlayBuildResult> buildOverlay({
   if (await sha256OfFile(gs) == stockSha) throw StateError('lab gen_snapshot is still the stock binary');
   await add(gs, 'sdk/$genSnapshotSdkPath', executable: true);
 
+  String? engineBuildId;
   for (final m in mirrorFilesFor(engineCommit)) {
     if (m.contains('/arm64_v8a_release/') && m.endsWith('.jar')) {
       // Like stock Flutter, ship the UNSTRIPPED libflutter.so: the Android Gradle plugin strips it
       // when it packages the app and extracts its debug symbols into app bundles (flutter build
       // appbundle requires them). It must be the same engine build as the lab jar's library.
-      final jar = await _engineJarWithUnstrippedLib(
+      final (jar, buildId) = await _engineJarWithUnstrippedLib(
         labJar: p.join(labDir, m),
-        unstrippedLib: unstrippedEngineLib ??
+        unstrippedLib:
+            unstrippedEngineLib ??
             p.join(labDir, 'engine', 'engine', 'src', 'out', 'android_release_arm64', 'libflutter.so'),
         workDir: '${stage.path}.engine',
       );
+      engineBuildId = buildId;
       await add(jar, m);
       Directory('${stage.path}.engine').deleteSync(recursive: true);
       continue;
@@ -161,7 +168,14 @@ It contains:
   stage.deleteSync(recursive: true);
   final sha = await sha256OfFile(outFile);
   log?.call('overlay: $outFile ${File(outFile).lengthSync()} bytes sha256 $sha');
-  return OverlayBuildResult(outFile, sha, File(outFile).lengthSync(), unpacked, toolchainId);
+  return OverlayBuildResult(
+    outFile,
+    sha,
+    File(outFile).lengthSync(),
+    unpacked,
+    toolchainId,
+    engineBuildId: engineBuildId,
+  );
 }
 
 /// A toolchain entry of the index (JSON object, see `ToolchainEntry.fromJson`).
@@ -218,7 +232,7 @@ Es256KeyPair readPrivateKey(String path) => Es256KeyPair.fromPrivateBase64(File(
 /// Builds an engine jar (same layout as the stock jar: one entry `lib/arm64-v8a/libflutter.so`)
 /// that contains [unstrippedLib], after checking that it is the same engine build as the library
 /// in [labJar] (same GNU build ID). The jar is reproducible: fixed timestamp, no extra fields.
-Future<String> _engineJarWithUnstrippedLib({
+Future<(String, String)> _engineJarWithUnstrippedLib({
   required String labJar,
   required String unstrippedLib,
   required String workDir,
@@ -244,5 +258,5 @@ Future<String> _engineJarWithUnstrippedLib({
     final r = await Process.run(cmd.first, cmd.sublist(1), workingDirectory: workDir, environment: env);
     if (r.exitCode != 0) throw StateError('${cmd.join(' ')} failed: ${r.stderr}');
   }
-  return p.join(workDir, 'engine.jar');
+  return (p.join(workDir, 'engine.jar'), id);
 }

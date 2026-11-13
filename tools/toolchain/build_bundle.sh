@@ -16,6 +16,8 @@
 #              the first run. It must be OUTSIDE the repository and must never be committed.
 #   KEY_ID     signing key id (default flutter-ota-toolchain-dev)
 #   NAME       toolchain id (default flutter-<FLUTTER_VERSION>-ota.1)
+#   RELEASE_LAYOUT=1   write the files for a GitHub release, all flat in OUT: toolchain-index.json,
+#              the overlay, toolchain-manifest.json (versions, engine build ID, SHA-256) and SHA256SUMS
 #   SDK_URL / SDK_SHA256 / SDK_SIZE   the stock Flutter SDK archive; by default the official
 #              release archive, with the SHA-256 from the official releases_linux.json.
 set -euo pipefail
@@ -50,6 +52,13 @@ if [[ -z ${SDK_SIZE:-} ]]; then
 fi
 [[ -n $SDK_SHA256 && -n $SDK_SIZE ]] || { echo "SDK_URL/SDK_SHA256/SDK_SIZE unknown" >&2; exit 1; }
 
+LAYOUT_ARGS=()
+INDEX_FILE=$OUT/index.json
+if [[ -n ${RELEASE_LAYOUT:-} ]]; then
+  LAYOUT_ARGS=(--release-layout)
+  INDEX_FILE=$OUT/toolchain-index.json
+fi
+
 cd "$HERE"
 nice "$DART" pub get >/dev/null
 if [[ ! -f $KEY_DIR/$KEY_ID.key ]]; then
@@ -57,9 +66,9 @@ if [[ ! -f $KEY_DIR/$KEY_ID.key ]]; then
 fi
 nice "$DART" run bin/toolchain_bundle.dart build --lab "$LAB" --pins "$PINS" --repo "$REPO" \
   --name "$NAME" --out-dir "$OUT" --key-dir "$KEY_DIR" --key-id "$KEY_ID" \
-  --sdk-url "$SDK_URL" --sdk-sha256 "$SDK_SHA256" --sdk-size "$SDK_SIZE"
-nice "$DART" run bin/toolchain_bundle.dart verify --index "$OUT/index.json" --pub "$KEY_DIR/$KEY_ID.pub" --key-id "$KEY_ID"
+  --sdk-url "$SDK_URL" --sdk-sha256 "$SDK_SHA256" --sdk-size "$SDK_SIZE" "${LAYOUT_ARGS[@]}"
+nice "$DART" run bin/toolchain_bundle.dart verify --index "$INDEX_FILE" --pub "$KEY_DIR/$KEY_ID.pub" --key-id "$KEY_ID"
 echo
 echo "Developers using this mirror run:"
-echo "  flutter_ota config set toolchain-index-url file://$OUT/index.json"
+echo "  flutter_ota config set toolchain-index-url file://$INDEX_FILE"
 echo "  flutter_ota config add-toolchain-key $KEY_ID $(cat "$KEY_DIR/$KEY_ID.pub")"
