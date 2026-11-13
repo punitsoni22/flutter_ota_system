@@ -6,6 +6,7 @@
 library;
 
 export 'src/owner/bundle_builder.dart';
+export 'src/release/ota_entry.dart' show dynamicModulesPackageFiles;
 export 'src/toolchain/canonical_json.dart';
 export 'src/toolchain/downloader.dart' show sha256OfFile;
 export 'src/toolchain/es256.dart';

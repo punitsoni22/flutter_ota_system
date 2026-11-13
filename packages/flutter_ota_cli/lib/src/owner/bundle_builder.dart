@@ -8,6 +8,7 @@ import 'dart:typed_data';
 import 'package:path/path.dart' as p;
 
 import '../build_support/elf_build_id.dart';
+import '../release/ota_entry.dart' show dynamicModulesPackageFiles;
 import '../build_support/toolchain_build.dart' show libflutterArm64;
 import '../build_support/zip_reader.dart' show readZipEntry;
 import '../toolchain/canonical_json.dart';
@@ -36,9 +37,6 @@ class OverlayBuildResult {
   /// library that ends up in apps).
   final String? engineBuildId;
 }
-
-/// Files of the `dynamic_modules` package shipped in an overlay under `packages/dynamic_modules/`.
-const dynamicModulesPackageFiles = ['pubspec.yaml', 'lib/dynamic_modules.dart'];
 
 Future<OverlayBuildResult> buildOverlay({
   required String labDir,

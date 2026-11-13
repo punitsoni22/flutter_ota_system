@@ -1,3 +1,10 @@
+## 0.2.0-alpha.1
+
+* Fix: `dart pub global activate flutter_ota_cli` failed to compile 0.2.0-alpha
+  (`dynamicModulesPackageFiles` was defined in a file that is not published). A test now checks
+  that published code never imports the owner-side toolchain builder.
+* Same toolchain as 0.2.0-alpha (the `v0.2.0-alpha` GitHub release).
+
 ## 0.2.0-alpha
 
 First release on pub.dev. **Experimental alpha. The CLI runs on Linux x64 and builds Android arm64
