@@ -1,11 +1,11 @@
-# Bytecode verifier (Phase 3C prototype)
+# Bytecode verifier
 
-Status: experimental prototype. Pinned Dart VM only (Dart 3.13.7, revision `416e33b0`, bytecode
-format 3). Android only. Not production code.
+Status: experimental alpha (part of the Flutter OTA custom engine). Pinned Dart VM only (Dart 3.13.7, revision `416e33b0`, bytecode
+format 3). Android only. Not production-ready.
 
-Why it exists: [phase-3c-vm-investigation.md](phase-3c-vm-investigation.md). In short, the pinned
-VM never verifies instructions in a dynamic module, and two validly signed malformed modules (B25,
-B27) crashed it.
+Why it exists: the pinned Dart VM never verifies the instructions of a dynamic module. During
+security testing, two validly signed modules with one changed byte each (B25: a reserved opcode;
+B27: a wrong argument count) crashed it. The verifier rejects both with a clean error.
 
 ## 1. Where it runs
 
@@ -56,10 +56,10 @@ checks in `interpreter.cc` to the instructions that index memory (`LoadFieldTOS`
 
 ## 4. Tests
 
-| Test | Where | Result recorded in |
+| Test | Where | Result |
 | --- | --- | --- |
-| 28 valid modules accepted (Phase 1-3 patches and probes) | Linux, reference verifier | final report, section E |
-| B25, B27 and the FFI module rejected (fixtures kept in `tools/bc_verify/fixtures`) | Linux, reference verifier | final report, section E |
+| 28 valid modules accepted (Phase 1-3 patches and probes) | Linux, reference verifier | passed |
+| B25, B27 and the FFI module rejected (fixtures kept in `tools/bc_verify/fixtures`) | Linux, reference verifier | passed |
 | B25/B27 signed, refused on the device by the VM verifier (`R25`/`R27` in the corpus, permanent) | Android 13 arm64 phone, release build | **passed**: clean `StateError` (`pc 29: reserved opcode` in `CatalogFeatureImpl_buildRow`; `pc 341: DirectCall` argument count in `_CatalogScreenState…build`); never activated, previous patch unchanged, main loader never called |
 | Signed FFI module (guard bypassed) refused by the VM verifier | Android 13 arm64 phone, release build | **passed**: `opcode FfiCall is not allowed in a dynamic module` |
 | Whole corpus (67 signed files, verify-only): main process alive | Android 13 arm64 phone, release build | **passed**: same main process (same pid) after all 67 files; details below |
@@ -94,4 +94,4 @@ dart --packages=$DART_SRC/.dart_tool/package_config.json bin/bc_verify.dart fixt
   the runtime guards, not eliminated.
 - Valid only for the pinned VM and bytecode format 3. A toolchain change needs a review of the
   opcode table and stack-effect table; the manifest's toolchain id makes such a change visible.
-- The verifier adds load time (measured in the final report); it was not optimised.
+- The verifier adds load time; it was not optimised. On the test phone, verifying a small demo patch in the separate process took 295 ms (in the background).

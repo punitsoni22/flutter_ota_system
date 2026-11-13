@@ -1,4 +1,4 @@
-## Unreleased (Phase 4, milestone 4C)
+## Unreleased
 
 Additive; the `0.1.0-alpha.1` API, wire formats, method channels and storage are unchanged.
 **Experimental alpha, Android arm64 only, needs the Flutter OTA System toolchain (Flutter 3.47.9).**
@@ -15,6 +15,8 @@ Additive; the `0.1.0-alpha.1` API, wire formats, method channels and storage are
 * Android: channel `flutter_ota/runtime` and the service `FlutterOtaVerifierService`.
 * The bytecode runtime also accepts plain `http://` to loopback hosts (`127.0.0.1`, `localhost`,
   `[::1]`) in release builds, for local tests through `adb reverse`. `OtaClient` is unchanged.
+* Tested end to end on one Android 13 arm64 phone (a feature patch with a freezed model change,
+  delivered without reinstalling the APK; rollback to the store code).
 
 ## 0.1.0-alpha.1
 

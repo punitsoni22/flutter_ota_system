@@ -1,6 +1,6 @@
-# Phase 4 runtime contract (CLI ↔ SDK ↔ patch module)
+# Runtime contract (CLI ↔ SDK ↔ patch module)
 
-Status: binding contract for Phase 4 milestones 4C–4F. Experimental alpha, Android arm64 only.
+Contributor reference: the contract between the `flutter_ota` CLI, the `flutter_ota_system` SDK and patch modules in the bytecode architecture. Experimental alpha, Android arm64 only.
 
 ## 1. Build-time configuration (CLI → app)
 
@@ -50,7 +50,7 @@ Future<void> main() async {
 
 1. **Never throws.** On any internal error it logs, and the store code runs.
 2. Does **no network request on the start-up path**:
-   - it verifies the stored active patch (Phase 3C pipeline);
+   - it verifies the stored active patch (full verification pipeline);
    - it loads the patch, applies the features and returns;
    - the update check runs in the background after the first frame.
 3. Confirms the start (crash state machine) after the first frame plus a stable period.
@@ -122,6 +122,6 @@ Phase 2 and 3 modules use contract 2 (direct slot objects). Contract 3 maps name
 ## 6. Device storage and verification
 
 - Private app storage: `<filesDir>/flutter_ota/`.
-- Verification of a **new** patch runs in a separate verifier process (same UID, Phase 3C) before activation. The in-VM bytecode verifier is part of the custom engine.
+- Verification of a **new** patch runs in a separate verifier process (same UID) before activation. The in-VM bytecode verifier is part of the custom engine.
 - The stored patch is re-verified cryptographically at every start.
-- Crash attribution uses `ApplicationExitInfo` (Phase 3C state machine).
+- Crash attribution uses `ApplicationExitInfo` (crash state machine).

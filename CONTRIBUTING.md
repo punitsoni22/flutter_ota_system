@@ -9,7 +9,7 @@ careful fixes are the most useful contributions right now.
 > **Testing status.** The maintainers develop and test on **Linux** only, and test the app side
 > on **Android** only (a small number of devices). iOS, macOS and Windows are **not tested**. If
 > you can test one of them, that is a welcome contribution: see
-> [Platform Support & Testing Status](README.md#platform-support--testing-status) and the
+> [Platform Support & Testing Status](docs/limitations.md#compatibility) and the
 > [platform testing tasks](docs/roadmap/README.md#platform-testing-planned) in the roadmap.
 
 ## Ground rules
@@ -43,7 +43,8 @@ careful fixes are the most useful contributions right now.
 | Git, Bash, curl | recent | everything |
 | Python | 3.13 (what CI and the image use) | backend, CLI |
 | Docker + Compose v2 | Docker 24+ | local stack, end-to-end test |
-| Flutter | stable ≥ 3.44.9, Dart ≥ 3.12.2 (the SDK's minimum; maintainers use 3.44.9) | `ota_client` and its example app |
+| Flutter | **3.47.9** (Dart 3.13.7) for the example app and the bytecode runtime; the classic `OtaClient` API still allows ≥ 3.44.9 | `ota_client`, its example app, `flutter_ota_cli` |
+| Flutter OTA toolchain | built locally ([toolchain management](docs/toolchain-management.md)) | release and patch builds, device tests of the bytecode architecture (Linux x64 only) |
 | shellcheck | any | shell scripts |
 
 ```bash
@@ -57,10 +58,13 @@ Repository layout:
 
 ```
 backend/            FastAPI control plane, Alembic migrations, tests, /admin page
-cli/                `ota` admin CLI and Android code-patch tooling
-packages/ota_client Flutter client package (Dart + Android Java)
-  example/          The official demo app (mock-v1 patches)
-prototypes/         Research prototypes of the bytecode patch engine (not demos; see prototypes/README.md)
+cli/                `ota` admin CLI (and the original alpha Android code-patch tooling)
+packages/ota_client Flutter SDK `flutter_ota_system` (Dart + Android Java): FlutterOta + OtaClient
+  example/          The official demo app (feature packages: products + freezed, core)
+packages/flutter_ota_cli  The `flutter_ota` developer CLI (Dart): toolchain, keys, release, patch
+tools/toolchain/    Owner tool: builds the signed toolchain overlay and index
+prototypes/         Research prototypes; the engine scripts, verifier patch, pkg_rename, patch_guard
+                    and bc_verify used by the toolchain live here (see prototypes/README.md)
 docker/, deploy/    nginx config; single-server compose (Caddy)
 scripts/            Local setup, demo, verification and pre-publish scripts
 docs/               Documentation (start at docs/index.md)
@@ -85,11 +89,17 @@ The tests use SQLite and a temporary directory, so they need no Docker. S3 stora
 ### Flutter client and example app
 
 ```bash
-cd packages/ota_client && flutter pub get && flutter analyze && flutter test   # expect: All tests passed!
+cd packages/ota_client && flutter pub get && flutter analyze && flutter test   # Flutter 3.47.9; expect: All tests passed!
 cd example && flutter pub get && flutter analyze
 ```
 
-### CLI
+### Developer CLI (`flutter_ota`)
+
+```bash
+cd packages/flutter_ota_cli && dart pub get && dart analyze && dart test
+```
+
+### Admin CLI (`ota`)
 
 ```bash
 python3 -m venv .venv && .venv/bin/pip install -r cli/requirements.txt

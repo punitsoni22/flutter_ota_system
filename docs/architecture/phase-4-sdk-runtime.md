@@ -1,14 +1,14 @@
 <!-- Copyright 2026 The Punit Authors -->
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 
-# Phase 4 SDK runtime (milestone 4C)
+# SDK runtime (bytecode architecture)
 
-Status: experimental alpha. Android arm64 only. Implemented and unit-tested on Linux; **not yet
-run on a device** (that is milestone 4I). Follows the
-[runtime contract](phase-4-runtime-contract.md) and the
-[backend protocol](phase-4-backend-protocol.md).
+Contributor reference for the bytecode runtime in `packages/ota_client` (added in Phase 4; the
+file name is kept because source comments link to it). Status: experimental alpha, Android arm64
+only. Unit-tested on Linux and tested end to end on one Android 13 phone. Follows the
+[runtime contract](runtime-contract.md) and the [backend protocol](phase-4-backend-protocol.md).
 
-Developer guide: [flutter-integration-v2.md](../flutter-integration-v2.md).
+Developer guide: [Flutter integration](../flutter-integration.md).
 
 ## 1. What was added (all additive)
 
@@ -121,11 +121,8 @@ If an app is built without this target, `initialize()` logs
   resolves it with `PluginUtilities.getCallbackFromHandle`. This is why the loader must be a
   top-level function with `@pragma('vm:entry-point')`. If it cannot be resolved, the result is
   `UNAVAILABLE` and the patch is **not** activated (fail closed).
-- **Needs device confirmation in 4I:** that the callback-handle lookup works in a fresh process
-  with the custom engine. The fallback, if it does not, is to move `flutterOtaVerifierMain` into
-  the generated `flutter_ota_main.g.dart` (root library) and run it with the two-argument
-  `DartEntrypoint(bundlePath, "flutterOtaVerifierMain")`; the SDK keeps the logic in
-  `verifyModuleBytes`.
+- **Confirmed on a device:** the callback-handle lookup works in the fresh `:flutter_ota_verify`
+  process with the custom engine (`VERIFY_PROCESS status=OK` on an Android 13 phone).
 
 ## 5. Separate-process verification protocol
 
@@ -144,8 +141,9 @@ and **without** `android:isolatedProcess` (Phase 3C proved Flutter cannot start 
 
 ## 6. Crash state machine (ported from Phase 3C)
 
-States, exit table and thresholds (`maxFailures = 2`, `maxUnconfirmedStarts = 3`) are unchanged.
-See [phase-3-final-security-report.md](phase-3-final-security-report.md), section H.
+States, exit table and thresholds (`maxFailures = 2`, `maxUnconfirmedStarts = 3`) are unchanged
+from the Phase 3C prototype. Crashes, ANRs and crash signals count as failures; force-stops,
+low-memory kills and normal exits do not; an unknown exit counts only for an unconfirmed start.
 
 Changes compared with the prototype:
 
@@ -196,18 +194,16 @@ Changes compared with the prototype:
 | `flutter analyze` (pinned Flutter 3.47.9) | no issues |
 | Java type check of the plugin (`javac` against `android.jar` + Flutter embedding jar) | compiles; no Gradle/APK build |
 
-Not run: Gradle or APK builds, device tests, the real `dynamic_modules` loader, the real
-separate process. All of that is milestone 4I.
+Device test (one Android 13 arm64 phone, demo app): download, verification, separate-process
+verification (295 ms), activation at the next start, patch load (3.8 ms), confirmation, and server
+rollback back to the store code all worked. Not yet tested on a device with the production SDK:
+the crash-recovery paths (they were tested on a device with the Phase 3C prototype runtime).
 
 ## 9. Open issues
 
-- **4I:** confirm on the phone the callback-handle lookup in `:flutter_ota_verify` (section 4),
-  the verifier service and channel, startup timings, and the crash suite.
-- **4D/4F:** emit `lib/flutter_ota_main.g.dart`, the `dynamic_modules` dependency and `-t`
-  (section 3). Optional config fields read by the SDK: `release_version`, `channel`,
-  `required_approvals`, `host_owned_packages`.
-- **4B:** ship the `dynamic_modules` package in the toolchain bundle. It needs no change: the
-  generated wrapper function carries the `@pragma('vm:entry-point')`.
+- Crash-recovery paths with the production SDK on a device (deferred to the final testing phase).
+- Optional config fields read by the SDK but not yet set by the CLI: `required_approvals`,
+  `host_owned_packages`.
 - The SDK's `pubspec.yaml` still allows Flutter `>=3.44.9` for the classic API. The bytecode
   runtime itself needs the pinned toolchain (Flutter 3.47.9). The code was not compiled with
   3.44.9 here.

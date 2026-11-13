@@ -1,16 +1,17 @@
-# Installation (local Docker stack)
+# Self-hosting
 
-This tutorial runs a complete Flutter OTA System server on your own computer with Docker, publishes a test
-patch, and shows it arriving in the example Flutter app. The server part is **one command**
-(`./flutter-ota-system.sh setup`) and takes about 5 minutes; the app part takes another 10–20 minutes.
+Run your own Flutter OTA System server. This page starts the **local Docker stack** (development
+and evaluation). For a single-server production-style setup, see
+[operations](operations.md#single-server-deployment-draft).
+
+It runs the API (FastAPI), PostgreSQL and a file server for patches with **one command**
+(`./flutter-ota-system.sh setup`), in about 5 minutes.
 
 > [!NOTE]
 > **What is tested.** Linux (Ubuntu) is the primary verified environment: the maintainers
 > test this local stack there with `./flutter-ota-system.sh` and `scripts/verify_demo.sh`, also in CI. Android
-> is the only internally tested app platform, on a small number of devices. Other platforms are
-> used at your own risk: iOS needs macOS + Xcode and has not been tested, and installation on
-> macOS or Windows (including Docker Desktop) has not been verified. See
-> [Platform Support & Testing Status](../README.md#platform-support--testing-status) and
+> is the only internally tested app platform. Installation on macOS or Windows (including
+> Docker Desktop) has not been verified; see [compatibility](limitations.md#compatibility) and
 > [platform notes](#platform-notes-macos-and-windows-not-tested) below. A production-style server
 > setup exists but is **not yet verified end to end**
 > ([operations.md](operations.md#single-server-deployment-draft)). Planned installation
@@ -19,7 +20,7 @@ patch, and shows it arriving in the example Flutter app. The server part is **on
 > [!WARNING]
 > This stack is for **local development and evaluation only**. Its signing key is a local
 > development key, and Flutter OTA System is not production-ready
-> ([limitations.md](limitations.md), [known-issues.md](known-issues.md)).
+> ([limitations](limitations.md)).
 
 What you get:
 
@@ -50,7 +51,7 @@ automatically when the API starts.
 | Docker Engine (tested on Linux) or Docker Desktop (not tested) | the server | 24 or newer, with **Compose v2.20+** | `docker compose version` |
 | Free ports `8000` and `8080` on 127.0.0.1 | the server | — | change them in `.env` if taken ([below](#ports-are-taken-or-a-second-stack)) |
 | Python 3.10+ with `venv` | the `ota` CLI only | 3.10 or newer | `python3 --version` |
-| Flutter | the example app only | stable ≥ 3.44.9, Dart ≥ 3.12.2 | `flutter --version` |
+| Flutter OTA toolchain | connecting an app (not the server) | Flutter 3.47.9 with the custom engine, installed by `flutter_ota` ([quick start](quick-start.md)) | `flutter_ota toolchain doctor` |
 | Android emulator or phone + `adb` | the example app only (Android is the only tested app platform) | — | `adb devices` |
 
 Only Docker is needed to run the server. Nothing else is installed on your computer: the server
@@ -127,7 +128,7 @@ curl http://localhost:8000/health/ready    # {"status":"ok"}
 curl http://localhost:8080/health          # ok
 ```
 
-## 4. Run the demo: seed, publish a test patch, verify
+## 4. Verify the server: seed, publish a test patch, check
 
 ```bash
 ./flutter-ota-system.sh demo
@@ -228,138 +229,19 @@ export OTA_API_KEY=<OTA_ADMIN_API_KEY from .env>
 Without the package: `python3 -m venv .venv && .venv/bin/pip install -r cli/requirements.txt`,
 then run `.venv/bin/python cli/ota.py …`. All commands: [cli-reference.md](cli-reference.md).
 
-## 8. Run the example app
+## 8. Connect an app
 
-The example app ([`packages/ota_client/example`](../packages/ota_client/example/README.md), the
-project's only demo app) uses `mock-v1` patches: a patch is a JSON file that changes its banner
-and colour.
-No code is downloaded. Its defaults already match the demo: application `flutter-ota-system-demo`, channel
-`dev`. You only pass the server address and the public key.
+The server is now ready for apps:
 
-**Get the public key and the demo app's server id** (both are printed by
-`./flutter-ota-system.sh status`; the id is the app's `"id"` in `ota app list`, not the Android
-package name):
-
-```bash
-KEY=$(./flutter-ota-system.sh status | sed -n 's/.*OTA_PUBLIC_KEY=\(local-dev-1:[^ ]*\).*/\1/p'); echo "$KEY"
-APP_ID=$(./flutter-ota-system.sh status | sed -n 's/.*OTA_APPLICATION_ID=\([0-9a-f-]*\).*/\1/p'); echo "$APP_ID"
-```
-
-**Let the device reach your computer.** Choose one:
-
-| Device | `OTA_SERVER_URL` for the app | `OTA_CDN_BASE_URL` in `.env` | Also | Tested with this guide |
-|---|---|---|---|---|
-| Phone on USB, with `adb reverse` (recommended for phones) | `http://localhost:8000` | `http://localhost:8080/cdn` (the default) | `adb reverse` for both ports (below) | Yes: one Android 13 arm64 phone |
-| Android emulator | `http://10.0.2.2:8000` | `http://10.0.2.2:8080/cdn` | — | Not re-tested with `flutter-ota-system.sh` |
-| Phone on the same Wi-Fi | An `https://` address for your computer (plain `http://` to a LAN IP is refused, see below) | The matching `https://…/cdn` | `FLUTTER_OTA_BIND_ADDRESS=0.0.0.0` in `.env`, plus your own HTTPS setup | Not tested |
-
-> [!NOTE]
-> **Which `http://` addresses the client accepts.** In **debug builds** (`flutter run`,
-> `flutter build apk --debug`), plain `http://` works only for loopback (`localhost`,
-> `127.0.0.1`, `[::1]`, e.g. with `adb reverse`) and the emulator address `10.0.2.2`. **Release
-> and profile builds accept `https://` only**, localhost included, for both `OTA_SERVER_URL` and
-> `OTA_CDN_BASE_URL`. Android code patches (`AotPatchRuntime`) run only in release builds, so
-> testing them needs a server reachable over HTTPS with a certificate the phone trusts; this
-> local `http://` setup is for `mock-v1` patches in debug builds.
-
-After changing `.env`, apply it with `./flutter-ota-system.sh up`.
-
-### USB phone with `adb reverse` (server stays on localhost)
-
-`adb reverse` makes the phone's `localhost:8000` and `localhost:8080` lead to your computer
-over the USB cable. The server stays bound to 127.0.0.1 and is never exposed to your network.
-
-```bash
-adb devices                              # your phone is listed as "device"
-adb reverse tcp:8000 tcp:8000            # API
-adb reverse tcp:8080 tcp:8080            # patch files (must match OTA_CDN_BASE_URL's port)
-cd packages/ota_client/example
-flutter run \
-  --dart-define=OTA_SERVER_URL=http://localhost:8000 \
-  --dart-define=OTA_APPLICATION_ID="$APP_ID" \
-  --dart-define=OTA_PUBLIC_KEY="$KEY"
-```
-
-The rules last until the cable is unplugged or `adb` restarts. Remove them with
-`adb reverse --remove-all`. If you changed the ports in `.env`, use those ports in all three places.
-
-### Emulator
-
-```bash
-cd packages/ota_client/example
-flutter run \
-  --dart-define=OTA_SERVER_URL=http://10.0.2.2:8000 \
-  --dart-define=OTA_APPLICATION_ID="$APP_ID" \
-  --dart-define=OTA_PUBLIC_KEY="$KEY"
-```
-
-> [!WARNING]
-> `FLUTTER_OTA_BIND_ADDRESS=0.0.0.0` (Wi-Fi option) exposes the API and file server to your whole
-> network. Use it only on a network you trust. Find your computer's IP with
-> `hostname -I | awk '{print $1}'` (Linux) or `ipconfig getifaddr en0` (macOS; not tested).
-
-### What you should see
-
-1. First start: **"Store build (no patch)"**, Active patch `none`. The app checks once in the
-   background at start and downloads the newest patch for `dev`. (The app checks only when it
-   calls `checkForUpdate()`; there is no timer.)
-2. Tap **Check for update now**: "Patch N ready. Close and reopen the app."
-3. Close the app fully (recent apps → swipe it away) and open it again: the banner and colour of
-   the patch, Active patch `#N`.
-
-On the server side, `./flutter-ota-system.sh ota patch show <patch id>` then shows `patch_downloaded`,
-`patch_staged` and `patch_boot_succeeded` counts, and
-`./flutter-ota-system.sh psql -c "select channel, current_patch_number from devices order by last_seen desc limit 1;"`
-shows the device on that patch.
-
-To build an APK instead of `flutter run`, pass the same `--dart-define`s to
-`flutter build apk --debug` and install it with `adb install`. `OTA_APP` and `OTA_CHANNEL` can
-still be set with `--dart-define` if you use other values.
-
-The example app allows plain `http://` (`android:usesCleartextTraffic="true"` in its manifest).
-Your own production app should use HTTPS and must not keep that setting.
-
-> [!IMPORTANT]
-> This local setup is for evaluation. Before you distribute an app that uses Flutter OTA System,
-> read the [Google Play policy considerations](policy/google-play.md) (code patches load native
-> code), the [privacy and data handling](privacy-and-data-handling.md) inventory and the
-> [signing-key trust model](signing-key-management.md).
-
-## 9. Try more cases (optional)
-
-Install the CLI first ([step 7](#7-install-the-ota-cli)). Make some patch files:
-
-```bash
-mkdir -p /tmp/ota && cd /tmp/ota
-echo '{"banner":"Patch 2","color":"#2196F3"}' > p2.json
-echo '{"banner":"Patch 3","color":"#9C27B0"}' > p3.json
-echo '{"crash":true}'                         > crash.json
-cd -   # back to the repository
-```
-
-The emulator is `x86_64`; most phones are `arm64-v8a`. This helper uploads a file for both and
-publishes it:
-
-```bash
-mkpatch() { ./flutter-ota-system.sh ota patch create flutter-ota-system-demo --platform android --release 1.0.0+1 \
-              --file x86_64="$1" --file arm64-v8a="$1" --channel "${2:-dev}" --percent "${3:-100}"; }
-```
-
-| Case | Do | Expected |
-|---|---|---|
-| Skip to the latest | `mkpatch /tmp/ota/p2.json`, `mkpatch /tmp/ota/p3.json`. In the app: Check, restart | Goes straight to the newest patch |
-| Crash protection | `mkpatch /tmp/ota/crash.json`. Check, restart | The app closes at once (the demo's crash hook). Open it again: back on the previous patch. `./flutter-ota-system.sh ota patch show <id>` shows `patch_boot_failed: 1` |
-| Crashed patch not retried | Tap Check | The app sends the crashed patch's id in `failed_patch_ids`, so the server skips it and offers the next best patch; it is never installed again on this device |
-| Rollback | `./flutter-ota-system.sh ota patch list flutter-ota-system-demo --platform android --release 1.0.0+1`, then `./flutter-ota-system.sh ota patch rollback <id of newest>`. Check, restart | Back on the previous patch |
-| Revoke | `./flutter-ota-system.sh ota patch revoke <id> --yes` | That patch never runs again |
-| Server down | `docker compose stop api`, restart the app | App opens normally on its current code; Check says "Failed: …". Then `./flutter-ota-system.sh up` |
-| Rollout percentage | `mkpatch /tmp/ota/p2.json staging` (test on `staging` first), then `./flutter-ota-system.sh ota patch promote <id> --percent 10`, then `OTA_API_URL=http://127.0.0.1:8000 .venv-cli/bin/python scripts/simulate_fleet.py --app flutter-ota-system-demo --release 1.0.0+1 --channel production --devices 1000` | About 10% are offered the patch. Raise it with `./flutter-ota-system.sh ota patch rollout <id> --channel production --percent 50` and run again: about 50%, and the first 10% stay in |
-
-`production` is a protected channel: the server refuses to put a patch there that was not live
-on another channel first (`error 409: promotion_checks_failed`). That is why the rollout case
-publishes to `staging` and then promotes. Details: [rollouts.md](rollouts.md).
-
-`simulate_fleet.py` uses `httpx`, which the CLI's `.venv-cli` already contains.
+- **Bytecode architecture** (`flutter_ota`): follow the [quick start](quick-start.md) from step 3
+  (`flutter_ota init`, `config set server-url http://127.0.0.1:8000`, `keys init`, `release
+  android`, `patch android`). With a phone on USB, run `adb reverse tcp:8000 tcp:8000` and
+  `adb reverse tcp:8080 tcp:8080` so the phone reaches this computer; release builds accept plain
+  `http://` only to loopback addresses. The [demo app](../packages/ota_client/example/README.md)
+  shows the whole flow.
+- **Original alpha** (`ota`, `mock-v1` / `aot-bidiff`): `./flutter-ota-system.sh demo` seeds a
+  demo app and publishes a signed `mock-v1` test patch; see
+  [releases and patches](releases-and-patches.md#original-alpha-patch-formats).
 
 ## Platform notes (macOS and Windows: not tested)
 
@@ -440,6 +322,7 @@ To work on Flutter OTA System itself (run the tests, lint, change the code), see
 
 ## Next steps
 
-- Connect your own app: [flutter-integration.md](flutter-integration.md)
-- Ship releases and patches: [releases-and-patches.md](releases-and-patches.md)
+- Connect your own app: [quick start](quick-start.md)
+- Run a production-style server: [operations](operations.md)
+- Ship releases and patches: [releases and patches](releases-and-patches.md)
 - Something failed: [troubleshooting.md](troubleshooting.md)

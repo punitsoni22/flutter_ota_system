@@ -124,7 +124,7 @@ channels makes the implementation automatically compliant; review the rules that
       and [SDK Requirements](https://support.google.com/googleplay/android-developer/answer/13323374) policies.
 - [ ] Decide, with appropriate guidance, whether your distribution channel allows it.
 - [ ] Record the decision (`ota app approve-policy` for `public_store` apps).
-- [ ] Review the [security model](../security.md) and [signing-key trust model](../signing-key-management.md).
+- [ ] Review the [security model](../security.md) and [signing keys](../security.md#developer-owned-signing).
 - [ ] Declare the SDK's data handling ([privacy-and-data-handling.md](../privacy-and-data-handling.md)).
 
 ## Sources

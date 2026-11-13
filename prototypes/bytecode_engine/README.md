@@ -7,9 +7,9 @@ without replacing `libapp.so`.
 > [!WARNING]
 > Research prototype. Not part of the Flutter OTA System product, not production code, no
 > signatures (integrity and identity checks only), fixed paths, one patchable package. The engine
-> uses an experimental, unsupported Dart feature. See the
-> [ADR](../../docs/architecture/adr/0001-bytecode-engine-and-developer-experience.md) and the
-> [Phase 1 report](../../docs/architecture/phase-1-prototype-report.md).
+> uses an experimental, unsupported Dart feature. The product architecture built on it is
+> described in [docs/architecture.md](../../docs/architecture.md); the Phase 1 report is kept in
+> the Git history.
 
 ## What is here
 

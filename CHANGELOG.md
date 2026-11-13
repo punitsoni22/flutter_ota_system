@@ -6,7 +6,51 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+Nothing below is released yet. The bytecode architecture is **experimental**: Android arm64 apps,
+Linux x64 developer machines, Flutter 3.47.9 / Dart 3.13.7 with a custom engine, tested end to end
+on one Android 13 phone. It is **not** part of `0.1.0-alpha.1`.
+
+### Added: bytecode architecture (experimental)
+
+- **Custom engine toolchain:** Flutter 3.47.9 with the Dart bytecode interpreter and an in-VM
+  bytecode verifier (engine patch in `prototypes/security_hardening/engine_patch`). Distributed as
+  a signed overlay on the stock SDK; owner tool `tools/toolchain` builds the overlay and index.
+  Nothing is published yet.
+- **Developer CLI `flutter_ota`** (`packages/flutter_ota_cli`): `init` (`flutter_ota.yaml` with
+  only `app_id`), `config`, `toolchain list|install|doctor|clean`, `upgrade`, `keys init|list`,
+  `doctor`, `release android`, `features [generate]`, `patch android`, `status`, `rollback`.
+  Builds, bytecode compilation and signing happen on the developer's machine; no source upload.
+- **Feature patching:** feature packages with an `OtaFeature` entry class, automatic dependency
+  closure, generated feature registry, freezed / json_serializable support with stale-codegen
+  detection, refusal of changes that need a store release.
+- **SDK (`flutter_ota_system`, additive):** `FlutterOta.initialize()`, `FlutterOta.feature<T>()`,
+  `OtaFeature`, status and start-up timing getters; patch verification (certificates, revocation
+  lists, toolchain id), separate-process verification, activation at the next start, crash
+  recovery. The `0.1.0-alpha.1` `OtaClient` API is unchanged.
+- **Backend (additive):** developer-signed `dbc-v1` patches that the server verifies and never
+  signs; trust roots, root-signed certificates and revocation lists; releases with a baseline
+  identity; device registration by app UUID; migration `0004`. Legacy clients get unchanged
+  responses.
+
+### Security: bytecode architecture
+
+- Developer-owned signing: offline root key per app, certified local signer keys, rotation,
+  root-signed revocation of serials and keys; the server never holds patch-signing keys for
+  `dbc-v1`.
+- `patch_guard` now rejects compile errors and scans every non-host package compiled into a module
+  (undeclared dependencies were not scanned before); host-only conditional imports are no longer
+  falsely rejected.
+- Store releases are built from a neutral copy of the workspace, so no developer home path is
+  embedded in `libapp.so`.
+- The bytecode runtime allows plain `http://` only to loopback addresses in release builds (local
+  testing with `adb reverse`); `OtaClient` stays https-only.
+
 ### Repository and documentation
+
+- Documentation rewritten for the bytecode architecture: new [quick start](docs/quick-start.md),
+  updated README, architecture, security, CLI reference, feature patching, toolchain and
+  limitations pages; duplicated guides merged. Internal phase reports, research spikes and test
+  records moved out of the public docs (they remain in the Git history).
 
 - One official demo app: the root `example_app/` was merged into the package example
   `packages/ota_client/example/`, which now has the full demo (local stack defaults,
@@ -16,8 +60,7 @@ All notable changes to this project are documented here. The format follows
 - Internal planning documents (the original phase-by-phase build plans), the internal
   pre-publication audit, launch-announcement drafts and the alternative patch engine research
   were removed from the public tree. `docs/roadmap/README.md` is now a short public roadmap.
-- New public summaries: `docs/architecture/bytecode-architecture.md` (bytecode engine research,
-  what exists and what does not) and `prototypes/README.md` (research prototypes are not demos).
+- New public summary `prototypes/README.md` (research prototypes are not demos).
 
 ### Security
 
@@ -56,7 +99,9 @@ All notable changes to this project are documented here. The format follows
 ## [0.1.0-alpha.1] - 2026-11-11
 
 First public, **experimental** release (an earlier planned `0.1.0-alpha` tag was never created).
-Internally tested only; not production-ready. Tested on a Linux development machine and with
+This is the **original alpha**: server-signed `mock-v1` and `aot-bidiff-android-v1` patches, the
+`OtaClient` API and the Python `ota` CLI. The bytecode architecture is not part of it (see
+Unreleased). Internally tested only; not production-ready. Tested on a Linux development machine and with
 Android apps on a small number of devices; iOS, macOS and Windows are not tested.
 
 ### Added
@@ -141,7 +186,7 @@ Android apps on a small number of devices; iOS, macOS and Windows are not tested
 
 ### Known limitations
 
-See [docs/known-issues.md](docs/known-issues.md) and [docs/limitations.md](docs/limitations.md).
+See [docs/limitations.md](docs/limitations.md) (known issues are listed there now).
 Open bugs: KI-8, KI-10, KI-11 (all low priority); KI-3 is an accepted limitation. The KI-1 and KI-4
 fixes are covered by automated tests and were checked on one Android phone only. Also: no audit
 log, one shared admin key, no rate limiting, no Key Vault/KMS signer, no Azure Blob adapter, no iOS

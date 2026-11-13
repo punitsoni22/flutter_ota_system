@@ -8,7 +8,7 @@ seriously. Flutter OTA System is **alpha software** and has **not been independe
 
 | Version | Supported |
 |---|---|
-| `0.1.x-alpha` (latest `main`) | Yes, best effort |
+| `0.1.x-alpha` and the unreleased bytecode architecture on `main` | Yes, best effort |
 | anything older | No |
 
 ## Reporting a vulnerability
@@ -19,7 +19,7 @@ Report it privately through **GitHub private vulnerability reporting**:
 
 1. Go to the repository's **Security** tab → **Report a vulnerability**
    (`https://github.com/punitsoni22/flutter_ota_system/security/advisories/new`).
-2. Include: the affected version/commit, component (backend, ota_client, CLI, deploy), steps to
+2. Include: the affected version/commit, component (backend, the `flutter_ota_system` SDK, the `flutter_ota` CLI, the toolchain or engine patch, the `ota` admin CLI, deploy), steps to
    reproduce or a proof of concept, impact, and any suggested fix.
 3. Remove real secrets, tokens and personal data from logs before sending them.
 

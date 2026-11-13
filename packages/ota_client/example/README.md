@@ -8,7 +8,46 @@ JSON over HTTP, with a freezed model, an entity, a repository, a controller and 
 patch changes all of them (new API endpoint, new `rating` field, new UI). The phone runs the new
 code after a restart, without a reinstall.
 
-**Step-by-step guide:** [docs/demo-walkthrough.md](../../../docs/demo-walkthrough.md).
+It was tested this way on one Android 13 arm64 phone (experimental alpha; see
+[limitations](../../../docs/limitations.md)).
+
+## Run the demo
+
+You need the `flutter_ota` CLI, a toolchain, a running server and a phone connected over USB. See
+the [quick start](../../../docs/quick-start.md) for the one-time setup (server, `flutter_ota init`,
+`config`, `toolchain install`, `keys init`).
+
+```bash
+cd packages/ota_client/example
+
+# 1. The demo's product API (v1 and v2), reachable from the phone over USB.
+./demo_api/serve.sh &                       # http://127.0.0.1:8090
+adb reverse tcp:8090 tcp:8090
+adb reverse tcp:8000 tcp:8000               # your local OTA server, if it runs on this computer
+
+# 2. Store release, then install it (a test install; a real app goes to the store).
+flutter_ota doctor
+flutter_ota release android --kind apk
+adb install -r build/app/outputs/flutter-apk/app-release.apk
+# The app shows "Products (v1)" and "active patch: none (store code)".
+
+# 3. Change the feature: new endpoint, new `rating` model field, entity, repository, UI.
+cp -r demo_patch_v2/products/. packages/products/
+(cd packages/products && dart run build_runner build --delete-conflicting-outputs)
+
+# 4. One command builds, verifies, signs and uploads the patch.
+flutter_ota patch android --channel staging
+ota patch promote <patch_id> --percent 100   # staging -> production (Python admin CLI)
+
+# 5. Open the app (it downloads and verifies the patch), then restart it.
+# It now shows "Products (v2, with rating)". The APK was not reinstalled.
+
+# 6. Undo.
+flutter_ota rollback                         # the next start runs the store code again
+```
+
+To start again from v1, restore `packages/products` with `git checkout packages/products` and make
+a new store release.
 
 ## Layout
 

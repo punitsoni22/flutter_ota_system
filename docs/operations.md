@@ -168,7 +168,7 @@ docker compose -f docker-compose.prod.yml restart api
 
 ### Local stack
 
-`./flutter-ota-system.sh` covers the local stack ([installation.md](installation.md#6-day-to-day-commands)).
+`./flutter-ota-system.sh` covers the local stack ([self-hosting](self-hosting.md#6-day-to-day-commands)).
 These commands were tested on Linux with a backup → change → restore round trip:
 
 ```bash
@@ -218,10 +218,10 @@ docker compose run --rm --no-deps -T --entrypoint tar api -C /data -czf - artifa
 | API down | Checks fail (`UpdateStatus.failed`); apps keep running their current code | Fix and restart; nothing is lost on the devices |
 | Database down | `/health/ready` fails; checks fail | Restore the database; restart the API |
 | File server down | Downloads fail; nothing is staged | Restart nginx; devices retry on their next check |
-| Bad patch published | Devices that started it and crashed fall back on their own | `ota patch rollback` or `revoke` ([rollouts.md](rollouts.md)) |
+| Bad patch published | Devices that started it and crashed fall back on their own | `ota patch rollback` or `revoke` ([releases and patches](releases-and-patches.md#rollback-and-revocation)) |
 | Lost artifacts volume | Published patches can't be downloaded; new patches can't be diffed against lost store builds | Restore from backup. Without the release's `libapp.so`, that release can't get new code patches |
 | Lost signing key | No new patches can be trusted by existing apps | Restore from backup; otherwise new store builds with a new key |
-| Leaked admin key or signing key | — | [security.md](security.md#compromised-signing-key-procedure) and rotate ([secret rotation](security.md#secret-rotation)) |
+| Leaked admin key or signing key | — | [security](security.md#rotation-revocation-and-recovery) (developer keys) or [original alpha key](security.md#original-alpha-server-held-key), and rotate ([secret rotation](security.md#secret-rotation-server)) |
 
 ## Upgrading Flutter OTA System
 
@@ -273,7 +273,7 @@ matches it.
 - [ ] Random 32+ character secrets; `OTA_ENV=production` (the API checks this)
 - [ ] HTTPS for the API and file server; no `usesCleartextTraffic` in apps
 - [ ] Signing key created once, backed up offline, readable only by the API
-- [ ] Apps ship with the production key **and** a backup key ([signing-key-management.md](signing-key-management.md#rotation-today))
+- [ ] Bytecode architecture: the app root key is backed up offline ([security](security.md#rotation-revocation-and-recovery)). Original alpha: apps ship with the production key **and** a backup key ([security](security.md#original-alpha-server-held-key))
 - [ ] Admin access restricted at the network level; admin key shared with as few people as possible
 - [ ] Off-server backups, and a tested restore
 - [ ] Uptime monitoring on `/health/ready`

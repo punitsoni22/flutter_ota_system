@@ -2,7 +2,7 @@
 
 > **Roadmap status: 🚧 partly done.** v0.1.0-alpha.1 added a one-command local setup (`./flutter-ota-system.sh`), a
 > hardened local Docker Compose stack and tested backup/restore for the local stack. The
-> remaining items are open. Current instructions: [installation.md](../installation.md),
+> remaining items are open. Current instructions: [self-hosting](../self-hosting.md),
 > [operations.md](../operations.md).
 
 Status legend: ✅ done (tested on Linux) · 🚧 partly done · 🔭 open.

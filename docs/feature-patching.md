@@ -3,9 +3,10 @@
 
 # Feature patching (`flutter_ota features`, `flutter_ota patch android`)
 
-Status: experimental alpha. Android arm64 apps, Linux x64 developer machines only. Tested on
-Linux with test fixtures and one real module build against a lab baseline. Not yet tested end to
-end on a phone with this command.
+Status: experimental alpha. Android arm64 apps, Linux x64 developer machines only. Tested end to
+end on one Android 13 phone with the [demo app](../packages/ota_client/example/README.md): an API
+endpoint change, a new freezed model field (regenerated `.freezed.dart` / `.g.dart`), entity,
+repository and UI changes, shipped with one `flutter_ota patch android`.
 
 ## 1. The idea
 
@@ -16,6 +17,15 @@ of `products`, that getter returns the new code; otherwise it returns the code i
 
 You do not write config files, rename packages or write slots by hand. The CLI finds the features
 from your package graph.
+
+**What a patch can change** (inside feature packages): API calls and parsing logic, feature-owned
+models (including freezed and json_serializable generated code), entities, repositories,
+controllers and state classes, widgets and UI. **What it cannot change** is listed in
+[section 6](#6-what-needs-a-new-store-release): the app package, shared packages, dependencies,
+native code and assets.
+
+Patching arbitrary code without feature packages (a whole-app patch) is **not supported**. It is a
+research topic: it compiles in experiments but has not been validated on a device.
 
 ## 2. Project layout
 
@@ -147,7 +157,7 @@ What the command does:
    A patch is never uploaded without it.
 7. Builds the manifest (format 2, entry contract 3, toolchain record, baseline `libapp.so`
    SHA-256, release id, next sequence, new patch id), signs it with your certified signer key
-   (see [signing-guide.md](signing-guide.md)), checks the signed file again, and writes
+   (see [security](security.md#developer-owned-signing)), checks the signed file again, and writes
    `.flutter_ota/releases/<release_id>/patches/<sequence>/patch.otp` and `patch.json`.
 8. Uploads it (`dbc-v1`) and optionally publishes it. Without `--channel` it stays a draft.
 
@@ -181,8 +191,9 @@ The command refuses, with the exact reason, when any of these changed since the 
 - Recommended: let the app depend on `freezed_annotation` and `json_annotation` directly, so they
   are part of the store build (as the demo app does).
 - If `dart2bytecode` fails with `Cannot extend ... in a dynamic module` (for example
-  `EqualUnmodifiableSetView`), the store build's interface does not allow it. See
-  [architecture/phase-4-spike-freezed.md](architecture/phase-4-spike-freezed.md).
+  freezed's `EqualUnmodifiableSetView`), a class the patch extends is not allowed by the store
+  build's dynamic interface. Making the app depend on the annotation packages directly (above)
+  avoids this case.
 - Always re-run `build_runner` after changing models; the patch command checks it.
 
 ## 8. Known limits
@@ -193,4 +204,6 @@ The command refuses, with the exact reason, when any of these changed since the 
   upload is refused; install a newer toolchain, or use `--dry-run`. (Toolchain builders only:
   `FLUTTER_OTA_BC_VERIFY=<path to a bc_verify AOT snapshot>` is used when the toolchain has none.)
 - Approvals (extra approver signatures) are not added by this command yet.
-- Not yet tested end to end on a phone with this command.
+- Tested on one phone and one small demo app. Large apps, many features and other devices are
+  not tested yet. Patched code runs in the bytecode interpreter: CPU-heavy code is slower than in
+  the store build.

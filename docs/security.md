@@ -1,252 +1,170 @@
 # Security
 
-> **Alpha disclaimer.** Flutter OTA System v0.1.0-alpha.1 has **not** undergone an independent security audit.
-> This page describes the security model as implemented, and its known gaps. It does not certify
-> that the implementation is free of flaws. Validate it yourself before users depend on it. Report
-> vulnerabilities privately as described in [SECURITY.md](../SECURITY.md).
-
 > [!WARNING]
-> Flutter OTA System is an experimental, self-hosted OTA platform. Its Android AotPatchRuntime
-> modifies executable application code and presents significant platform-policy and security
-> considerations. It has not been independently security-audited or validated for production use.
-> Developers must evaluate applicable app-store policies and deployment risks before integrating it
-> into distributed applications.
+> **No independent security audit.** This page describes the security model as implemented, and its known gaps. It does not certify that the implementation is free of flaws. Validate it yourself before users depend on it. Report vulnerabilities privately as described in [SECURITY.md](../SECURITY.md).
 
-This documentation is provided for technical guidance and is not legal advice. Platform policies
-can change. Developers are responsible for independently reviewing the policies applicable to
-their applications and distribution channels.
+**What is being protected.** Flutter OTA System delivers code that installed apps run. Anyone who can make a device accept a patch can change what the app does for every user in the rollout. Most controls below exist to stop that.
 
-Related pages: [signing keys and trust model](signing-key-management.md) ·
-[privacy and data handling](privacy-and-data-handling.md) ·
-[platform compatibility](platform-compatibility.md) · store policies:
-[Google Play](policy/google-play.md), [Apple App Store](policy/apple-app-store.md).
+There are two patch paths, with different trust models:
 
-## What is being protected
+| | Bytecode architecture (`dbc-v1`, unreleased, experimental) | Original alpha (`v0.1.0-alpha.1`) |
+| --- | --- | --- |
+| Who signs | **The developer**, on their own machine | The **server**, with one server-held key |
+| Server holds a private signing key | **No** | Yes |
+| Key hierarchy | Offline root key → certified signer keys; rotation and revocation | One key; no rotation tooling |
+| Code runs as | Dart bytecode in the custom engine's interpreter, verified first | A replaced compiled `libapp.so` |
 
-Flutter OTA System delivers files that installed apps load: configuration (`mock-v1`) or **compiled Dart code**
-(Android code patches). Anyone who can make a device accept a patch can change what the app does
-for every user in that rollout. That is the main risk, and most controls below exist to stop it.
+## Developer-owned signing
 
-## Controls at a glance
+### The keys
 
-| Control | Status | Where |
-|---|---|---|
-| ES256 signature over all patch metadata, verified on the device | ✅ Implemented | `signing.py`, `canonical.py`, `signature.dart` |
-| SHA-256 and exact-size checks on download | ✅ Implemented | `ota_client.dart` |
-| Base + result hash checks for code patches; re-check before loading | ✅ Implemented | `aot_runtime.dart`, `OtaBoot.java` |
-| Anti-replay (no downgrade without a server rollback) | ✅ Implemented | client `state.dart`, server `updates.py` |
-| Compatibility binding (app, release, platform, arch, format in the signature) | ✅ Implemented | `canonical.py` |
-| Device tokens (HS256 JWT, per device) | ✅ Implemented | `auth.py` |
-| Admin authentication | 🟡 One shared API key | `auth.py` |
-| Private storage for store builds | ✅ Implemented | `storage.py`, nginx/Caddy config |
-| Production startup safety checks | ✅ Implemented | `config.py` |
-| Store-policy gate for public-store code patches | ✅ Implemented | `routers/admin.py` |
-| Secret scanning in CI (gitleaks) | ✅ Implemented | `.github/workflows/ci.yml` |
-| **RBAC**, users, SSO, MFA | 🔭 Planned | [roadmap](roadmap/README.md#planned--not-implemented) |
-| **Audit log** | 🔭 Planned | [roadmap](roadmap/README.md#planned--not-implemented) |
-| **Azure Key Vault / KMS / HSM signer** | 🔭 Planned | [roadmap](roadmap/README.md#planned--not-implemented), [signing-key-management.md](signing-key-management.md) |
-| **Short-lived signed download URLs** | 🔭 Planned | ADR-0008 (not written) |
-| Rate limiting on device endpoints | 🔭 Planned | [roadmap](roadmap/README.md#planned--not-implemented) |
-| Individual device-token revocation | ❌ Not available | — |
-| TLS | Your responsibility (the single-server compose uses Caddy) | `deploy/` |
-
-## Device authentication
-
-| Identifier | What it identifies | Secret? |
-|---|---|---|
-| App slug (`OtaConfig.appSlug`) | The application on the server, by name; used to register | No: it is in every app build |
-| Application id (`OtaConfig.applicationId`) | The application's server UUID; bound into every patch signature and checked on every response | No: it only scopes and pins; it grants nothing |
-| Installation id | One installation (random, created on first launch) | No |
-| Device token | Permission to call the update-check and events endpoints as one device of one app | Yes: sent only in the `Authorization` header over HTTPS (release builds) |
-
-
-- A device registers with `POST /v1/devices/register` and gets an **HS256 JWT** signed with
-  `OTA_DEVICE_JWT_SECRET`. Claims: device id, application id, installation id, `typ: device`,
-  issue and expiry time (30 days by default, `OTA_DEVICE_TOKEN_TTL_SECONDS`).
-- The token is required for `/v1/updates/check` and `/v1/events/batch`, and scopes them to its
-  own application.
-- **Registration is open**: anyone who knows the app slug can register any installation id. The
-  token limits what a caller can see; it does not prove the caller is a genuine install.
-- Tokens cannot be revoked one by one. Rotating `OTA_DEVICE_JWT_SECRET` invalidates all of them;
-  `ota_client` re-registers automatically.
-- On the device the token is stored in the client's state file in the app's private folder, not
-  in a hardware-backed keystore.
-
-## Admin authentication and RBAC
-
-- All of `/v1/admin` requires the header `X-API-Key`, compared in constant time with
-  `OTA_ADMIN_API_KEY`. The CLI, CI and the `/admin` page all use this one key.
-- **There is no RBAC**: no users, roles, per-person keys, SSO or MFA. Whoever has the key can
-  publish code to every device.
-- Until roles exist: keep the key in a password manager, share it with as few people as possible,
-  rotate it when someone leaves, and restrict `/v1/admin` and `/admin` at the network level
-  (VPN, IP allow-list, or a reverse proxy with SSO).
-- The `/admin` page holds no secrets; it sends the key you type to the API.
-
-## What is signed
-
-When a patch file is uploaded, the server computes its SHA-256 itself and signs a **canonical
-message** ([ADR-0002](adr/0002-signature-scheme.md)):
-
-```
-"OTA-PATCH-V1\n" + length-prefixed(
-    protocol_version, application_id, release_id, patch_number, platform, arch,
-    runtime_abi, artifact_format, base_artifact_sha256, payload_sha256, result_sha256, size_bytes)
+```text
+app ROOT key (offline; its public key is compiled into your store build)
+  └── signs a CERTIFICATE: app id, environment, role "signer", serial, validity
+        └── your SIGNER key signs each patch, on your machine (or in your own CI)
 ```
 
-Each field is UTF-8 with a 4-byte big-endian length prefix, so fields cannot be shifted into
-each other. The signature is ECDSA P-256 / SHA-256 (ES256), encoded as raw `r‖s` (64 bytes),
-base64. The device rebuilds the message from the update-check response **and its own** platform
-and arch, so no field can be swapped without breaking the signature. Python
-([`canonical.py`](../backend/app/canonical.py)) and Dart
-([`canonical.dart`](../packages/ota_client/lib/src/canonical.dart)) share a test vector.
+`flutter_ota keys init` creates them under `~/.config/flutter_ota/keys/<app_id>/`:
+- `roots/<key_id>.key` and `signers/<key_id>.key` are the **private** keys, mode 0600.
+- `.pub` files and `signers/<key_id>.cert.json` are public.
 
-**Not signed:** the rollback/revocation lists, `download_url` and `next_check_after_seconds`.
-Without TLS, a network attacker could fake "your patch is revoked" (a denial of service, not code
-execution). Use HTTPS.
+**Rules for the private keys:**
+- Only the **public** root key and the certificate are sent to your server.
+- Private keys never go into your project, your APK/AAB, the build configuration or the server.
+- Never commit them, and never paste them into a chat, a ticket or a log.
+- Keep the root key offline when you can. It is only needed to certify new signer keys and to sign revocation lists.
 
-## Device-side checks
+### What is signed
 
-In order, before a patch can run ([`ota_client.dart`](../packages/ota_client/lib/src/ota_client.dart)):
+A patch is one `OTAPRT02` file:
+- a canonical-JSON **manifest**;
+- a signature block;
+- the Dart bytecode module.
 
-1. Not a patch that already failed on this device.
-2. **Anti-replay:** the patch number must be higher than the highest number this install ever
-   accepted, unless the server names it as the rollback target.
-3. `arch`, `runtime_abi` and `artifact_format` match this app and runtime.
-4. `key_id` is one of the keys compiled into the app.
-5. **ES256 signature verifies** over the canonical message. This happens **before** the download.
-6. Download stops if more than `size_bytes` arrive; the final size must match exactly.
-7. **SHA-256** of the file equals `payload_sha256`.
-8. Code patches: the store `libapp.so` must match `base_artifact_sha256` (the patch was built for
-   this exact build), and the rebuilt file must match `result_sha256`.
-9. Before use: `mock-v1` payloads are re-hashed on every start; `OtaBoot` re-checks the size and
-   SHA-256 of a patched `libapp.so` before loading it (hashed once per file, then cached).
+**The signature:**
+- ES256 (ECDSA P-256 + SHA-256), raw `r‖s`;
+- computed over `"flutter-ota-system/patch-manifest/v2\n"` plus the manifest. The prefix means a patch signature can never be reused as another kind of signature.
 
-Also, before any of these:
+**What the manifest binds the patch to:**
+- the app id;
+- the store release id and the SHA-256 of that release's `libapp.so`;
+- a unique patch id and a sequence number (replay protection);
+- the runtime (engine and Dart revisions);
+- the toolchain id (content hash);
+- the host interface hash;
+- the module's SHA-256 and size;
+- an optional expiry.
 
-- **Patch id:** must be a canonical lowercase UUID, because the client uses it as a directory
-  name and it is **not signed** (see below). Any other id is refused before downloading; a state
-  file or native `boot.json` entry with another id is discarded. Dart (`patch_id.dart`) and
-  Android (`OtaPaths.java`) use the same pattern; a test compares them.
-- **URLs:** release and profile builds use `https://` only, for the server, patch downloads and
-  every redirect. Debug builds may also use `http://localhost`/`127.0.0.1`/`[::1]` and
-  `http://10.0.2.2` (emulator). The client follows redirects itself (GET only, at most 5),
-  checks every destination, never follows `https://` → `http://`, and drops the device token
-  when a redirect changes the host.
-- **Timeouts:** connect 15 s; API calls 15 s; patch download: response 30 s, stall 30 s, total
-  10 min.
+### Who checks it
 
-### Protocol v2 requirement: sign the patch id
+**The CLI**, before upload:
+- the manifest schema;
+- the signer certificate: app, environment, `signer` role, validity, a root compiled into the release, and the key file mode;
+- it re-verifies its own signature.
 
-In protocol v1 (`OTA-PATCH-V1`, [ADR-0002](adr/0002-signature-scheme.md)) the signed message
-covers the app, release, patch number, platform, arch, runtime ABI, format, hashes and size, but
-**not the patch id** and not the download URL. The client therefore treats both as untrusted
-input (strict UUID check, URL rules above). Protocol v2 must add `patch_id` to the signed
-message. That changes every signature and the ADR test vector, so it needs a new protocol
-version that old clients ignore, and is not part of v1.
+**The server**, on upload (`dbc.py`):
+- the binding to app, release and baseline `libapp.so` hash;
+- the certificate chain to a registered, non-revoked root;
+- the signature and any approvals;
+- the module hash and size;
+- that the patch id is unique and the sequence number is higher;
+- the expiry.
 
-### Download hosts
+It stores the file unchanged and **never signs it**.
 
-Downloads are **not** restricted to the API's host: patch files are normally served from another
-host (`OTA_CDN_BASE_URL`: nginx/Caddy, a CDN, or an S3-compatible public bucket such as Supabase
-Storage, Cloudflare R2 or AWS S3). Integrity comes from the signature and SHA-256, not from the
-host. An optional allow-list of download hosts in the client is a possible later addition.
+**The phone**, before activation and again at **every start**:
+- the same checks, against the **root keys compiled into the store build**;
+- the signed revocation list;
+- replay, by sequence number.
 
-[`scripts/verify_demo.sh`](../scripts/verify_demo.sh) re-implements the canonical message
-independently and confirms that a corrupted file, flipped signature bits, a changed patch number,
-a substituted hash and a different key are all rejected.
+### Rotation, revocation and recovery
 
-## Patch compatibility checks
+| Situation | What to do |
+| --- | --- |
+| **Planned rotation** of a signer key | Certify a new signer key with the root key. It works at once; no new store release |
+| **Signer key stolen** | Sign a revocation list with the root key that revokes the certificate serial (and key id), certify a new signer key, and re-sign the current patch. A stolen signer key cannot certify keys and cannot revoke anything |
+| **Root key lost or stolen** | Needs a **new store release** with a new root key. Keep the root key offline and backed up |
+| **Bad patch** | `flutter_ota rollback` (reversible) or `ota patch revoke` (permanent) |
 
-| Layer | Check |
-|---|---|
-| Server | Patch must belong to the device's release; artifact must exist for its arch; format must be supported |
-| Signature | App, release, patch number, platform, arch, runtime ABI and format are inside the signed message |
-| Device | Base hash must match the installed store code (code patches) |
-| CLI (build time) | Same Flutter version as the release; no native, Java/Kotlin, manifest, resource or asset changes |
+Revocation lists are signed by a root key and have a sequence number; an older list is refused. The server stores them, and phones fetch them with the update check.
 
-## Key management
+**Approvals** (extra approver signatures) are supported by the verifier, but only tested on Linux. The CLI does not add them yet.
 
-The private signing key is an EC P-256 PEM key held by the server (`LocalSigner`: environment
-variable or a file in the `…_keys` volume); apps trust only the public keys compiled into them.
-There is no Key Vault, KMS or HSM signer, and no rotation tooling. The full trust model, its
-verified limitations, rotation, loss and compromise, operator practices and the possible future
-Azure Key Vault signer are in **[signing-key-management.md](signing-key-management.md)**.
+## Code safety on the phone
 
-Local development: `./flutter-ota-system.sh setup` creates the development key `local-dev-1` in
-the Docker volume `flutter-ota-system_keys`. **Never ship an app that trusts a development key.**
+A correctly signed patch can still contain broken code. More layers protect the app:
 
-## Artifact downloads
+1. **Build time (`patch_guard`).** Before compiling, it rejects:
+   - FFI, `dart:mirrors` and internal `dart:_` libraries;
+   - dynamic calls and `noSuchMethod`;
+   - compile errors;
+   - dependencies that are not part of the store build.
+2. **Reference verifier (`bc_verify`).** It runs on every module before signing.
+3. **In-VM bytecode verifier.** It is part of the custom engine, and checks every function while the module is read, before any of its code runs:
+   - opcodes and instruction boundaries;
+   - registers, branch targets and object-pool types;
+   - argument counts, field offsets and stack depth.
 
-- Patch URLs are **public and permanent** (`/cdn/patches/<sha256>`), so CDNs can cache them.
-  Integrity comes from the signature, not from a secret URL. **Never put secrets in a patch.**
-- **Short-lived signed URLs (S3 pre-signed, Azure SAS) are not implemented**, so there is no URL
-  expiry.
-- Store builds (`releases/`, the app's full compiled code) are private: only the admin API serves
-  them. nginx and Caddy return 404 for any other `/cdn/` path.
-- Use HTTPS for the API and file server in production; the production startup check requires an
-  `https://` CDN URL.
+   Interpreter runtime guards also protect memory-indexing instructions. See [architecture/bytecode-verifier.md](architecture/bytecode-verifier.md).
+4. **Separate verification process.** A new patch is first loaded in `:flutter_ota_verify`. If that process refuses the patch or crashes, the patch is never activated, and the app keeps running.
+5. **Activation at the next start.** Running code is never swapped live.
+6. **Crash recovery.** A patch that crashes the app twice is rolled back and blocklisted. Android exit information tells real crashes apart from force-stops and OS kills.
 
-## Replay protection, rollback and revocation
+## Server, admin and device security
 
-- **Anti-replay:** see device-side check 2. A patch that crashed does not raise the highest
-  accepted number, so it cannot block older good patches.
-- **Rollback** marks a patch `rolled_back`; devices move to the newest other eligible patch or the
-  store code. It can be published again.
-- **Revoke** is permanent. Every update-check response lists revoked numbers, and clients drop
-  those patches even if they are already downloaded.
-- Both reach a device only when the app **calls `checkForUpdate()`** (the client has no timer)
-  and take effect on the next start. Offline devices keep running their last good code.
+- **Admin API:**
+  - every `/v1/admin` route needs `X-API-Key`, compared in constant time;
+  - there is **one shared key**, with no users, roles (RBAC), MFA or audit log. Whoever has it can publish patches to every device;
+  - restrict admin access at the network level (VPN, IP allow-list or SSO proxy).
+- **Devices:**
+  - devices register (by app UUID or slug) and get a 30-day **HS256 JWT** for the update check and events;
+  - registration is open: a token limits what a caller sees, it does not prove the install is genuine;
+  - tokens cannot be revoked one by one.
+- **Transport:**
+  - release builds use `https://` only;
+  - the bytecode runtime also allows `http://` to loopback addresses, for local testing;
+  - use HTTPS in production. Production start-up checks refuse unsafe settings.
+- **Downloads:**
+  - patch URLs are public and permanent (`/cdn/patches/<sha256>`); integrity comes from signatures, not secret URLs;
+  - **never put secrets in a patch.**
+- **Store builds:** they are not uploaded in the bytecode architecture, only their `libapp.so` hash. In the original alpha, they are stored privately.
 
-## Audit logging
+## Original alpha: server-held key
 
-**Not implemented.** Who created, published, rolled back or revoked a patch, and when, is not
-recorded. Patches keep their creation time only. Exceptions: policy approvals are stored with
-their reason and time (`ota app policy-history`, [KI-2](known-issues.md#ki-2-the-policy-approval-reason-is-not-stored)), and
-promotion-check overrides are written to the server log with their reason. Neither records *who*
-did it, because there is only one shared admin key. Until an audit log exists: keep
-reverse-proxy access logs for `/v1/admin`, restrict admin access, and
-track releases in your own change management.
+In `v0.1.0-alpha.1`, the **server** signs every patch, with one EC P-256 key (`OTA_SIGNING_KEY_PEM` or `OTA_SIGNING_KEY_PATH`) for all apps. Apps trust the public keys compiled into them (`ota key show --dart`).
 
-## Threat model
+**Consequences:**
+- The server, the signing key and the admin API key are **equally sensitive**. Whoever controls them can sign patches that devices accept.
+- There is no rotation tooling. Replacing the key needs new store builds that trust the new key. Ship builds that already trust a backup key.
+- The patch id and the rollback/revocation lists are not signed (protocol v1). Clients treat them as untrusted input.
 
-| Threat | Mitigation today | Residual risk |
-|---|---|---|
-| Patch modified in transit or on the file server | SHA-256 + ES256 signature, verified on device with compiled-in keys | None for integrity while the key is safe. Use HTTPS for the rest |
-| Fake update-check response | Signature covers every field that defines the patch | Unsigned lists can be spoofed without TLS (denial of service) |
-| Replay of an old, valid but buggy patch | Highest-accepted number on device; server never offers older patches unless the current one is bad | Downgrade only through an authenticated rollback over TLS |
-| Patch for another app / release / arch | Those values are signed | — |
-| **Stolen signing key** | None automatic | **Critical.** See the procedure below |
-| **Stolen admin API key** | Constant-time check; production refuses default or short keys | **Critical.** The attacker can publish patches that the server signs. No RBAC, MFA or audit log |
-| Stolen device token | Scoped to one device and app; read-only metadata + counters | Valid up to 30 days; no per-token revocation |
-| Fake devices, scraping | Registration needs a known slug | Open registration, no rate limiting; patch files public by hash |
-| Broken patch | Boot protection + server rollback/revoke | Crashes after confirmation, or before the native hook, are not covered |
-| Malicious insider | — | No approvals, no two-person rule, no audit log |
-| Store-policy violation | `aot_policy_approved` gate for `public_store` apps | The policy decision is the operator's |
-| Supply chain (dependencies, CI) | gitleaks, licence gate, read-only CI token | GitHub Actions are pinned to tags, not commit SHAs; no dependency vulnerability scan in CI |
+**If that key is compromised:**
+1. Stop the API, or cut admin access.
+2. Revoke every patch you did not publish.
+3. Check the server, DNS and TLS.
+4. Create a new key, and ship new store builds that trust only it.
 
-## Compromised signing key: procedure
+Local development keys (`local-dev-1`) must never be trusted by a shipped app.
 
-See [signing-key-management.md](signing-key-management.md#if-the-private-key-is-compromised).
+## Known security limitations
 
-## Secret rotation
+- **No independent security audit, no penetration test.**
+- **Not a sandbox.** The verification process runs with the **same Linux user** as the app: Android isolated processes cannot run Flutter in release builds.
+- **Some malformed patches are contained, not rejected cleanly.** About 40 test files with corrupt headers or sections abort the separate verification process: the reader stops before function verification. The app stays alive and the patch is not used, but this is containment, not a clean rejection.
+- **The bytecode verifier is not a type checker.** Type confusion into VM runtime entries remains a residual risk, reduced by the runtime guards, the signature and the separate process.
+- **The toolchain id is declared by the signer.** It is not proven. A stolen signer key can declare any toolchain; reproducible builds allow audits.
+- **Admin access is coarse:** one shared key, no RBAC, no audit log, no KMS/HSM signer, no rate limiting, no short-lived download URLs.
+- **The device token is not hardware-protected.** It is stored in the app's private storage.
+
+## Secret rotation (server)
 
 | Secret | Effect of rotating |
-|---|---|
+| --- | --- |
 | `OTA_ADMIN_API_KEY` | CLI, CI and admin users need the new key. No device impact |
-| `OTA_DEVICE_JWT_SECRET` | All device tokens become invalid; clients re-register on HTTP 401 |
-| `OTA_ROLLOUT_HMAC_SECRET` | Every rollout group reshuffles. Do it only when no partial rollout is running |
-| Database password, S3 keys | Update the server environment and restart |
-| Signing key | Needs new store builds (above) |
+| `OTA_DEVICE_JWT_SECRET` | All device tokens become invalid; clients register again |
+| `OTA_ROLLOUT_HMAC_SECRET` | Rollout groups reshuffle. Do it only when no partial rollout is running |
+| Original alpha signing key | Needs new store builds |
 
-## Security limitations (summary)
+No secrets are committed to this repository. `.env`, key files and local state are git-ignored, and CI runs gitleaks.
 
-No independent security audit, no RBAC, no audit log, no HSM/KMS, no signed URLs, no rate limiting, open device
-registration, one signing key at a time, device token stored without hardware protection, and no
-iOS support (iOS is not tested). See [limitations.md](limitations.md).
-
-## Secrets in this repository
-
-No secrets are committed. `.env`, key files and local state are git-ignored. CI runs gitleaks on
-every pull request and push. `.env.example` contains only clearly fake values, and the production
-startup checks reject them.
+Related: [privacy and data handling](privacy-and-data-handling.md) · [limitations](limitations.md) · [Google Play](policy/google-play.md) · [Apple App Store](policy/apple-app-store.md).

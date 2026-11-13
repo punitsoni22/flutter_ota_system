@@ -3,9 +3,10 @@
 
 # Toolchain management
 
-Status: **experimental alpha, Phase 4 milestone 4B.** Linux x64 developer machines only. Tested
-only with local `file://` mirrors and small test archives. No official toolchain is published yet:
-publishing needs a separate owner approval.
+Status: **experimental alpha.** Linux x64 developer machines only. Tested with local `file://`
+mirrors: a real toolchain install from a signed local index, real store builds and the
+real-device patch test. **No official toolchain is published yet**, so today you build the
+toolchain yourself (section 6) or use a mirror someone built for you.
 
 This page explains:
 
@@ -15,12 +16,12 @@ This page explains:
 4. how the owner builds and signs a toolchain bundle;
 5. how a developer can build the toolchain themselves.
 
-Commands are listed in [cli-reference-flutter-ota.md](cli-reference-flutter-ota.md).
+Commands are listed in the [CLI reference](cli-reference.md#toolchain).
 
 ## 1. What the toolchain is
 
-Bytecode patches need a Flutter engine with the Dart bytecode interpreter compiled in
-([ADR 0001 §11](architecture/adr/0001-bytecode-engine-and-developer-experience.md)). A toolchain is:
+Bytecode patches need a Flutter engine with the Dart bytecode interpreter (and our bytecode
+verifier) compiled in. A stock Flutter SDK cannot load patches. A toolchain is:
 
 - a **stock Flutter SDK** (for example 3.47.9), downloaded from the official release archive;
 - plus our **overlay**, a small archive (about 17 MB for 3.47.9) that contains:
@@ -32,12 +33,12 @@ Bytecode patches need a Flutter engine with the Dart bytecode interpreter compil
   - the unchanged `dynamic_modules` package (`packages/dynamic_modules/`, from
     `prototypes/real_app_compatibility/packages/dynamic_modules`). Only a package with this name
     may call the Dart VM's module loader, so `flutter_ota release android` copies it into the app
-    (see [releasing-with-flutter-ota.md](releasing-with-flutter-ota.md));
+    (see the [CLI reference](cli-reference.md#release-android));
   - `toolchain.json`, the content-hash record of the toolchain (its `id` is the `toolchain_id`);
   - licence notices (Flutter and Dart are BSD-3-Clause; our tools are Apache-2.0).
 
 The toolchain lives in the CLI's own cache. **Your global Flutter, your PATH, your Gradle cache and
-your Android SDK are never used or changed.** Builds (later milestones) run the toolchain's own
+your Android SDK are never used or changed.** Builds run the toolchain's own
 `flutter` with:
 
 ```text
@@ -255,17 +256,31 @@ OUT=$HOME/flutter-ota-mirror ./tools/toolchain/build_bundle.sh
 The last command prints the two `flutter_ota config` commands that point your CLI at your mirror
 and trust your key.
 
-## 7. Known limits (milestone 4B)
+## 7. Flutter upgrades
+
+A toolchain matches exactly one Flutter / Dart / engine version. When a new Flutter version is
+supported, the **project owner** (not each app developer) does this once:
+
+1. pins the new Flutter, Dart and engine revisions;
+2. ports and applies the engine changes (bytecode interpreter build flag, verifier patch);
+3. builds the engine and the tools, runs the compatibility and security tests;
+4. builds and signs a new overlay and index entry (section 5) and publishes it.
+
+App developers then run `flutter_ota upgrade`. It asks before changing `flutter_ota.lock`, and the
+next store release uses the new toolchain. Existing store releases keep their old toolchain, so
+patches for them keep working. Today only Flutter 3.47.9 is supported.
+
+## 8. Known limits
 
 - Linux x64 hosts only. macOS and Windows would need separate engine host builds, which do not
   exist.
-- Tested only with small test archives and local `file://` mirrors. A full install from the real
-  1.5 GB Flutter archive has not been run yet.
+- Tested with local `file://` mirrors and an SDK archive made from a local Flutter 3.47.9
+  install. A full install from the official 1.5 GB Flutter release archive has not been run yet.
 - Not yet checked: whether the official Flutter 3.47.9 archive already contains the
   `android-arm64-release` `gen_snapshot` that the overlay replaces. If it does not, the install
   stops with "The stock SDK has no …", and the overlay must also carry those Android engine
   artifacts.
-- The first `flutter` run inside the installed SDK may still try to download other engine
-  artifacts; with the mirror setting, that would fail. To be checked in milestone 4D (release
-  builds).
+- Not yet checked with the official archive: whether the first `flutter` run needs engine
+  artifacts that the mirror does not provide (with the SDK used in testing, release builds
+  worked).
 - No official signing key and no published index exist yet.
