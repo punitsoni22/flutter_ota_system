@@ -20,7 +20,11 @@ the device log with `adb logcat | grep flutter_ota`.
 
 | Message | Cause | Fix |
 |---|---|---|
-| `[x] flutter_ota.lock: missing` (doctor) | No toolchain pinned yet | `flutter_ota toolchain install` (after setting the toolchain index and key, see [toolchain management](toolchain-management.md#2-using-it-developer)) |
+| `[x] flutter_ota.lock: missing` (doctor) | No toolchain pinned yet | `flutter_ota toolchain install` in the app folder, then commit `flutter_ota.lock` |
+| `Download of ... stopped at ...` / `Run the same command again to resume.` | The toolchain download was interrupted (network, Ctrl+C) | Run `flutter_ota toolchain install` again: it resumes where it stopped |
+| `No trusted toolchain-signing keys are configured` or `... signed only by unknown key(s) ...` | The index you use is not signed by the key built into the CLI (for example a private mirror) | For a private mirror, trust its public key: `flutter_ota config add-toolchain-key <key_id> <public_key_base64>`. To use the official index again: `flutter_ota config unset toolchain-index-url` (and check `FLUTTER_OTA_TOOLCHAIN_INDEX` is not set). See [private mirrors](toolchain-management.md#25-private-mirrors) |
+| `The toolchain index (serial N) is older than one already seen` | The index is older than one this machine already used | Use the current index of the mirror; an old index is never accepted |
+| `flutter_ota --version` prints nothing (Ubuntu) | The snap-packaged `dart` can print nothing for very short programs. Real commands work | Run `flutter_ota --help` to check, or use an official Flutter install from flutter.dev instead of the snap |
 | A toolchain error saying the toolchain is missing or changed | The pinned toolchain is not installed, or a file in it changed | `flutter_ota toolchain install --force`. The CLI never falls back to stock Flutter |
 | `No certified patch-signing key for app ...` | No signer key and certificate on this machine | `flutter_ota keys init`, or get a certificate from whoever holds the root key |
 | `... can be read by other users` | A private key file has loose permissions | `chmod 600 <the key file>` |
@@ -28,10 +32,14 @@ the device log with `adb logcat | grep flutter_ota`.
 | A patch is refused with "needs a new store release" (exit 3) | The change is outside feature packages, or changes dependencies, native code or assets | See [what needs a new store release](feature-patching.md#6-what-needs-a-new-store-release) |
 | `The generated code of <package> is out of date (...)` | `build_runner` was not run after a model change | `dart run build_runner build --delete-conflicting-outputs` in that package |
 | `patch_guard: ... dynamic function invocation` (exit 4) | Code calls a method on a `dynamic` value | Rewrite it with static types (casts, typed callbacks) |
-| `409 promotion_checks_failed ... has not been on a test channel` | Publishing straight to `production` | Publish to `staging` first, then `ota patch promote <patch_id>` |
+| `The build also contains native libraries for x86_64, ...` (`release android`) | A plugin ships native libraries for other ABIs; the OTA engine exists for arm64-v8a only | Add the `abiFilters` block from the message to `android/app/build.gradle.kts` ([quick start, step 6](quick-start.md#6-prepare-the-app)), then run `release android` again. Nothing was registered |
+| `The build does NOT contain the OTA engine` (`release android`) | A stock Flutter engine was picked up | `flutter_ota toolchain doctor`, delete `android/.gradle` and `build/`, then try again |
+| `409 promotion_checks_failed ... has not been on a test channel` | Publishing straight to `production` | Publish to `staging` first (`patch android --channel staging`), test, then `ota patch promote <patch_id>`. To override on purpose: `--force --reason "…"` (logged) |
 | Device log `DISABLED FLUTTER_OTA_CONFIG is not set` | The app was built with plain `flutter run` / `flutter build` | Build it with `flutter_ota release android` |
 | Device log `REJECTED offered patch N: replay: sequence ...` | The server offers an older patch than the one the device already accepted | Normal after a rollback of a newer patch; publish a new patch |
 | Device log `VERIFY_PROCESS status=REJECTED` / `CRASHED` | The verifier process refused or could not load the patch | The patch is never used. Check the patch with `flutter_ota patch android --dry-run` and report a bug |
+| Device log `VERIFY_PROCESS status=EVICTED` | Android killed the verifier process for low memory | Nothing to do: the check is retried at a later update check (at most 3 times per patch) |
+| A new patch ran, then the store code (or the previous patch) came back | The patch crashed the app twice before its start was confirmed, so the device rolled it back and blocklisted it | Roll it back on the server too (`flutter_ota rollback`), so other devices stop getting it. Fix the crash and ship a new patch |
 | The phone cannot reach a local server | Release builds accept `http://` only to loopback | `adb reverse tcp:8000 tcp:8000` and use `http://127.0.0.1:8000` |
 
 The sections below cover the server, the local stack and the **original alpha** `OtaClient` path.

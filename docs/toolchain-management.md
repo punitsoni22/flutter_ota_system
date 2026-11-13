@@ -3,18 +3,19 @@
 
 # Toolchain management
 
-Status: **experimental alpha.** Linux x64 developer machines only. Tested with local `file://`
-mirrors: a real toolchain install from a signed local index, real store builds and the
-real-device patch test. **No official toolchain is published yet**, so today you build the
-toolchain yourself (section 6) or use a mirror someone built for you.
+Status: **experimental alpha** (`v0.2.0-alpha`). Linux x64 developer machines only, Android
+arm64 apps, one toolchain: `flutter-3.47.9-ota.1` (Flutter 3.47.9 / Dart 3.13.7 with our custom
+engine). The toolchain is published as assets of the GitHub release, and `flutter_ota` downloads
+and verifies it for you.
 
 This page explains:
 
 1. what the OTA toolchain is;
-2. how `flutter_ota` installs and checks it;
+2. how `flutter_ota` installs, checks, upgrades and cleans it, and how to use a private mirror;
 3. the index, lock file and cache formats;
-4. how the owner builds and signs a toolchain bundle;
-5. how a developer can build the toolchain themselves.
+4. how an install is protected;
+5. how the owner builds and signs the release files;
+6. how a developer can build the toolchain themselves.
 
 Commands are listed in the [CLI reference](cli-reference.md#toolchain).
 
@@ -53,23 +54,92 @@ If the pinned toolchain is missing or fails verification, the CLI stops with a c
 
 ## 2. Using it (developer)
 
-```bash
-# Once per machine: where the signed index is, and which key signs it.
-flutter_ota config set toolchain-index-url file:///path/to/mirror/index.json
-flutter_ota config add-toolchain-key <key_id> <public_key_base64>
+In your Flutter app folder (after `flutter_ota init`):
 
-# In your Flutter app:
-flutter_ota init --app-id <server application UUID>
+```bash
 flutter_ota toolchain install      # downloads, verifies, installs, writes flutter_ota.lock
 flutter_ota toolchain doctor       # checks the installed toolchain
 ```
 
 Commit `flutter_ota.lock` with your app, so every developer and CI job uses the same toolchain.
+You need no other setting: each CLI version has the URL of its own toolchain index built in.
 
-To move to a newer toolchain, run `flutter_ota upgrade`. It shows the change and asks
-`[y/N]`. Only after you answer yes does it install the new toolchain and rewrite
-`flutter_ota.lock`. In CI, use `flutter_ota upgrade --yes`. Remember: a new toolchain means a new
-store release, because patches only apply to apps built with the same toolchain.
+### 2.1 Where it comes from
+
+For `v0.2.0-alpha`, the index is
+`https://github.com/punitsoni22/flutter_ota_system/releases/download/v0.2.0-alpha/toolchain-index.json`.
+The [GitHub release](https://github.com/punitsoni22/flutter_ota_system/releases/tag/v0.2.0-alpha)
+has these files:
+
+| File | What it is |
+| --- | --- |
+| `toolchain-index.json` | The signed index (ES256). **The only file the CLI trusts**; every other download is checked against it |
+| `flutter-3.47.9-ota.1-linux-x64.tar.gz` | Our overlay: 53,806,362 bytes, SHA-256 `8887b78bb89e26ff8e4d752389f697fd322499a2c6feaf0eb929e9d81df8dd5d` |
+| `toolchain-manifest.json` | For people: versions, engine commit `89c39edfdfae2949f6806e4a315c0c08522238b7`, engine ELF build ID `cbce549523681a8db4ebd7a27a2876625867f64a`, sizes and SHA-256 |
+| `SHA256SUMS` | SHA-256 of the release files, for a manual check with `sha256sum -c` |
+
+The stock **Flutter 3.47.9 SDK** archive (`tar.xz`, 1,582,752,184 bytes) is not a release file:
+the CLI downloads it from Google's official Flutter release URL listed in the signed index, and
+checks it against the size and SHA-256 recorded there.
+
+### 2.2 What `toolchain install` checks
+
+1. It downloads the index and checks its ES256 signature with the key built into the CLI. An
+   unsigned index, an unknown key or a bad signature is refused; there is no option to skip this.
+2. It refuses an index whose serial is lower than one it has already seen, so an old index
+   cannot be replayed.
+3. It downloads the SDK archive and the overlay. **Every file must have the exact size and
+   SHA-256 from the index**, or it is deleted.
+4. It installs into a temporary folder and moves it into place only when everything is verified.
+
+If the network is down, the CLI uses the last verified copy of the index from its cache.
+
+**Interrupted download?** Run `flutter_ota toolchain install` again. It resumes where it stopped
+(HTTP `Range`; this works with the redirects GitHub release downloads use). A resumed file that
+does not verify is downloaded once more from the start.
+
+**The first store build** (`flutter_ota release android`) also downloads about 2 GB of Android
+Gradle dependencies from the usual public repositories into the toolchain's own `gradle-home`.
+Plan about 10 GB of free disk in total.
+
+### 2.3 Upgrade
+
+```bash
+flutter_ota upgrade                # shows the current and the new toolchain, asks [y/N]
+flutter_ota upgrade --yes          # in CI
+```
+
+Only after you answer yes does it install the new toolchain and rewrite `flutter_ota.lock`.
+A new toolchain means a **new store release**, because patches only apply to apps built with the
+same toolchain. Today `flutter-3.47.9-ota.1` is the only toolchain.
+
+### 2.4 Clean up
+
+```bash
+flutter_ota toolchain list         # installed toolchains; * marks this project's pin
+flutter_ota toolchain clean        # deletes downloaded archives and leftovers
+flutter_ota toolchain clean --unused   # also deletes toolchains no known project pins (asks first)
+```
+
+`--all` deletes every installed toolchain (it asks first; `--yes` skips the question). A deleted
+toolchain is downloaded again by the next `toolchain install` or `release android`.
+
+### 2.5 Private mirrors
+
+You can serve the toolchain from your own server or folder, for example for machines without
+internet access or for a toolchain you built yourself (section 6). Point the CLI at the mirror's
+index and trust the public key that signed it:
+
+```bash
+flutter_ota config set toolchain-index-url https://mirror.example.com/index.json   # or file:///path/to/index.json
+flutter_ota config add-toolchain-key <key_id> <public_key_base64>
+flutter_ota toolchain install
+```
+
+Both the GitHub release layout (section 5) and the older mirror layout (`index.json` plus
+`overlays/`) work, because relative URLs in the index are resolved against the index URL.
+`FLUTTER_OTA_TOOLCHAIN_INDEX` overrides the setting for one shell. To go back to the official
+index: `flutter_ota config unset toolchain-index-url`.
 
 ## 3. Formats
 
@@ -96,8 +166,8 @@ The index is one JSON file. The CLI downloads it over `https://`, `file://` or
         "artifacts": {
           "flutter_sdk": {"url": "https://…/flutter_linux_3.47.9-stable.tar.xz", "sha256": "…",
                           "size": 1582752184, "format": "tar.xz", "root": "flutter"},
-          "overlay": {"url": "overlays/flutter-3.47.9-ota.1-linux-x64.tar.gz", "sha256": "…",
-                      "size": 17961577, "unpacked_size": 41379840, "format": "tar.gz"}
+          "overlay": {"url": "flutter-3.47.9-ota.1-linux-x64.tar.gz", "sha256": "…",
+                      "size": 53806362, "unpacked_size": …, "format": "tar.gz"}
         }
       }
     ]
@@ -112,9 +182,9 @@ Rules:
   domain string `flutter-ota-system/toolchain-index/v1\n` followed by the **canonical JSON** of
   `index` (keys sorted, no spaces, integers only; the same encoding as
   `prototypes/security_hardening/tools/toolchain.py`).
-- **Trusted keys:** the keys embedded in the CLI
-  (`packages/flutter_ota_cli/lib/src/toolchain/trusted_keys.dart`, empty until the owner creates the
-  official key), plus keys the user adds with `flutter_ota config add-toolchain-key`. An unsigned
+- **Trusted keys:** the official key built into the CLI
+  (`packages/flutter_ota_cli/lib/src/toolchain/trusted_keys.dart`), plus keys the user adds with
+  `flutter_ota config add-toolchain-key`. An unsigned
   index, an unknown key or a bad signature is always refused. There is no option to skip
   verification.
 - **Serial:** it must never go down. The CLI remembers the highest serial it has seen and refuses an
@@ -179,15 +249,21 @@ locks/<id>.lock          install lock (holds the process id)
 
 Archives are extracted with GNU `tar`, which refuses member names with `..`.
 
-## 5. Owner: building and signing a bundle
+## 5. Owner: building and signing the release files
 
 Requirements: the lab toolchain in `~/.cache/flutter-ota-lab` (see section 6). The script only
-reads the lab.
+reads the lab, and uploads nothing.
 
 ```bash
-cd ~/Desktop/flutter_ota_system      # your clone of the repository
-OUT=$HOME/flutter-ota-mirror ./tools/toolchain/build_bundle.sh
+cd flutter_ota_system                # your clone of the repository
+RELEASE_LAYOUT=1 OUT=$HOME/flutter-ota-release ./tools/toolchain/build_bundle.sh   # GitHub release files
+OUT=$HOME/flutter-ota-mirror ./tools/toolchain/build_bundle.sh                      # private mirror layout
 ```
+
+With `RELEASE_LAYOUT=1`, all files are written flat into `OUT`: `toolchain-index.json`, the
+overlay, `toolchain-manifest.json` and `SHA256SUMS` (section 2.1). Without it, `OUT` gets
+`index.json` and `overlays/<id>-linux-x64.tar.gz`. The header comment of
+`tools/toolchain/build_bundle.sh` lists every setting.
 
 What it does:
 
@@ -198,15 +274,15 @@ What it does:
 3. Creates the toolchain signing key on the first run, in `KEY_DIR` (default
    `~/.cache/flutter-ota-lab/keys/toolchain`). The script refuses a `KEY_DIR` inside the
    repository. **Never commit or share the `.key` file.**
-4. Builds `overlays/<id>-linux-x64.tar.gz` reproducibly (sorted names, fixed dates and owners,
+4. Builds the overlay `<id>-linux-x64.tar.gz` reproducibly (sorted names, fixed dates and owners,
    `gzip -n`): the same lab gives the same SHA-256.
-5. Writes and signs `index.json` (other toolchains already in it are kept; the serial goes up by
+5. Writes and signs the index (other toolchains already in it are kept; the serial goes up by
    one), then verifies the result.
 6. Prints the two commands developers run to use this mirror.
 
-To make a key official, add its **public** key to
-`packages/flutter_ota_cli/lib/src/toolchain/trusted_keys.dart` in a reviewed commit. Publishing a
-mirror (for example on GitHub Releases) needs the owner's approval.
+The official key's **public** key is in
+`packages/flutter_ota_cli/lib/src/toolchain/trusted_keys.dart`; changing it needs a reviewed
+commit and a new CLI version. Each CLI version pins the index URL of its own release.
 
 ## 6. Building the toolchain yourself
 
@@ -276,12 +352,9 @@ patches for them keep working. Today only Flutter 3.47.9 is supported.
 
 - Linux x64 hosts only. macOS and Windows would need separate engine host builds, which do not
   exist.
-- Tested once (Phase 5, Linux x64) with the official Flutter 3.47.9 release archive downloaded
-  over HTTPS, the overlay from a local `file://` mirror and a test key: the download resumed
-  after an interruption, the archive contains the stock `android-arm64-release` `gen_snapshot`
-  with the SHA-256 the overlay expects, `toolchain doctor` passed, `flutter precache --android`
-  needed nothing from the mirror, and a release `flutter build apk --target-platform
-  android-arm64` of a new `flutter create` app worked and packaged the OTA `libflutter.so`.
-  The first Gradle build downloads the Android Gradle plugin and its dependencies from the usual
-  public repositories into the toolchain's `gradle-home` (about 2 GB).
-- No official signing key and no published index exist yet.
+- One toolchain only: Flutter 3.47.9 / Dart 3.13.7.
+- The install was tested on Linux x64 with the official Flutter 3.47.9 archive downloaded over
+  HTTPS: the download resumed after an interruption, `toolchain doctor` passed, and a release
+  build of a new `flutter create` app worked and packaged the OTA `libflutter.so`.
+- The first Gradle build needs internet access to the usual public repositories (about 2 GB into
+  the toolchain's `gradle-home`).

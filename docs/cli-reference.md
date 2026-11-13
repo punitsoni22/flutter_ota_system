@@ -11,17 +11,17 @@ The local server stack is driven by `./flutter-ota-system.sh` (see [self-hosting
 
 ## `flutter_ota`
 
-Experimental alpha. It runs on **Linux x64** machines and builds **Android arm64** apps.
+Experimental alpha (`0.2.0-alpha`). It runs on **Linux x64** machines and builds **Android arm64** apps with its own Flutter 3.47.9 toolchain.
 
-**Install it** from a clone of the repository. It needs Dart 3.8 or newer, but has only been tested with Dart 3.13.7.
+**Install it** from pub.dev. It needs Dart 3.8 or newer (the `dart` of any recent Flutter install), but has only been tested with Dart 3.13.7.
 
 ```bash
-dart pub global activate --source path packages/flutter_ota_cli
+dart pub global activate flutter_ota_cli
 export PATH="$PATH:$HOME/.pub-cache/bin"      # if this folder is not on your PATH yet
-flutter_ota --version
+flutter_ota --help                            # all commands; `flutter_ota --version` prints the version
 ```
 
-Once published on pub.dev, the install command will be `dart pub global activate flutter_ota_cli`.
+`flutter_ota <command> --help` shows every option of a command. To work on the CLI itself, activate it from a clone instead: `dart pub global activate --source path packages/flutter_ota_cli`.
 
 ### Settings
 
@@ -33,7 +33,7 @@ For each setting, the first match wins:
 | Setting | Environment variable | Meaning |
 | --- | --- | --- |
 | `server-url` | `FLUTTER_OTA_SERVER_URL` | Your OTA server. `https://` only; `http://` only for localhost testing |
-| `toolchain-index-url` | `FLUTTER_OTA_TOOLCHAIN_INDEX` | Signed toolchain index (`https://`, `file://` or `http://localhost`) |
+| `toolchain-index-url` | `FLUTTER_OTA_TOOLCHAIN_INDEX` | Signed toolchain index (`https://`, `file://` or `http://localhost`). Default: the `toolchain-index.json` asset of this CLI version's GitHub release ([toolchain management](toolchain-management.md#2-using-it-developer)) |
 | — | `FLUTTER_OTA_ADMIN_KEY` | Admin API key for the commands that talk to the server. **Never stored** in any file by `flutter_ota` |
 
 Other environment variables:
@@ -70,14 +70,14 @@ flutter_ota config add-toolchain-key <key_id> <public_key_base64>
 flutter_ota config remove-toolchain-key <key_id>
 ```
 
-`add-toolchain-key` trusts an extra **public** key for the toolchain index, for example when you build the toolchain yourself.
+`add-toolchain-key` trusts an extra **public** key for the toolchain index, for example for a private mirror or a toolchain you built yourself. The official index needs no extra key: it is checked with the key built into the CLI.
 
 ### `toolchain`
 
 | Command | What it does |
 | --- | --- |
 | `toolchain list [--offline]` | Installed toolchains, and the ones in the verified index. `*` marks this project's pinned toolchain |
-| `toolchain install [id] [--force]` | Installs the toolchain from `flutter_ota.lock` (or `id`, or the newest). Writes `flutter_ota.lock` if the project has none. `--force` reinstalls |
+| `toolchain install [id] [--force]` | Installs the toolchain from `flutter_ota.lock` (or `id`, or the newest). Writes `flutter_ota.lock` if the project has none. `--force` reinstalls. An interrupted download resumes when you run it again |
 | `toolchain doctor [id]` | Checks the installed toolchain: file hashes, overlay, engine mirror, tool snapshots, toolchain id, disk space |
 | `toolchain clean [--unused \| --all] [--yes]` | Deletes downloads and leftovers. `--unused` also deletes toolchains no known project pins, and `--all` deletes every toolchain (both ask first) |
 
@@ -215,7 +215,8 @@ It rolls back a **published** patch. The default is the highest-numbered publish
 - Without a terminal and without `--yes`, it changes nothing.
 
 **What happens:**
-- Devices return to the newest other published patch, or to the store code, at their next start.
+- At their next start, devices go back to the patch they ran before (if they still have it), or to the store code.
+- Devices never download an older patch again (replay protection). To give them the previous code, ship it as a new patch.
 - Nothing is deleted.
 - `--reason` is only printed: the server API has no reason field.
 

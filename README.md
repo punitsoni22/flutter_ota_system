@@ -48,7 +48,7 @@ Flutter OTA System started with an Android approach that patched the compiled ap
 > - The bytecode architecture has been tested on Linux (development) and **one Android 13 arm64 phone**.
 > - It has not been independently security-audited, load-tested or validated in production.
 > - No app store has reviewed or approved it.
-> - Packages are **not yet on pub.dev**, and the custom toolchain is **not yet published** (you build it locally for now).
+> - Release `v0.2.0-alpha` is the first release of this architecture: Android **arm64** apps, **Flutter 3.47.9** with our custom engine, built on **Linux x64**.
 >
 > Read [limitations](docs/limitations.md) and [security](docs/security.md) before you try it. Use at your own risk ([Apache-2.0](LICENSE), no warranty).
 
@@ -116,9 +116,10 @@ More: [architecture](docs/architecture.md) · [security](docs/security.md) · [f
 ## Quick start
 
 Requirements:
-- Linux x64 with Git and Docker;
-- an Android arm64 test phone;
-- the Flutter OTA toolchain (built locally today: see [toolchain management](docs/toolchain-management.md)).
+- Linux x64 with Git, Docker, Flutter 3.44.9 or newer (to create and edit your app) and about 10 GB of free disk;
+- an Android arm64 test phone.
+
+The CLI downloads the custom Flutter 3.47.9 toolchain for you (about 1.6 GB, verified, cached once).
 
 1. **Run your own server.**
    ```bash
@@ -126,17 +127,20 @@ Requirements:
    cd flutter_ota_system
    ./flutter-ota-system.sh setup     # local Docker stack: API, PostgreSQL, CDN
    ```
+   Then create your app on the server and note its UUID ([quick start, step 2](docs/quick-start.md#2-run-your-server)).
 
-2. **Add the SDK and install the CLI.** Once published to pub.dev:
+2. **Add the SDK and install the CLI:**
    ```bash
    flutter pub add flutter_ota_system
    dart pub global activate flutter_ota_cli
    ```
-   Until then, use the Git and path installs in the [quick start](docs/quick-start.md#1-install).
 
-3. **Connect your app.** This writes `flutter_ota.yaml`, containing only `app_id: <server app UUID>`:
+3. **Connect your app and install the toolchain.** `init` writes `flutter_ota.yaml`, containing only the server's app id:
    ```bash
-   flutter_ota init
+   flutter_ota init --app-id <server app UUID>
+   flutter_ota config set server-url https://ota.example.com
+   export FLUTTER_OTA_ADMIN_KEY=<admin API key>   # never stored in files
+   flutter_ota toolchain install        # downloads and verifies the toolchain; writes flutter_ota.lock
    ```
 
 4. **Call `initialize()` once in `main.dart`:**
@@ -155,6 +159,7 @@ Requirements:
    flutter_ota release android             # store build: upload the AAB to Google Play yourself
    # ...change your feature code...
    flutter_ota patch android --channel staging
+   # ...test it on staging, then promote it to production (quick start, step 8)...
    flutter_ota status
    flutter_ota rollback                    # if something goes wrong
    ```
@@ -167,7 +172,7 @@ The full walkthrough is in [docs/quick-start.md](docs/quick-start.md).
 | --- | --- |
 | Android | Experimental (arm64 only) |
 | Developer machine | Linux x64 only |
-| Flutter / Dart | 3.47.9 / 3.13.7 with the Flutter OTA custom engine |
+| Flutter / Dart | 3.47.9 / 3.13.7 with the Flutter OTA custom engine (downloaded by the CLI; your own Flutter is not changed) |
 | iOS, macOS, Windows, web apps | Not implemented |
 
 **Adopting the custom engine needs a new store release of your app.** Only code in **feature packages** can be patched. Patched code runs in an interpreter, so CPU-heavy code is slower, and the store binary is larger. Details: [limitations](docs/limitations.md).
@@ -179,7 +184,7 @@ The tagged release `v0.1.0-alpha.1` contains the **original** design:
 - the Python admin CLI `ota`;
 - the `OtaClient` API on stock Flutter.
 
-This path is still in the code. It is **not** the bytecode architecture described above, which is unreleased (see [CHANGELOG](CHANGELOG.md)). See [releases and patches](docs/releases-and-patches.md#original-alpha-patch-formats).
+This path is still in the code. It is **not** the bytecode architecture described above, which was first released in `v0.2.0-alpha` (see [CHANGELOG](CHANGELOG.md)). See [releases and patches](docs/releases-and-patches.md#original-alpha-patch-formats).
 
 ## Documentation
 

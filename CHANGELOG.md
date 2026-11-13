@@ -6,16 +6,30 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
-Nothing below is released yet. The bytecode architecture is **experimental**: Android arm64 apps,
-Linux x64 developer machines, Flutter 3.47.9 / Dart 3.13.7 with a custom engine, tested end to end
-on one Android 13 phone. It is **not** part of `0.1.0-alpha.1`.
+Nothing yet.
+
+## [0.2.0-alpha] - 2026-11-13
+
+First release of the **bytecode architecture**. It is an **experimental alpha**, not
+production-ready, not independently security-audited and not reviewed or approved by any app
+store. Supported: Android **arm64** apps, built on **Linux x64** machines, with Flutter 3.47.9 /
+Dart 3.13.7 and our custom engine. Tested end to end on one Android 13 arm64 phone, with
+compatibility runs on Android 14, 16 and 17 x86_64 emulators (arm64 translation; not proof for
+real devices or other manufacturers). Release notes: [docs/release/v0.2.0-alpha.md](docs/release/v0.2.0-alpha.md).
 
 ### Added: bytecode architecture (experimental)
 
+- **Packages:** the SDK `flutter_ota_system` and the developer CLI `flutter_ota_cli` (command
+  `flutter_ota`), both `0.2.0-alpha`, published on pub.dev.
 - **Custom engine toolchain:** Flutter 3.47.9 with the Dart bytecode interpreter and an in-VM
   bytecode verifier (engine patch in `prototypes/security_hardening/engine_patch`). Distributed as
-  a signed overlay on the stock SDK; owner tool `tools/toolchain` builds the overlay and index.
-  Nothing is published yet.
+  a signed overlay on the stock SDK. The `v0.2.0-alpha` GitHub release carries the toolchain
+  files: `toolchain-index.json` (ES256-signed; the only file the CLI trusts), the overlay
+  `flutter-3.47.9-ota.1-linux-x64.tar.gz`, `toolchain-manifest.json` (versions, engine commit,
+  engine build ID, sizes, SHA-256) and `SHA256SUMS`. The CLI pins this index, downloads the
+  official Flutter SDK archive from Google, checks size and SHA-256 of every file, resumes
+  interrupted downloads and refuses older index serials. The owner tool
+  `RELEASE_LAYOUT=1 tools/toolchain/build_bundle.sh` writes the release files.
 - **Developer CLI `flutter_ota`** (`packages/flutter_ota_cli`): `init` (`flutter_ota.yaml` with
   only `app_id`), `config`, `toolchain list|install|doctor|clean`, `upgrade`, `keys init|list`,
   `doctor`, `release android`, `features [generate]`, `patch android`, `status`, `rollback`.
@@ -78,6 +92,24 @@ on one Android 13 phone. It is **not** part of `0.1.0-alpha.1`.
   the default HTTP client has a 15 s connect timeout. Before, a stalled download could block
   every later `checkForUpdate()` until the app restarted.
 
+### Fixed (found in release testing)
+
+- **App bundles:** `flutter_ota release android --kind aab` failed because the overlay shipped a
+  stripped engine. The overlay now ships the unstripped engine (the Android Gradle plugin strips
+  it, so the app does not grow), and the release check compares the engine's ELF build ID.
+- **Other ABIs:** `release android` refuses a build that also contains native libraries for
+  non-arm64 ABIs (Google Play would offer it to devices where it cannot start) and prints the
+  `abiFilters` fix.
+- **Low-memory verifier kills:** when Android kills the separate verifier process for low memory,
+  the SDK reports `EVICTED` and retries later (at most 3 times per patch) instead of blocklisting
+  a good patch.
+- **Malformed input refused cleanly:** malformed certificates, revocation lists and very deeply
+  nested JSON are now refused with a normal rejection (SDK) or `422` (server), instead of an
+  exception or a `500`. None of them bypassed a signature check.
+- **Rollback wording:** the CLI and docs now say that devices go back to the patch they ran before
+  or to the store code, and never download an older patch again (replay protection); fix forward
+  with a new patch.
+
 ### Changed
 
 - **Breaking:** the Flutter SDK is now the package `flutter_ota_system` (still in
@@ -92,7 +124,7 @@ on one Android 13 phone. It is **not** part of `0.1.0-alpha.1`.
   is automatic; apps need no change. On-device file locations are unchanged.
 - `./flutter-ota-system.sh status` and the demo seed print the demo app's
   `OTA_APPLICATION_ID` for `example_app`.
-- **Breaking for some setups:** release builds must use `https://` (local `adb reverse` testing
+- **Breaking for some setups (`OtaClient`):** release builds must use `https://` (local `adb reverse` testing
   of release builds over `http://localhost` no longer works). Debug builds pointed at
   `http://<LAN IP>` (phone on Wi-Fi) must use HTTPS or `adb reverse` with `http://localhost`.
 
@@ -101,7 +133,7 @@ on one Android 13 phone. It is **not** part of `0.1.0-alpha.1`.
 First public, **experimental** release (an earlier planned `0.1.0-alpha` tag was never created).
 This is the **original alpha**: server-signed `mock-v1` and `aot-bidiff-android-v1` patches, the
 `OtaClient` API and the Python `ota` CLI. The bytecode architecture is not part of it (see
-Unreleased). Internally tested only; not production-ready. Tested on a Linux development machine and with
+0.2.0-alpha). Internally tested only; not production-ready. Tested on a Linux development machine and with
 Android apps on a small number of devices; iOS, macOS and Windows are not tested.
 
 ### Added
@@ -193,5 +225,6 @@ log, one shared admin key, no rate limiting, no Key Vault/KMS signer, no Azure B
 code patches (iOS not tested), the single-server `deploy/` setup is not verified, and there are no
 published load tests.
 
-[Unreleased]: https://github.com/punitsoni22/flutter_ota_system/compare/v0.1.0-alpha.1...HEAD
+[Unreleased]: https://github.com/punitsoni22/flutter_ota_system/compare/v0.2.0-alpha...HEAD
+[0.2.0-alpha]: https://github.com/punitsoni22/flutter_ota_system/compare/v0.1.0-alpha.1...v0.2.0-alpha
 [0.1.0-alpha.1]: https://github.com/punitsoni22/flutter_ota_system/releases/tag/v0.1.0-alpha.1
