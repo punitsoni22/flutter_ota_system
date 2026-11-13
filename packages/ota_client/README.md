@@ -89,7 +89,7 @@ The server signs these patches; the app trusts the public keys you compile in. `
 
 | | Bytecode runtime | Original alpha runtime |
 | --- | --- | --- |
-| Flutter | 3.44.9 or newer to add the package; the app is built with Flutter 3.47.9 / Dart 3.13.7 and the Flutter OTA custom engine (downloaded by `flutter_ota`) | 3.44.9 or newer |
+| Flutter | 3.47.9 (Dart 3.13) for `flutter pub` and your IDE; the app is built with Flutter 3.47.9 / Dart 3.13.7 and the Flutter OTA custom engine (downloaded by `flutter_ota`) | 3.44.9 or newer |
 | Platform | Android arm64 | Android |
 | Developer machine | Linux x64 | Linux (the only tested host) |
 | Server | A self-hosted Flutter OTA System server | Same |

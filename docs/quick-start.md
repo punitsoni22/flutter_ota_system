@@ -8,7 +8,7 @@ This guide takes a Flutter app from zero to a working OTA patch with the bytecod
 > - Not production-ready, no independent security audit, no app-store approval of any kind.
 
 You need:
-- Linux x64 with Git, Docker (for the server), Flutter 3.44.9 or newer (to create and edit your app; the OTA builds use their own Flutter) and about 10 GB of free disk;
+- Linux x64 with Git, Docker (for the server), Flutter 3.47.9 (Dart 3.13) for `flutter pub` and your IDE: after the first release your project depends on the toolchain's `dynamic_modules` package, which needs Dart 3.13. The OTA builds use their own Flutter and about 10 GB of free disk;
 - an Android arm64 phone for testing;
 - your app's feature code in **feature packages** (see step 6).
 

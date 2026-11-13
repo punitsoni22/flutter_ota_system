@@ -18,7 +18,7 @@ Flutter OTA System `v0.2.0-alpha` is an **experimental alpha**:
 | iOS | Not implemented |
 | macOS, Windows, Linux, web **apps** | Not implemented |
 | Backend | Linux Docker stack tested. The single-server deploy (`deploy/`, Caddy) is a draft and not verified end to end |
-| Packages | `flutter_ota_system` (SDK) and `flutter_ota_cli` (CLI), both `0.2.0-alpha` on pub.dev. The SDK package resolves with Flutter 3.44.9 or newer; apps are built with the toolchain |
+| Packages | `flutter_ota_system` (SDK) and `flutter_ota_cli` (CLI), both `0.2.0-alpha` on pub.dev. Use Flutter 3.47.9 (Dart 3.13) for `flutter pub` in an OTA project (the `dynamic_modules` loader needs Dart 3.13); apps are built with the toolchain |
 | Toolchain distribution | `flutter-3.47.9-ota.1`, downloaded and verified by the CLI from the `v0.2.0-alpha` GitHub release ([toolchain management](toolchain-management.md)) |
 
 The original alpha (`v0.1.0-alpha.1`, server-signed `libapp.so` patches) runs on stock Flutter 3.44.9+. It has its own limits, listed [below](#original-alpha-limitations).
