@@ -233,8 +233,7 @@ class UpdateApi {
     required int currentPatchNumber,
     required List<String> failedPatchIds,
   }) async {
-    _lastRegister = () =>
-        _register(platform: platform, arch: arch, releaseVersion: releaseVersion, channel: channel);
+    _lastRegister = () => _register(platform: platform, arch: arch, releaseVersion: releaseVersion, channel: channel);
     final uri = _uri('/v1/updates/check', {
       'platform': platform,
       'arch': arch,

@@ -29,6 +29,9 @@ class FixtureProject {
     final root = Directory.systemTemp.createTempSync('flutter_ota_features_test').path;
     copyTree(fixturesDir, root);
     final f = FixtureProject._(p.join(root));
+    // The SDK stub's pubspec is stored under another name: a second committed pubspec.yaml named
+    // flutter_ota_system would stop pub.dev from verifying the real package's repository.
+    File(p.join(f.sdk, 'pubspec.fixture.yaml')).renameSync(p.join(f.sdk, 'pubspec.yaml'));
     f.writePackageConfig(extra: extraConfigPackages);
     f.writePubspecLock();
     return f;

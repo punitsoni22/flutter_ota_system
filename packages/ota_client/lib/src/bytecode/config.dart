@@ -169,7 +169,9 @@ class FlutterOtaConfig {
       return v;
     }
 
-    if (j['format'] != supportedFormat) throw _Bad('format ${j['format']} is not supported (expected $supportedFormat)');
+    if (j['format'] != supportedFormat) {
+      throw _Bad('format ${j['format']} is not supported (expected $supportedFormat)');
+    }
     if (j['entry_contract'] != supportedEntryContract) {
       throw _Bad('entry_contract ${j['entry_contract']} is not supported (expected $supportedEntryContract)');
     }
@@ -229,7 +231,10 @@ class FlutterOtaConfig {
         releaseVersion: releaseVersion as String?,
         channel: channel,
         requiredApprovals: approvals,
-        hostOwnedPackages: {...alwaysHostOwned, if (j.containsKey('host_owned_packages')) ...packages('host_owned_packages')},
+        hostOwnedPackages: {
+          ...alwaysHostOwned,
+          if (j.containsKey('host_owned_packages')) ...packages('host_owned_packages'),
+        },
       ),
       null,
       warnings,

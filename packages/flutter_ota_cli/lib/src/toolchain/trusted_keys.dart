@@ -13,6 +13,8 @@
 /// `flutter_ota config add-toolchain-key <key_id> <public_key_base64>`.
 const Map<String, String> embeddedToolchainKeys = {};
 
-/// URL of the official toolchain index. `null` until the owner approves publishing; set your own
-/// with `flutter_ota config set toolchain-index-url <url>` or `FLUTTER_OTA_TOOLCHAIN_INDEX`.
-const String? defaultToolchainIndexUrl = null;
+/// URL of the official toolchain index for this CLI version: a GitHub release asset. Each CLI
+/// release pins its own index; override it with `flutter_ota config set toolchain-index-url <url>`
+/// or `FLUTTER_OTA_TOOLCHAIN_INDEX` (for example a local mirror).
+const String defaultToolchainIndexUrl =
+    'https://github.com/punitsoni22/flutter_ota_system/releases/download/v0.2.0-alpha/toolchain-index.json';

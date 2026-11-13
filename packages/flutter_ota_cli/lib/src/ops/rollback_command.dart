@@ -30,8 +30,8 @@ class RollbackCommand extends Command<int> {
   String get name => 'rollback';
   @override
   String get description =>
-      'Roll back a published patch of a store release. Devices that run it go back to the newest '
-      'other published patch, or to the store code, at their next start. Deletes nothing.';
+      'Roll back a published patch of a store release. Devices that run it go back to the patch they '
+      'ran before it (if they still have it), or to the store code, at their next start. Deletes nothing.';
 
   @override
   Future<int> run() async {
@@ -112,8 +112,9 @@ class RollbackCommand extends Command<int> {
         o.writeln('  - Devices that run patch $n go back to the store code (no patch) at their next start.');
       } else {
         o.writeln(
-          '  - Devices that run patch $n go back to the newest other published patch for their channel '
-          '(published now: ${others.map(patchNumber).join(', ')}), or to the store code, at their next start.',
+          '  - Devices that run patch $n go back to the patch they ran before it, if they still have it '
+          '(published now: ${others.map(patchNumber).join(', ')}), or to the store code, at their next start. '
+          'They never download an older patch again (replay protection): ship a fix as a new patch.',
         );
       }
       o.writeln('  - You can publish patch $n again later:  ota patch publish ${target['id']} --channel <channel>');

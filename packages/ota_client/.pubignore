@@ -27,6 +27,10 @@ example/macos/
 example/windows/
 example/web/
 
+# Tests are not needed by apps that use the package
+/test/
+/android/src/test/
+
 # Editors and OS files
 .idea/
 *.iml

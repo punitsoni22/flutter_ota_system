@@ -49,7 +49,8 @@ String? _buildIdInNotes(ByteData d, int start, int end) {
     final descStart = nameStart + align4(namesz);
     final next = descStart + align4(descsz);
     if (next > end || namesz > 64 || descsz > 1024) return null;
-    final isGnu = namesz == 4 &&
+    final isGnu =
+        namesz == 4 &&
         d.getUint8(nameStart) == 0x47 && // G
         d.getUint8(nameStart + 1) == 0x4e && // N
         d.getUint8(nameStart + 2) == 0x55 && // U

@@ -258,7 +258,9 @@ class PatchStore {
     _delete(attempt);
     save();
     final good = _s['active_patch_id'] as String?;
-    _log('BLACKLISTED patch=${_short(id)} ($why); last known-good state: ${good == null ? 'store build' : 'patch ${_short(good)}'}');
+    _log(
+      'BLACKLISTED patch=${_short(id)} ($why); last known-good state: ${good == null ? 'store build' : 'patch ${_short(good)}'}',
+    );
   }
 
   /// Removes the active patch and restores the previous CONFIRMED patch if there is one (it is
@@ -401,7 +403,9 @@ class PatchStore {
     _to(v.manifest.patchId, 'VERIFIED', 'separate-process verification OK; activates at the next start');
     _event('patch_staged', v.manifest.patchId);
     save();
-    _log('STAGED patch #${v.manifest.sequence} ${_short(v.manifest.patchId)} (${bytes.length} bytes): restart required');
+    _log(
+      'STAGED patch #${v.manifest.sequence} ${_short(v.manifest.patchId)} (${bytes.length} bytes): restart required',
+    );
   }
 
   void _dropPending(String why) {
@@ -442,7 +446,9 @@ class PatchStore {
     try {
       v = verify(bytes, security);
     } on PatchRejected catch (e) {
-      _log('REJECTED pending patch [${e.code}] ${e.reason} (active patch kept: ${_short(activePatchId ?? 'store build')})');
+      _log(
+        'REJECTED pending patch [${e.code}] ${e.reason} (active patch kept: ${_short(activePatchId ?? 'store build')})',
+      );
       _dropPending('rejected: ${e.code}');
       save();
       return;
@@ -499,7 +505,9 @@ class PatchStore {
     _s.remove('pending');
     _s.remove('activation');
     save();
-    _log('ACTIVATED patch #$seq ${_short(newId)}${keepPrevious ? ' (previous ${_short(oldId!)} kept as fallback)' : ''}');
+    _log(
+      'ACTIVATED patch #$seq ${_short(newId)}${keepPrevious ? ' (previous ${_short(oldId!)} kept as fallback)' : ''}',
+    );
   }
 
   /// Re-verifies the stored active patch (tampering, torn writes, revocation, new release). If it

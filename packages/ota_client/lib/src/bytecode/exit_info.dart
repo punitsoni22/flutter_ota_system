@@ -89,8 +89,7 @@ class ExitInfo {
   };
 
   /// [kind] if this record belongs to the process [sessionPid], otherwise [ExitKind.unknown].
-  ExitKind kindFor(int? sessionPid) =>
-      sessionPid == null || pid == null || pid == sessionPid ? kind : ExitKind.unknown;
+  ExitKind kindFor(int? sessionPid) => sessionPid == null || pid == null || pid == sessionPid ? kind : ExitKind.unknown;
 
   @override
   String toString() => '$name(status=$status, pid=$pid${description.isEmpty ? '' : ', $description'})';
