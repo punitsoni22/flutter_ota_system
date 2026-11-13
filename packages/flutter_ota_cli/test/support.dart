@@ -9,6 +9,9 @@ import 'package:flutter_ota_cli/flutter_ota_cli.dart';
 import 'package:flutter_ota_cli/owner.dart';
 import 'package:path/path.dart' as p;
 
+import 'elf_fixture.dart';
+import 'release_android/release_support.dart' show makeZip;
+
 const engine = '89c39edfdfae2949f6806e4a315c0c08522238b7';
 const dartRev = '416e33b0ffaef062a60ec966bb8c82ed2b83f128';
 const keyId = 'test-toolchain-key';
@@ -90,6 +93,15 @@ class Fixture {
     w('flutter/$genSnapshotSdkPath', 'OTA gen_snapshot $n');
     w('flutter/LICENSE', 'BSD flutter');
     for (final m in mirrorFilesFor(engine)) {
+      if (m.contains('/arm64_v8a_release/') && m.endsWith('.jar')) {
+        // The lab jar holds the stripped engine; the engine build dir the unstripped one (same build ID).
+        final jar = File(p.join(l, m))..parent.createSync(recursive: true);
+        jar.writeAsBytesSync(makeZip({'lib/arm64-v8a/libflutter.so': fakeElf(otaEngineBuildId)}));
+        final lib = File(p.join(l, 'engine/engine/src/out/android_release_arm64/libflutter.so'))
+          ..parent.createSync(recursive: true);
+        lib.writeAsBytesSync(fakeElf(otaEngineBuildId, padding: 4096 + n));
+        continue;
+      }
       w(m, 'maven $m $n');
     }
     for (final t in toolSnapshots) {

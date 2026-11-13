@@ -10,6 +10,8 @@ import 'package:flutter_ota_cli/flutter_ota_cli.dart';
 import 'package:flutter_ota_cli/src/build_support/toolchain_build.dart';
 import 'package:path/path.dart' as p;
 
+import '../elf_fixture.dart';
+
 const appId = '3f2b8c1e-5d4a-4e7b-9c0f-1a2b3c4d5e6f';
 const appSlug = 'demo-app';
 const adminKey = 'test-admin-key';
@@ -164,7 +166,8 @@ class ReleaseWorld {
   final out = StringBuffer();
   final err = StringBuffer();
   late FakeBackend backend;
-  final engineBytes = utf8.encode('OUR OTA libflutter.so');
+  // The APK holds the stripped engine; the toolchain jar may hold the unstripped one (same build ID).
+  final engineBytes = fakeElf(otaEngineBuildId);
 
   String get project => p.join(dir, 'work', 'demo_app');
   String get cacheRoot => p.join(dir, 'cache');
@@ -254,7 +257,7 @@ cp "$FAKE_DILL" "$out"
     final jar = mirrorFilesFor(engineCommit).firstWhere((m) => m.contains('arm64_v8a_release') && m.endsWith('.jar'));
     File(p.join(t, jar))
       ..parent.createSync(recursive: true)
-      ..writeAsBytesSync(makeZip({'lib/arm64-v8a/libflutter.so': engineBytes}, deflate: true));
+      ..writeAsBytesSync(makeZip({'lib/arm64-v8a/libflutter.so': fakeElf(otaEngineBuildId, padding: 8192)}, deflate: true));
     final fields = {
       'flutter': '3.47.9',
       'dart': '3.13.7',
@@ -383,11 +386,13 @@ Future<void> main() async {
   }
 
   /// The fake `flutter build` output: an APK whose libflutter.so has [engine] bytes.
-  void setApk(List<int> engine, {bool withLibapp = true}) {
+  /// [extraLibs] adds more entries (for example a plugin's `lib/x86_64/libfoo.so`).
+  void setApk(List<int> engine, {bool withLibapp = true, Map<String, List<int>> extraLibs = const {}}) {
     final files = {
       'AndroidManifest.xml': utf8.encode('manifest'),
       'lib/arm64-v8a/libflutter.so': engine,
       if (withLibapp) 'lib/arm64-v8a/libapp.so': utf8.encode('LIBAPP of demo_app'),
+      ...extraLibs,
     };
     File(p.join(dir, 'fake.apk')).writeAsBytesSync(makeZip(files));
     File(p.join(dir, 'fake.aab')).writeAsBytesSync(makeZip({for (final e in files.entries) 'base/${e.key}': e.value}));

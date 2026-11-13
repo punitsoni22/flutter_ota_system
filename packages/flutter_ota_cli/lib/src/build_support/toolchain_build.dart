@@ -4,8 +4,9 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:crypto/crypto.dart';
 import 'package:path/path.dart' as p;
+
+import 'elf_build_id.dart';
 
 import '../errors.dart';
 import '../toolchain/manager.dart';
@@ -140,9 +141,14 @@ Future<void> compileLinkKernel({
 const libflutterArm64 = 'lib/arm64-v8a/libflutter.so';
 const libappArm64 = 'lib/arm64-v8a/libapp.so';
 
-/// SHA-256 of the toolchain's own `libflutter.so` (arm64), read from the engine jar of the
-/// toolchain's Maven mirror. The jar itself is covered by the verified install record.
-String expectedLibflutterSha256(ResolvedToolchain tc, String engineCommit) {
+/// GNU build ID of the toolchain's own `libflutter.so` (arm64), read from the engine jar of the
+/// toolchain's Maven mirror (the jar itself is covered by the verified install record).
+///
+/// The build ID, not the file hash, identifies the engine: the jar may contain the unstripped
+/// library (as stock Flutter jars do, so the Android Gradle plugin can extract debug symbols for
+/// app bundles), and the plugin strips it when it packages the APK/AAB. Stripping keeps the build
+/// ID. A stock engine has a different build ID.
+String expectedLibflutterBuildId(ResolvedToolchain tc, String engineCommit) {
   final jar = mirrorFilesFor(engineCommit).firstWhere((m) => m.contains('/arm64_v8a_release/') && m.endsWith('.jar'));
   final path = p.join(tc.root, jar);
   if (!File(path).existsSync()) throw CliException('The toolchain mirror has no engine jar ($jar).');
@@ -150,7 +156,9 @@ String expectedLibflutterSha256(ResolvedToolchain tc, String engineCommit) {
   try {
     final bytes = readZipEntry(path, libflutterArm64);
     if (bytes == null) bad('entry missing');
-    return sha256.convert(bytes).toString();
+    final id = elfGnuBuildId(bytes);
+    if (id == null) bad('no GNU build ID in libflutter.so');
+    return id;
   } on FormatException catch (e) {
     bad(e.message);
   }

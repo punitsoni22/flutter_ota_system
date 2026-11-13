@@ -3,11 +3,14 @@
 
 import 'dart:io';
 
+import 'package:flutter_ota_cli/src/build_support/elf_build_id.dart';
+import 'package:flutter_ota_cli/src/build_support/zip_reader.dart';
 import 'package:flutter_ota_cli/flutter_ota_cli.dart';
 import 'package:flutter_ota_cli/owner.dart';
 import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
 
+import 'elf_fixture.dart';
 import 'support.dart';
 
 void main() {
@@ -246,6 +249,42 @@ void main() {
     expect(await f.run(['toolchain', 'clean', '--unused', '--yes']), 0);
     expect(Directory(p.join(f.cacheRoot, 'toolchains', 'flutter-3.47.9-ota.1')).existsSync(), isFalse);
     expect(Directory(p.join(f.cacheRoot, 'toolchains', 'flutter-3.47.9-ota.2')).existsSync(), isTrue);
+  });
+
+  test('the overlay ships the unstripped engine library of the same build (AAB debug symbols)', () async {
+    final l = await f.makeLab();
+    final ov = await buildOverlay(
+      labDir: l,
+      outFile: p.join(f.dir, 'eng.tar.gz'),
+      toolchainName: 't',
+      engineCommit: engine,
+      flutterVersion: '3.47.9',
+      notices: {'N': p.join(l, 'notice.txt')},
+    );
+    final x = Directory(p.join(f.dir, 'eng-x'))..createSync();
+    expect((await Process.run('tar', ['-xzf', ov.path, '-C', x.path])).exitCode, 0);
+    final jar = mirrorFilesFor(engine).firstWhere((m) => m.contains('/arm64_v8a_release/') && m.endsWith('.jar'));
+    final lib = readZipEntry(p.join(x.path, jar), 'lib/arm64-v8a/libflutter.so')!;
+    final unstripped = File(p.join(l, 'engine/engine/src/out/android_release_arm64/libflutter.so')).readAsBytesSync();
+    expect(lib, unstripped);
+    expect(elfGnuBuildId(lib), otaEngineBuildId);
+  });
+
+  test('an unstripped engine library from another build is refused', () async {
+    final l = await f.makeLab();
+    File(p.join(l, 'engine/engine/src/out/android_release_arm64/libflutter.so'))
+        .writeAsBytesSync(fakeElf(stockEngineBuildId, padding: 4096));
+    expect(
+      () => buildOverlay(
+        labDir: l,
+        outFile: p.join(f.dir, 'bad.tar.gz'),
+        toolchainName: 't',
+        engineCommit: engine,
+        flutterVersion: '3.47.9',
+        notices: {'N': p.join(l, 'notice.txt')},
+      ),
+      throwsA(isA<StateError>().having((e) => e.message, 'message', contains('is not the engine build'))),
+    );
   });
 
   test('the overlay archive is reproducible', () async {
