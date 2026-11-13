@@ -274,13 +274,12 @@ patches for them keep working. Today only Flutter 3.47.9 is supported.
 
 - Linux x64 hosts only. macOS and Windows would need separate engine host builds, which do not
   exist.
-- Tested with local `file://` mirrors and an SDK archive made from a local Flutter 3.47.9
-  install. A full install from the official 1.5 GB Flutter release archive has not been run yet.
-- Not yet checked: whether the official Flutter 3.47.9 archive already contains the
-  `android-arm64-release` `gen_snapshot` that the overlay replaces. If it does not, the install
-  stops with "The stock SDK has no …", and the overlay must also carry those Android engine
-  artifacts.
-- Not yet checked with the official archive: whether the first `flutter` run needs engine
-  artifacts that the mirror does not provide (with the SDK used in testing, release builds
-  worked).
+- Tested once (Phase 5, Linux x64) with the official Flutter 3.47.9 release archive downloaded
+  over HTTPS, the overlay from a local `file://` mirror and a test key: the download resumed
+  after an interruption, the archive contains the stock `android-arm64-release` `gen_snapshot`
+  with the SHA-256 the overlay expects, `toolchain doctor` passed, `flutter precache --android`
+  needed nothing from the mirror, and a release `flutter build apk --target-platform
+  android-arm64` of a new `flutter create` app worked and packaged the OTA `libflutter.so`.
+  The first Gradle build downloads the Android Gradle plugin and its dependencies from the usual
+  public repositories into the toolchain's `gradle-home` (about 2 GB).
 - No official signing key and no published index exist yet.
