@@ -142,6 +142,17 @@ class ProductsFeature extends OtaFeature {
 
 Your app shows the feature through the generated registry, `OtaFeatures.products.build(context)`. `flutter_ota release android` generates it. Details are in [feature patching](feature-patching.md).
 
+**arm64 only.** The OTA engine exists for arm64-v8a only. Keep only that ABI in `android/app/build.gradle.kts`, inside `android { defaultConfig { ... } }`:
+
+```kotlin
+ndk {
+    abiFilters.clear()
+    abiFilters += "arm64-v8a"
+}
+```
+
+Without it, plugins that ship libraries for other ABIs (x86_64, armeabi-v7a) make Google Play offer the app to devices where it cannot start. `flutter_ota release android` refuses such a build.
+
 **Check everything:**
 
 ```bash

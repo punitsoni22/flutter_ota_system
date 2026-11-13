@@ -23,6 +23,12 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        // The Flutter OTA engine exists for arm64-v8a only. Without this filter, plugin libraries
+        // for other ABIs make Google Play offer the app to devices where it cannot start.
+        ndk {
+            abiFilters.clear()
+            abiFilters += "arm64-v8a"
+        }
     }
 
     buildTypes {

@@ -7,6 +7,9 @@ import 'dart:typed_data';
 
 import 'package:path/path.dart' as p;
 
+import '../build_support/elf_build_id.dart';
+import '../build_support/toolchain_build.dart' show libflutterArm64;
+import '../build_support/zip_reader.dart' show readZipEntry;
 import '../toolchain/canonical_json.dart';
 import '../toolchain/downloader.dart' show sha256OfFile;
 import '../toolchain/es256.dart';
@@ -41,6 +44,7 @@ Future<OverlayBuildResult> buildOverlay({
   required String flutterVersion,
   required Map<String, String> notices,
   String? dynamicModulesDir,
+  String? unstrippedEngineLib,
   void Function(String)? log,
 }) async {
   final stage = Directory('$outFile.stage');
@@ -74,6 +78,20 @@ Future<OverlayBuildResult> buildOverlay({
   await add(gs, 'sdk/$genSnapshotSdkPath', executable: true);
 
   for (final m in mirrorFilesFor(engineCommit)) {
+    if (m.contains('/arm64_v8a_release/') && m.endsWith('.jar')) {
+      // Like stock Flutter, ship the UNSTRIPPED libflutter.so: the Android Gradle plugin strips it
+      // when it packages the app and extracts its debug symbols into app bundles (flutter build
+      // appbundle requires them). It must be the same engine build as the lab jar's library.
+      final jar = await _engineJarWithUnstrippedLib(
+        labJar: p.join(labDir, m),
+        unstrippedLib: unstrippedEngineLib ??
+            p.join(labDir, 'engine', 'engine', 'src', 'out', 'android_release_arm64', 'libflutter.so'),
+        workDir: '${stage.path}.engine',
+      );
+      await add(jar, m);
+      Directory('${stage.path}.engine').deleteSync(recursive: true);
+      continue;
+    }
     await add(p.join(labDir, m), m);
   }
   for (final t in toolSnapshots) {
@@ -196,3 +214,35 @@ Future<Es256KeyPair> generateKeyFiles(String dir, String keyId) async {
 }
 
 Es256KeyPair readPrivateKey(String path) => Es256KeyPair.fromPrivateBase64(File(path).readAsStringSync());
+
+/// Builds an engine jar (same layout as the stock jar: one entry `lib/arm64-v8a/libflutter.so`)
+/// that contains [unstrippedLib], after checking that it is the same engine build as the library
+/// in [labJar] (same GNU build ID). The jar is reproducible: fixed timestamp, no extra fields.
+Future<String> _engineJarWithUnstrippedLib({
+  required String labJar,
+  required String unstrippedLib,
+  required String workDir,
+}) async {
+  final labLib = readZipEntry(labJar, libflutterArm64);
+  if (labLib == null) throw StateError('$labJar has no $libflutterArm64');
+  final labId = elfGnuBuildId(labLib);
+  final libFile = File(unstrippedLib);
+  if (!libFile.existsSync()) throw StateError('missing input: $unstrippedLib (the unstripped engine library)');
+  final id = elfGnuBuildId(libFile.readAsBytesSync());
+  if (labId == null || id == null || id != labId) {
+    throw StateError('$unstrippedLib (build ID $id) is not the engine build in $labJar (build ID $labId)');
+  }
+  final dir = Directory(workDir);
+  if (dir.existsSync()) dir.deleteSync(recursive: true);
+  final lib = File(p.join(workDir, libflutterArm64))..parent.createSync(recursive: true);
+  libFile.copySync(lib.path);
+  final env = {'TZ': 'UTC'};
+  for (final cmd in [
+    ['touch', '-d', '1980-01-01 00:00:00', lib.path],
+    ['zip', '-X', '-q', '-9', 'engine.jar', libflutterArm64],
+  ]) {
+    final r = await Process.run(cmd.first, cmd.sublist(1), workingDirectory: workDir, environment: env);
+    if (r.exitCode != 0) throw StateError('${cmd.join(' ')} failed: ${r.stderr}');
+  }
+  return p.join(workDir, 'engine.jar');
+}

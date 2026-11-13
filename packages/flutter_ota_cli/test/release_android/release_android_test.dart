@@ -1,6 +1,7 @@
 // Copyright 2026 The Punit Authors
 // SPDX-License-Identifier: Apache-2.0
 
+import '../elf_fixture.dart';
 import 'dart:convert';
 import 'dart:io';
 
@@ -319,12 +320,35 @@ void main() {
 
     test('a stock engine in the APK is refused and nothing is registered', () async {
       await keysInit();
-      w.setApk(utf8.encode('STOCK libflutter.so'));
+      w.setApk(fakeElf(stockEngineBuildId));
       expect(await w.run(['release', 'android', '--kind', 'apk']), 1);
       expect(w.err.toString(), contains('does NOT contain the OTA engine'));
       expect(w.err.toString(), contains('Do NOT upload'));
       expect(w.backend.releases, isEmpty);
       expect(releaseDirs(), isEmpty);
+    });
+
+    for (final kind in ['aab', 'apk']) {
+      test('$kind: plugin libraries for other ABIs are refused and nothing is registered', () async {
+        await keysInit();
+        w.setApk(w.engineBytes, extraLibs: {
+          'lib/arm64-v8a/libdartjni.so': [1],
+          'lib/x86_64/libdartjni.so': [2],
+          'lib/armeabi-v7a/libdartjni.so': [3],
+        });
+        expect(await w.run(['release', 'android', '--kind', kind]), 1);
+        expect(w.err.toString(), contains('native libraries for armeabi-v7a, x86_64'));
+        expect(w.err.toString(), contains('abiFilters += "arm64-v8a"'));
+        expect(w.backend.releases, isEmpty);
+        expect(releaseDirs(), isEmpty);
+      });
+    }
+
+    test('extra arm64-v8a plugin libraries are fine', () async {
+      await keysInit();
+      w.setApk(w.engineBytes, extraLibs: {'lib/arm64-v8a/libdartjni.so': [1]});
+      expect(await w.run(['release', 'android']), 0, reason: w.output);
+      expect(w.backend.releases, hasLength(1));
     });
 
     test('a failing flutter build leaves no baseline and registers nothing', () async {
@@ -460,6 +484,27 @@ void main() {
         expect(await w.run(['release', 'android', '--', ...bad]), 1, reason: '$bad');
       }
       expect(w.flutterCalls(), isEmpty);
+    });
+  });
+
+  group('nonArm64Abis', () {
+    test('lists other ABI folders of an APK or AAB, sorted and once each', () {
+      expect(nonArm64Abis(['lib/arm64-v8a/libflutter.so', 'lib/x86_64/a.so', 'lib/x86_64/b.so', 'lib/x86/c.so'], ''),
+          ['x86', 'x86_64']);
+      expect(nonArm64Abis(['base/lib/arm64-v8a/libapp.so', 'base/lib/armeabi-v7a/libx.so'], 'base/'), ['armeabi-v7a']);
+    });
+
+    test('ignores arm64-v8a, other modules, non-library files and files directly under lib/', () {
+      expect(
+        nonArm64Abis([
+          'base/lib/arm64-v8a/libflutter.so',
+          'feature/lib/x86_64/libx.so', // another module: not the base prefix
+          'base/lib/x86_64/readme.txt',
+          'base/lib/odd.so',
+          'base/assets/lib/x86_64/fake.so',
+        ], 'base/'),
+        isEmpty,
+      );
     });
   });
 

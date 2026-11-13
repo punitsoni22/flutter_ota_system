@@ -11,6 +11,7 @@ import 'package:path/path.dart' as p;
 import '../build_support/build_copy.dart';
 import '../build_support/canonical_paths.dart';
 import '../build_support/dynamic_interface.dart';
+import '../build_support/elf_build_id.dart';
 import '../build_support/kernel_libraries.dart';
 import '../build_support/ota_config.dart';
 import '../build_support/toolchain_build.dart';
@@ -204,7 +205,7 @@ class AndroidRelease {
       final manager = ToolchainManager(ctx);
       final tc = await _resolveToolchain(manager, lock, dir);
       final tcRecord = jsonDecode(File(tc.toolchainJson).readAsStringSync()) as Map<String, Object?>;
-      final expectedEngineSha = expectedLibflutterSha256(tc, lock.engine);
+      final expectedEngineBuildId = expectedLibflutterBuildId(tc, lock.engine);
 
       // 4. Build.
       final releaseId = newUuidV4();
@@ -229,7 +230,7 @@ class AndroidRelease {
           rootKeys: roots.embedded,
           userDefines: userDefines,
           version: version,
-          expectedEngineSha: expectedEngineSha,
+          expectedEngineBuildId: expectedEngineBuildId,
         );
         final record = built.record;
         _writeRecord(releaseDir.path, record);
@@ -314,7 +315,7 @@ class AndroidRelease {
     required Map<String, String> rootKeys,
     required List<String> userDefines,
     required String version,
-    required String expectedEngineSha,
+    required String expectedEngineBuildId,
   }) async {
     final env = toolchainProcessEnvironment(ctx.environment, tc);
     final commands = <CommandRecord>[];
@@ -526,24 +527,40 @@ class AndroidRelease {
     final zip = ZipReader.open(artifact);
     final List<int> libapp;
     final String engineSha;
+    final String? engineBuildId;
+    final List<String> otherAbis;
     try {
+      otherAbis = nonArm64Abis(zip.entries.keys, prefix);
       final engine = zip.read('$prefix$libflutterArm64');
       final app0 = zip.read('$prefix$libappArm64');
       if (engine == null || app0 == null) {
         throw CliException('${p.relative(artifact, from: dir)} has no arm64 libflutter.so/libapp.so.');
       }
       engineSha = sha256.convert(engine).toString();
+      engineBuildId = elfGnuBuildId(engine);
       libapp = app0;
     } on FormatException catch (e) {
       throw CliException('Cannot read ${p.relative(artifact, from: dir)}: ${e.message}');
     } finally {
       zip.close();
     }
-    if (engineSha != expectedEngineSha) {
+    if (engineBuildId != expectedEngineBuildId) {
       throw CliException(
-        'The build does NOT contain the OTA engine (libflutter.so $engineSha, expected '
-        '$expectedEngineSha from ${lock.toolchain}). A stock engine was picked up; nothing was registered.\n'
+        'The build does NOT contain the OTA engine (libflutter.so build ID ${engineBuildId ?? 'missing'}, '
+        'expected $expectedEngineBuildId from ${lock.toolchain}). A stock engine was picked up; nothing was registered.\n'
         'Run `flutter_ota toolchain doctor` and remove android/.gradle and build/ before retrying.',
+      );
+    }
+    if (otherAbis.isNotEmpty) {
+      throw CliException(
+        'The build also contains native libraries for ${otherAbis.join(', ')}, but the OTA engine exists '
+        'for arm64-v8a only. Google Play would offer the app to those devices and it would crash at start '
+        '("Could not find libflutter.so"). Nothing was registered.\n'
+        'Keep only arm64-v8a in android/app/build.gradle.kts (inside android { defaultConfig { ... } }):\n'
+        '    ndk {\n'
+        '        abiFilters.clear()\n'
+        '        abiFilters += "arm64-v8a"\n'
+        '    }',
       );
     }
     File(p.join(tmp, baselineLibappName)).writeAsBytesSync(libapp, flush: true);
@@ -574,6 +591,7 @@ class AndroidRelease {
       'libapp_sha256': libappSha,
       'libapp_size': libapp.length,
       'libflutter_sha256': engineSha,
+      'libflutter_build_id': engineBuildId,
       'artifact': {
         'kind': options.kind,
         'path': p.relative(artifact, from: dir),
@@ -726,4 +744,16 @@ String newUuidV4() {
   b[8] = (b[8] & 0x3f) | 0x80;
   final h = b.map((x) => x.toRadixString(16).padLeft(2, '0')).join();
   return '${h.substring(0, 8)}-${h.substring(8, 12)}-${h.substring(12, 16)}-${h.substring(16, 20)}-${h.substring(20)}';
+}
+
+/// The ABI folders under `lib/` (APK) or `base/lib/` (AAB) other than arm64-v8a, sorted. Plugins
+/// often ship libraries for every ABI; the OTA engine exists for arm64-v8a only.
+List<String> nonArm64Abis(Iterable<String> entryNames, String prefix) {
+  final libDir = '${prefix}lib/';
+  return {
+    for (final name in entryNames)
+      if (name.startsWith(libDir) && name.endsWith('.so'))
+        if (name.substring(libDir.length).split('/') case [final abi, _, ...] when abi != 'arm64-v8a') abi,
+  }.toList()
+    ..sort();
 }
