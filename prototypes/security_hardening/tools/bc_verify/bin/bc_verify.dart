@@ -66,6 +66,8 @@ const forbidden = {
   'kTrap': 'Trap instruction',
   'kExternalCall': 'native (external) call',
   'kFfiCall': 'FFI call (unsupported in interpreted modules)',
+  // Dart 3.14 and later (FFI native-function resolution).
+  'kResolveNativeFunction': 'FFI native function resolution (unsupported in interpreted modules)',
   'kRecordCoverage': 'coverage instrumentation',
 };
 
@@ -361,7 +363,10 @@ void verifyCode(List<int> bytecodes, ExceptionsTable exc, ConstantPool pool, int
 
 
 /// Pool slots holding raw native pointers (never valid as Dart objects).
-bool taggedObject(ConstantPoolEntry e) => e is! ConstantExternalCall && e is! ConstantFfiCall;
+/// Compared by tag name so the same source builds against Dart 3.13 (`kFfiCall`) and Dart 3.14,
+/// where that entry was renamed `kNativeFunction`.
+bool taggedObject(ConstantPoolEntry e) =>
+    !const {'kExternalCall', 'kFfiCall', 'kNativeFunction'}.contains(e.tag.name);
 
 /// Number of fields of "RecordType(a, b, T c)": top-level commas only (generics nest).
 int recordFieldCount(String t) {
