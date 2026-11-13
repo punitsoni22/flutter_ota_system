@@ -223,7 +223,7 @@ flutter_ota status                  # release, patches, channels, rollout %, dev
 flutter_ota rollback                # rolls back the newest published patch (asks first)
 ```
 
-After a rollback, devices go back to the previous patch, or to the store code, at their next start.
+After a rollback, devices go back to the patch they ran before (if they still have it), or to the store code, at their next start. They never download an older patch again (replay protection), so ship the fix as a new patch.
 
 ## Next
 

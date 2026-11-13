@@ -66,7 +66,8 @@ Watch with `flutter_ota status` (patches, rollout, device summary) and the event
 
 **Rollback** (`flutter_ota rollback`, or `ota patch rollback <id>`):
 - The patch becomes `rolled_back`.
-- Devices running it get the newest other patch they are eligible for, or the store code, at their next start.
+- Devices running it go back, at their next start, to the patch they ran before (if they still have it) or to the store code.
+- Devices never download an **older** patch again: they refuse a lower sequence number (replay protection). To give every device the previous code, build it again as a new patch (`flutter_ota patch android`), which gets a higher sequence.
 - It can be published again.
 
 **Revocation** (`ota patch revoke <id>`):
@@ -80,6 +81,7 @@ A new patch first runs **on probation**:
 - If the app crashes before the start is confirmed, or keeps crashing after it, the patch is rolled back on that device, blocklisted, and reported to the server.
 - The previous confirmed patch, or the store code, runs instead.
 - Force-stops and low-memory kills do not count as crashes.
+- The server keeps offering the patch to other devices until you roll it back there (`flutter_ota rollback`). Then fix forward with a new patch.
 
 ## Original alpha patch formats
 
