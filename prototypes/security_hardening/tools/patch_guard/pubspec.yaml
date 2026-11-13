@@ -1,0 +1,19 @@
+# Copyright 2026 The Punit Authors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Only used to run the guard outside the lab (CI: test/run_ci_cases.sh). The lab and the toolchain
+# build compile the guard against the Dart SDK source tree instead (--packages=<sdk>/.dart_tool/...).
+# The pinned Dart 3.13.7 tree vendors analyzer 14.1.0-dev with _fe_analyzer_shared 104.0.0; the
+# published analyzer that uses the same _fe_analyzer_shared is 14.0.0. Keep these versions exact.
+name: patch_guard
+description: Source-level security guard for Flutter OTA System patch modules (CI runner only).
+version: 0.0.0
+publish_to: none
+
+environment:
+  sdk: ^3.13.0
+
+dependencies:
+  analyzer: 14.0.0
+  _fe_analyzer_shared: 104.0.0
+  yaml: ^3.1.2
