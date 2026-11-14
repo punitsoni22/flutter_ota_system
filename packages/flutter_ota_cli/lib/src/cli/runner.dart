@@ -23,6 +23,7 @@ import '../toolchain/disk_space.dart';
 import '../toolchain/index.dart';
 import '../toolchain/install_lock.dart';
 import '../toolchain/manager.dart';
+import '../toolchain/trusted_keys.dart';
 import '../version.dart';
 
 /// Runs the `flutter_ota` CLI and returns the process exit code.
@@ -112,8 +113,9 @@ class _InitCommand extends _Cmd {
 Next steps:
   1. Set your server once:     flutter_ota config set server-url https://ota.example.com
   2. Install the toolchain:    flutter_ota toolchain install
-  3. Later milestones add the flutter_ota_system dependency and the
-     `await FlutterOta.initialize();` call in main.dart.''');
+  3. Add the SDK:              flutter pub add flutter_ota_system
+     and call `await FlutterOta.initialize();` in main() (see the quick start, step 6).
+  4. Create your signing keys:  flutter_ota keys init''');
     return 0;
   }
 }
@@ -193,7 +195,7 @@ class _ConfigGet extends _Cmd {
     final rest = argResults!.rest;
     if (rest.length != 1) usageException('Expected <key>.');
     if (!configKeys.containsKey(rest[0])) throw CliException('Unknown setting "${rest[0]}".');
-    final v = UserConfig.load(ctx.environment).resolve(rest[0], ctx.environment);
+    final v = UserConfig.load(ctx.environment).resolve(rest[0], ctx.environment, builtIn: _builtInDefaults[rest[0]]);
     if (v.value == null) {
       ctx.err.writeln('${rest[0]} is not set.');
       return 1;
@@ -202,6 +204,9 @@ class _ConfigGet extends _Cmd {
     return 0;
   }
 }
+
+/// Built-in values used when a setting is not set by flag, environment or config file.
+const _builtInDefaults = <String, String>{'toolchain-index-url': defaultToolchainIndexUrl};
 
 class _ConfigList extends _Cmd {
   _ConfigList(super.ctx);
@@ -214,10 +219,11 @@ class _ConfigList extends _Cmd {
     final cfg = UserConfig.load(ctx.environment);
     ctx.out.writeln('Config file: ${cfg.path}');
     for (final k in configKeys.keys) {
-      final v = cfg.resolve(k, ctx.environment);
+      final v = cfg.resolve(k, ctx.environment, builtIn: _builtInDefaults[k]);
       ctx.out.writeln('$k = ${v.value ?? '(not set)'}  [${_sourceLabel(v.source, k)}]');
     }
     final keys = {...cfg.toolchainKeys};
+    ctx.out.writeln('toolchain-trusted-keys (built-in): ${embeddedToolchainKeys.keys.join(', ')}');
     ctx.out.writeln('toolchain-trusted-keys (user-added): ${keys.isEmpty ? '(none)' : keys.keys.join(', ')}');
     return 0;
   }
