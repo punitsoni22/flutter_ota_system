@@ -227,6 +227,11 @@ const buildToolVersionFiles = {
   'android/settings.gradle.kts',
 };
 
+/// Files Flutter rewrites on every build with paths of the build machine (`flutter.sdk`, `sdk.dir`).
+/// They are git-ignored and never part of the installed app, so a different machine, user or
+/// toolchain cache folder does not block a patch.
+const machineLocalFiles = {'android/local.properties'};
+
 /// Whether a group of files changed. With per-file hashes on both sides (snapshots written since
 /// multi-toolchain support), files in [ignore] do not count (`flutter_ota.lock` follows the project's
 /// toolchain, while the patch is checked against the release's own toolchain). Older snapshots
@@ -287,7 +292,7 @@ SnapshotDiff diffFeatureSnapshots(Map<String, Object?> release, Map<String, Obje
     );
     c.flutterSectionChanged = x['flutter_sha256'] != y['flutter_sha256'];
     c.environmentChanged = canonicalJsonString(x['environment']) != canonicalJsonString(y['environment']);
-    c.nativeChanged = _groupChanged(x, y, 'native_files', 'native_sha256', ignore: buildToolVersionFiles);
+    c.nativeChanged = _groupChanged(x, y, 'native_files', 'native_sha256', ignore: {...buildToolVersionFiles, ...machineLocalFiles});
     c.otherFilesChanged = _groupChanged(x, y, 'other_hashes', 'other_sha256', ignore: const {'flutter_ota.lock'});
   }
   return d;

@@ -11,6 +11,8 @@ Flutter 3.50.0 support next to Flutter 3.47.9. The default toolchain index is th
   * `toolchain clean --unused` keeps toolchains that local releases still need.
 * Raising Android build tool versions no longer blocks patches for releases made from this version
   on.
+* `android/local.properties` (build-machine paths) no longer blocks a patch, so patches can be built
+  on another machine or with a different toolchain cache folder.
 
 ## 0.2.0-alpha.2
 
