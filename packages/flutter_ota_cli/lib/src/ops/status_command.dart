@@ -130,11 +130,19 @@ class StatusCommand extends Command<int> {
         o.writeln('          Make one with:  flutter_ota patch android --channel <channel>');
       } else {
         o.writeln('Patches (${patches.length}):');
-        o.writeln('  NO  STATUS       FORMAT   CHANNELS (ROLLOUT)       PATCH ID');
+        // A rolled-back or revoked patch is no longer delivered: its channels are marked "(was)".
+        // The column is as wide as its longest entry.
+        String channels(Map<String, Object?> pt) =>
+            pt['status'] == 'published' || pt['status'] == 'draft' ? channelsText(pt) : '(was) ${channelsText(pt)}';
+        var w = 'CHANNELS (ROLLOUT)'.length;
+        for (final pt in patches) {
+          if (channels(pt).length > w) w = channels(pt).length;
+        }
+        o.writeln('  NO  STATUS       FORMAT   ${'CHANNELS (ROLLOUT)'.padRight(w)} PATCH ID');
         for (final pt in patches) {
           o.writeln(
             '  ${'${patchNumber(pt)}'.padRight(3)} ${'${pt['status']}'.padRight(12)} '
-            '${'${pt['artifact_format']}'.padRight(8)} ${channelsText(pt).padRight(24)} ${pt['id']}',
+            '${'${pt['artifact_format']}'.padRight(8)} ${channels(pt).padRight(w)} ${pt['id']}',
           );
         }
         o.writeln('  published = devices can download it; draft = uploaded, not published yet;');

@@ -4,7 +4,7 @@ name: flutter_ota_cli
 description: >-
   Experimental developer CLI (command `flutter_ota`) for Flutter OTA System: builds Android
   arm64 store releases and signed feature patches locally. Linux x64 hosts only.
-version: 0.2.0-alpha.1
+version: 0.2.0-alpha.2
 homepage: https://github.com/punitsoni22/flutter_ota_system
 repository: https://github.com/punitsoni22/flutter_ota_system/tree/main/packages/flutter_ota_cli
 issue_tracker: https://github.com/punitsoni22/flutter_ota_system/issues

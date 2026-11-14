@@ -1,3 +1,14 @@
+## 0.2.0-alpha.2
+
+Text and display fixes found in the public v0.2.0-alpha validation (no behaviour change):
+* `flutter_ota init` lists the real next steps (it printed a leftover internal line).
+* `flutter_ota config get/list` show the built-in default toolchain index URL, and `config list`
+  names the built-in trusted toolchain key.
+* `flutter_ota status` marks the channels of rolled-back or revoked patches as "(was) …" and keeps
+  the columns aligned.
+* `flutter_ota patch android` labels the manifest patch id and prints the promote command with
+  the server patch id.
+
 ## 0.2.0-alpha.1
 
 * Fix: `dart pub global activate flutter_ota_cli` failed to compile 0.2.0-alpha

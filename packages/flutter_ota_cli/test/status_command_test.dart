@@ -41,7 +41,7 @@ void main() {
     expect(await w.run(['status']), 0, reason: w.output);
     final out = w.out.toString();
     expect(out, contains('Patches (3):'));
-    expect(out, matches(RegExp(r'1\s+rolled_back\s+dbc-v1\s+stable 100%')));
+    expect(out, matches(RegExp(r'1\s+rolled_back\s+dbc-v1\s+\(was\) stable 100%')));
     expect(out, matches(RegExp(r'2\s+published\s+dbc-v1\s+stable 100%, beta 12.5%')));
     expect(out, matches(RegExp(r'3\s+draft\s+dbc-v1\s+-')));
     expect(out, contains(serverPatch(2, 'published')['id'] as String));
