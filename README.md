@@ -116,7 +116,7 @@ More: [architecture](docs/architecture.md) · [security](docs/security.md) · [f
 ## Quick start
 
 Requirements:
-- Linux x64 with Git, Docker, Flutter 3.47.9 (Dart 3.13, the same version as the OTA toolchain, for `flutter pub` and your IDE) and about 10 GB of free disk;
+- Linux x64 with Git, Docker, Flutter 3.47.9 (Dart 3.13, the same version as the OTA toolchain, for `flutter pub` and your IDE; [how to get it](docs/quick-start.md)) and about 10 GB of free disk;
 - an Android arm64 test phone.
 
 The CLI downloads the custom Flutter 3.47.9 toolchain for you (about 1.6 GB, verified, cached once).

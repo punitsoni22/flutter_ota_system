@@ -8,7 +8,12 @@ This guide takes a Flutter app from zero to a working OTA patch with the bytecod
 > - Not production-ready, no independent security audit, no app-store approval of any kind.
 
 You need:
-- Linux x64 with Git, Docker (for the server), Flutter 3.47.9 (Dart 3.13) for `flutter pub` and your IDE: after the first release your project depends on the toolchain's `dynamic_modules` package, which needs Dart 3.13. The OTA builds use their own Flutter and about 10 GB of free disk;
+- Linux x64 with Git, Docker (for the server) and about 10 GB of free disk;
+- **Flutter 3.47.9** (Dart 3.13) for `flutter pub` and your IDE. After the first release your project depends on the toolchain's `dynamic_modules` package, which needs Dart 3.13, so an older Flutter can no longer run `flutter pub get` in it. Ways to get 3.47.9 next to your usual Flutter:
+  - [fvm](https://fvm.app): `fvm use 3.47.9` in the project;
+  - or after step 4, use the toolchain's own copy: `~/.cache/flutter_ota/toolchains/flutter-3.47.9-ota.1/flutter/bin/flutter` (point your IDE's Flutter SDK path at `…/flutter`).
+
+  Only 3.47.9 was tested. The OTA builds always use the toolchain's own Flutter;
 - an Android arm64 phone for testing;
 - your app's feature code in **feature packages** (see step 6).
 
@@ -26,7 +31,7 @@ flutter pub add flutter_ota_system
 dart pub global activate flutter_ota_cli
 ```
 
-Make sure `~/.pub-cache/bin` is on your `PATH`, then check:
+Make sure `~/.pub-cache/bin` (or `$PUB_CACHE/bin` if you set `PUB_CACHE`) is on your `PATH`, then check:
 
 ```bash
 export PATH="$PATH:$HOME/.pub-cache/bin"     # add this line to ~/.bashrc to keep it
@@ -102,20 +107,15 @@ Only the public keys and the certificate are sent to your server. Private keys n
 
 ## 6. Prepare the app
 
-**`main.dart`.** Call `initialize()` once:
+**Feature packages.** Patchable code lives in local packages, for example `packages/products/`. Create one and connect it to the app:
 
-```dart
-import 'package:flutter/widgets.dart';
-import 'package:flutter_ota_system/flutter_ota_system.dart';
-
-Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await FlutterOta.initialize();
-  runApp(const MyApp());
-}
+```bash
+flutter create --template=package packages/products
+(cd packages/products && flutter pub add flutter_ota_system)
+flutter pub add 'products:{"path":"packages/products"}'
 ```
 
-**Feature packages.** Patchable code lives in local packages, for example `packages/products/`. Each one has an entry class in `lib/<package>.dart`:
+Each feature package has one entry class in `lib/<package>.dart`:
 
 ```dart
 // packages/products/lib/products.dart
@@ -124,11 +124,33 @@ import 'package:flutter_ota_system/flutter_ota_system.dart';
 
 class ProductsFeature extends OtaFeature {
   @override
-  Widget build(BuildContext context, [Object? arguments]) => const ProductScreen();
+  Widget build(BuildContext context, [Object? arguments]) =>
+      const ProductsScreen(); // your own widget, in this package
 }
 ```
 
-Your app shows the feature through the generated registry, `OtaFeatures.products.build(context)`. `flutter_ota release android` generates it. Details are in [feature patching](feature-patching.md).
+**Generate the feature registry** (`lib/flutter_ota_features.g.dart`, one typed slot per feature; `release android` regenerates it):
+
+```bash
+flutter_ota features generate
+```
+
+**`main.dart`.** Call `initialize()` once, and show features through the registry:
+
+```dart
+import 'package:flutter/material.dart';
+import 'package:flutter_ota_system/flutter_ota_system.dart';
+
+import 'flutter_ota_features.g.dart';
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await FlutterOta.initialize();
+  runApp(MaterialApp(home: Builder(builder: (context) => OtaFeatures.products.build(context))));
+}
+```
+
+Details are in [feature patching](feature-patching.md).
 
 **arm64 only.** The OTA engine exists for arm64-v8a only. Keep only that ABI in `android/app/build.gradle.kts`, inside `android { defaultConfig { ... } }`:
 
@@ -155,13 +177,16 @@ Fix every `[x]` line. `doctor` only reads; it never changes anything.
 flutter_ota release android                 # AAB by default; --kind apk for a test install
 ```
 
+Each store version (`versionName+versionCode`) is one release. To make an APK as well as an AAB, give it its own build number (`--kind apk --build-number <n>`). Patches target the newest local release unless you pass `--release <id>`.
+
 What it does:
 - builds your app with the custom toolchain, on your machine;
 - generates `lib/flutter_ota_main.g.dart` (the build entry point) and `lib/flutter_ota_features.g.dart` (the feature registry) — commit both;
 - adds the `dynamic_modules` loader package under `.flutter_ota/packages/` — commit it;
+- adds the `dynamic_modules` dependency to `pubspec.yaml` (and updates `pubspec.lock`);
 - registers the release with your server. **It uploads only `libapp.so` and the release metadata**, never your source code or the APK/AAB.
 
-**Upload the AAB to Google Play yourself.** The output path is printed.
+**Upload the AAB to Google Play yourself.** The output path is printed. Sign it with your own upload key first: a new `flutter create` app signs release builds with the debug key, which Google Play rejects (see Flutter's [Android deployment guide](https://docs.flutter.dev/deployment/android#sign-the-app)).
 
 **What to commit or ignore:**
 - Add `/.flutter_ota/releases/` to `.gitignore`. It holds large build files. Back it up (for example as a CI artifact), because patches for this release are built against it.
@@ -192,7 +217,7 @@ The command:
 
 It refuses with a clear reason if a change needs a new store release.
 
-**Promote it to production.** After testing on staging, use the Python admin CLI from your server folder (`flutter_ota status` shows the patch id):
+**Promote it to production.** After testing on staging, use the Python admin CLI from your server folder. Use the **server patch id**: `patch android` prints it (`uploaded as server patch <id>`), and so does `flutter_ota status`:
 
 ```bash
 cd flutter_ota_system
