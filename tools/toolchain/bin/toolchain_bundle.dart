@@ -176,6 +176,9 @@ Future<void> _build(ArgResults c) async {
 
 /// Human-readable manifest and checksums for a GitHub release. The signed index stays the only
 /// file the CLI trusts; these let a person check the assets by hand.
+///
+/// The manifest lists every toolchain of the index (format 2). Entries of toolchains built earlier
+/// into the same folder are kept, so several Flutter versions can share one release.
 Future<void> _writeReleaseFiles(
   String outDir,
   File indexFile,
@@ -186,8 +189,7 @@ Future<void> _writeReleaseFiles(
   OverlayBuildResult overlay,
 ) async {
   final artifacts = entry['artifacts']! as Map;
-  final manifest = {
-    'format': 1,
+  final mine = {
     'toolchain': entry['id'],
     'toolchain_id': entry['toolchain_id'],
     'flutter': entry['flutter'],
@@ -198,6 +200,29 @@ Future<void> _writeReleaseFiles(
     'target': entry['target'],
     'flutter_sdk': artifacts['flutter_sdk'],
     'overlay': {'file': p.basename(overlay.path), 'sha256': overlay.sha256, 'size': overlay.size},
+  };
+  final manifestFile = File(p.join(outDir, 'toolchain-manifest.json'));
+  final indexed = {
+    for (final t in ((jsonDecode(indexFile.readAsStringSync()) as Map)['index'] as Map)['toolchains'] as List)
+      (t as Map)['id'] as String,
+  };
+  final toolchains = <Map<String, Object?>>[];
+  if (manifestFile.existsSync()) {
+    final old = jsonDecode(manifestFile.readAsStringSync()) as Map;
+    // Format 1 described one toolchain at the top level; format 2 lists them.
+    final previous = old['format'] == 1 ? [old] : (old['toolchains'] as List? ?? const []);
+    for (final t in previous.cast<Map>()) {
+      final id = t['toolchain'];
+      if (id != entry['id'] && indexed.contains(id)) {
+        toolchains.add({for (final k in mine.keys) k: t[k]});
+      }
+    }
+  }
+  toolchains
+    ..add(mine)
+    ..sort((a, b) => '${a['toolchain']}'.compareTo('${b['toolchain']}'));
+  final manifest = {
+    'format': 2,
     'index': {
       'file': p.basename(indexFile.path),
       'serial': serial,
@@ -205,13 +230,21 @@ Future<void> _writeReleaseFiles(
       'public_key': publicKey,
       'sha256': await sha256OfFile(indexFile.path),
     },
+    'toolchains': toolchains,
   };
-  final manifestFile = File(p.join(outDir, 'toolchain-manifest.json'))
-    ..writeAsStringSync('${const JsonEncoder.withIndent('  ').convert(manifest)}\n');
+  manifestFile.writeAsStringSync('${const JsonEncoder.withIndent('  ').convert(manifest)}\n');
   final sums = StringBuffer();
-  for (final f in [p.basename(overlay.path), p.basename(indexFile.path), p.basename(manifestFile.path)]) {
+  final files = [
+    for (final t in toolchains) (t['overlay']! as Map)['file'] as String,
+    p.basename(indexFile.path),
+    p.basename(manifestFile.path),
+  ];
+  for (final f in files) {
     sums.writeln('${await sha256OfFile(p.join(outDir, f))}  $f');
   }
   File(p.join(outDir, 'SHA256SUMS')).writeAsStringSync(sums.toString());
-  stdout.writeln('release files: toolchain-manifest.json, SHA256SUMS (engine build ID ${overlay.engineBuildId})');
+  stdout.writeln(
+    'release files: toolchain-manifest.json (${toolchains.length} toolchains), SHA256SUMS '
+    '(engine build ID ${overlay.engineBuildId})',
+  );
 }
