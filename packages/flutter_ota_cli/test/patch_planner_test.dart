@@ -1,6 +1,7 @@
 // Copyright 2026 The Punit Authors
 // SPDX-License-Identifier: Apache-2.0
 
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_ota_cli/flutter_ota_cli.dart';
@@ -106,6 +107,36 @@ void main() {
     File(p.join(f.pkg('cart'), 'android', 'src', 'Main.kt')).deleteSync();
     f.write('packages/cart/assets/a.json', '{}');
     expectRefused('cart: files outside lib/ changed');
+  });
+
+  test('raising Android build tool versions and a new toolchain pin do not block a patch', () {
+    // What `flutter_ota upgrade` to a newer Flutter needs: the release stays patchable.
+    f.write('android/gradle/wrapper/gradle-wrapper.properties', 'distributionUrl=gradle-9.1.0-all.zip\n');
+    f.write('android/settings.gradle.kts', 'id("com.android.application") version "9.0.1"\n');
+    f.write('flutter_ota.lock', 'toolchain: "flutter-3.47.9-ota.1"\n');
+    recordFeatureSnapshot(f.app, releaseDir);
+    f.write('android/gradle/wrapper/gradle-wrapper.properties', 'distributionUrl=gradle-9.5.0-all.zip\n');
+    f.write('android/settings.gradle.kts', 'id("com.android.application") version "9.3.1"\n');
+    f.write('flutter_ota.lock', 'toolchain: "flutter-3.50.0-ota.1"\n');
+    expect(plan().refusals, isEmpty);
+    // Any other native change in the app is still refused.
+    f.write('android/app/build.gradle.kts', 'android { }\n');
+    expectRefused('native code changed');
+  });
+
+  test('a snapshot without per-file hashes (older releases) keeps the strict group rule', () {
+    f.write('android/settings.gradle.kts', 'id("com.android.application") version "9.0.1"\n');
+    recordFeatureSnapshot(f.app, releaseDir);
+    final file = File(p.join(releaseDir, 'feature_snapshot.json'));
+    final snap = jsonDecode(file.readAsStringSync()) as Map<String, Object?>;
+    for (final pkg in (snap['packages']! as Map).values) {
+      (pkg as Map)
+        ..remove('native_files')
+        ..remove('other_hashes');
+    }
+    file.writeAsStringSync(jsonEncode(snap));
+    f.write('android/settings.gradle.kts', 'id("com.android.application") version "9.3.1"\n');
+    expectRefused('native code changed');
   });
 
   test('new dependency outside the store build is refused; one inside is a note', () {

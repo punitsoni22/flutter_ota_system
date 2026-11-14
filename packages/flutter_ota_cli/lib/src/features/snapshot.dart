@@ -112,6 +112,9 @@ Map<String, Object?> _packageSnapshot(LocalPackage pkg, {required bool isApp}) {
     'native_sha256': _hashOfMap(native),
     'other_sha256': _hashOfMap(other),
     'other_files': other.keys.toList(),
+    // Per-file hashes (since multi-toolchain support), so build-tool-only changes can be told apart.
+    'native_files': native,
+    'other_hashes': other,
   };
 }
 
@@ -215,6 +218,29 @@ class PackageChange {
   ].join('; ');
 }
 
+/// Android build tool version files. A new Flutter version needs them raised (for example Flutter
+/// 3.50: Gradle 9.3.1, AGP 9.1.1, KGP 2.4.10); they change only how a new store build is made, never
+/// the installed app, so they do not block a patch for an existing release.
+const buildToolVersionFiles = {
+  'android/gradle/wrapper/gradle-wrapper.properties',
+  'android/settings.gradle',
+  'android/settings.gradle.kts',
+};
+
+/// Whether a group of files changed. With per-file hashes on both sides (snapshots written since
+/// multi-toolchain support), files in [ignore] do not count (`flutter_ota.lock` follows the project's
+/// toolchain, while the patch is checked against the release's own toolchain). Older snapshots
+/// only have the group hash, which is compared as before.
+bool _groupChanged(Map x, Map y, String filesKey, String hashKey, {required Set<String> ignore}) {
+  final fx = x[filesKey], fy = y[filesKey];
+  if (fx is! Map || fy is! Map) return x[hashKey] != y[hashKey];
+  Map<String, Object?> kept(Map m) => {
+    for (final e in m.entries)
+      if (!ignore.contains(e.key)) '${e.key}': e.value,
+  };
+  return canonicalJsonString(kept(fx)) != canonicalJsonString(kept(fy));
+}
+
 /// Differences between the release snapshot and the current project.
 class SnapshotDiff {
   SnapshotDiff(this.release, this.current);
@@ -261,8 +287,8 @@ SnapshotDiff diffFeatureSnapshots(Map<String, Object?> release, Map<String, Obje
     );
     c.flutterSectionChanged = x['flutter_sha256'] != y['flutter_sha256'];
     c.environmentChanged = canonicalJsonString(x['environment']) != canonicalJsonString(y['environment']);
-    c.nativeChanged = x['native_sha256'] != y['native_sha256'];
-    c.otherFilesChanged = x['other_sha256'] != y['other_sha256'];
+    c.nativeChanged = _groupChanged(x, y, 'native_files', 'native_sha256', ignore: buildToolVersionFiles);
+    c.otherFilesChanged = _groupChanged(x, y, 'other_hashes', 'other_sha256', ignore: const {'flutter_ota.lock'});
   }
   return d;
 }
