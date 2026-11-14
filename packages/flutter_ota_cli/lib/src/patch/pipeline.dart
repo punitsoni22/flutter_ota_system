@@ -298,7 +298,7 @@ class PatchPipeline {
     File(p.join(outDir.path, 'patch.json')).writeAsStringSync(const JsonEncoder.withIndent('  ').convert(summary));
 
     _say('[6/7] Summary');
-    _say('  patch_id ${manifest['patch_id']}, sequence $sequence, features ${plan.features.join(', ')}');
+    _say('  manifest patch_id ${manifest['patch_id']}, sequence $sequence, features ${plan.features.join(', ')}');
     _say('  files: ${outDir.path}');
     if (o.dryRun) {
       _say('[7/7] Dry run: nothing was uploaded.');
@@ -321,6 +321,9 @@ class PatchPipeline {
         final pct = o.rolloutPercent ?? 100;
         await s.publish(id, o.channel!, pct);
         _say('  published to channel ${o.channel} for $pct% of devices');
+        if (o.channel != 'production') {
+          _say('  after testing, promote it (server patch id):  ota patch promote $id --percent <n>');
+        }
       } else {
         _say('  not published. Publish it with:  ota patch publish $id --channel <channel> --percent <n>');
       }
