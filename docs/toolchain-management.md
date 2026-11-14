@@ -82,6 +82,24 @@ The stock **Flutter 3.47.9 SDK** archive (`tar.xz`, 1,582,752,184 bytes) is not 
 the CLI downloads it from Google's official Flutter release URL listed in the signed index, and
 checks it against the size and SHA-256 recorded there.
 
+**Several Flutter versions.** One index can list several toolchains: Flutter 3.47.9 now, and
+**Flutter 3.50.0 (`flutter-3.50.0-ota.1`, engine build ID
+`c9ecf2e22a18d86fc619668200137cfed5ab48b7`) from the next release**. The release then carries one
+overlay per toolchain; `toolchain-manifest.json` (format 2) lists every toolchain with its engine
+build ID, and `SHA256SUMS` covers every overlay. Each toolchain is installed in its own folder of the
+cache, with its own Gradle home, so they never affect each other.
+
+**Which toolchain a project gets.** `flutter_ota toolchain install` in a project without
+`flutter_ota.lock` picks the **newest toolchain the project can build with**:
+- its Dart version must match `environment: sdk:` in `pubspec.yaml`;
+- the project's Android build tools must meet the minimums that toolchain's Flutter enforces
+  (Flutter 3.50: Gradle 9.3.1, Android Gradle plugin 9.1.1, Kotlin Gradle plugin 2.4.10, in
+  `android/gradle/wrapper/gradle-wrapper.properties` and `android/settings.gradle(.kts)`).
+
+It prints why it skipped a newer toolchain, for example
+`Skipping flutter-3.50.0-ota.1: needs newer Android build tools (Gradle 9.1.0 < 9.3.1, ...)`.
+`flutter_ota toolchain install <id>` installs a specific one.
+
 ### 2.2 What `toolchain install` checks
 
 1. It downloads the index and checks its ES256 signature with the key built into the CLI
@@ -111,16 +129,27 @@ flutter_ota upgrade --yes          # in CI
 ```
 
 Only after you answer yes does it install the new toolchain and rewrite `flutter_ota.lock`.
-A new toolchain means a **new store release**, because patches only apply to apps built with the
-same toolchain. Today `flutter-3.47.9-ota.1` is the only toolchain.
+Without `--to <id>` it offers the newest toolchain the project can build with (see 2.1), and warns
+when the project's Android build tools are below the new Flutter's minimums. `flutter_ota doctor`
+checks them too.
+
+A new toolchain means a **new store release**, because an installed app only runs patches built
+with its own toolchain. **Existing store releases keep working:** `flutter_ota patch android
+--release <id>` builds a patch for an older release with the toolchain that release was built with
+(it installs it if needed), even after the project moved to a newer Flutter. See
+[section 7](#7-flutter-upgrades).
 
 ### 2.4 Clean up
 
 ```bash
 flutter_ota toolchain list         # installed toolchains; * marks this project's pin
 flutter_ota toolchain clean        # deletes downloaded archives and leftovers
-flutter_ota toolchain clean --unused   # also deletes toolchains no known project pins (asks first)
+flutter_ota toolchain clean --unused   # also deletes toolchains no known project uses (asks first)
 ```
+
+A toolchain is "in use" while a known project pins it **or one of the project's local store
+releases (`.flutter_ota/releases/`) was built with it**, so `--unused` never removes the toolchain
+you still need to patch an older release.
 
 `--all` deletes every installed toolchain (it asks first; `--yes` skips the question). A deleted
 toolchain is downloaded again by the next `toolchain install` or `release android`.
@@ -345,15 +374,47 @@ supported, the **project owner** (not each app developer) does this once:
 3. builds the engine and the tools, runs the compatibility and security tests;
 4. builds and signs a new overlay and index entry (section 5) and publishes it.
 
-App developers then run `flutter_ota upgrade`. It asks before changing `flutter_ota.lock`, and the
-next store release uses the new toolchain. Existing store releases keep their old toolchain, so
-patches for them keep working. Today only Flutter 3.47.9 is supported.
+**Owner, several versions in one release:** build each toolchain into the same output folder with
+the same key; the other entries of the index are kept and its serial goes up:
+
+```bash
+RELEASE_LAYOUT=1 OUT=$HOME/flutter_ota_release/<tag> KEY_DIR=… KEY_ID=… ./tools/toolchain/build_bundle.sh   # 3.47.9 lab
+PINS_FILE=$PWD/prototypes/bytecode_engine/pins-3.50.0.env LAB=$HOME/.cache/flutter-ota-lab-350 \
+  RELEASE_LAYOUT=1 OUT=$HOME/flutter_ota_release/<tag> KEY_DIR=… KEY_ID=… ./tools/toolchain/build_bundle.sh
+```
+
+**App developers, moving a project to a newer Flutter** (for example 3.47.9 → 3.50.0):
+
+1. Raise the Android build tools to the new minimums (`flutter_ota doctor` lists them).
+2. `flutter_ota upgrade` (asks before rewriting `flutter_ota.lock`). Use Flutter 3.50 for
+   `flutter pub` and your IDE from now on.
+3. `flutter_ota release android`: the next store release uses the new toolchain.
+
+**Patching a store release made with the older Flutter** keeps working:
+`flutter_ota patch android --release <id>` builds the patch with that release's toolchain. Two rules
+protect the installed app:
+- the patch is compared with the release's snapshot: raised Android build tool versions and the new
+  `flutter_ota.lock` are ignored, other native or asset changes are refused;
+- `pubspec.lock` must still be the release's: after `flutter pub get` with the new Flutter the
+  versions differ, and `patch android` refuses ("pubspec.lock changed since the release").
+
+So patch an older release from **that release's code**, for example a release branch or tag, where
+`pubspec.lock` is still the release's. The release folder also keeps a copy
+(`.flutter_ota/releases/<id>/pubspec.lock`).
+
+Releases made with CLI 0.2.0-alpha.2 or earlier have no per-file snapshot hashes. For them, any
+change to the Android build files also blocks a patch, so patch them from their own code as well.
 
 ## 8. Known limits
 
 - Linux x64 hosts only. macOS and Windows would need separate engine host builds, which do not
   exist.
-- One toolchain only: Flutter 3.47.9 / Dart 3.13.7.
+- Toolchains: Flutter 3.47.9 / Dart 3.13.7 (published in v0.2.0-alpha), and Flutter 3.50.0 /
+  Dart 3.14.0 from the next release.
+  - 3.50.0 was tested on an Android 14 x86_64 emulator with arm64 translation: release APK/AAB,
+    patches, rollback, the malformed-patch corpus, and patching a 3.47.9 release after the project
+    moved to 3.50.
+  - 3.50.0 is **not yet tested on a physical phone**.
 - The install was tested on Linux x64 with the official Flutter 3.47.9 archive downloaded over
   HTTPS: the download resumed after an interruption, `toolchain doctor` passed, and a release
   build of a new `flutter create` app worked and packaged the OTA `libflutter.so`.

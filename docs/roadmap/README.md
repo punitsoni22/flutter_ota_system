@@ -56,10 +56,10 @@ Nothing in Flutter OTA System is production-validated yet (see the warning in th
 - **Final deep-testing phase** for the bytecode architecture: more devices and Android versions,
   large apps (size, start-up, memory), crash recovery on device, store-release compatibility,
   security fuzzing ([limitations](../limitations.md#not-tested-yet)).
-- **A newer Flutter version (3.50 / Dart 3.14)** as a second supported toolchain. A first
-  compatibility review found only small porting changes, but no 3.50 engine has been built or
-  tested. Until then only Flutter 3.47.9 is supported. Apps moving to 3.50 will also need newer
-  Android build tools (Gradle 9.3.1+, Android Gradle plugin 9.1.1+, Kotlin plugin 2.4.10+).
+- **Flutter 3.50 / Dart 3.14** as a second toolchain: implemented, for the next release.
+  - Engine ported; the security tests match 3.47.9.
+  - Tested on an emulator only; a physical-phone test is still to do.
+  - See [toolchain management](../toolchain-management.md#7-flutter-upgrades).
 - **Publishing:** the packages on pub.dev and an official, signed toolchain download.
 - **Whole-app patching** (patching code outside feature packages): research only.
 - **Users, roles (RBAC), SSO and an audit log.** Today there is one shared admin API key.

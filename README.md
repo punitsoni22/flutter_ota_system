@@ -172,7 +172,7 @@ The full walkthrough is in [docs/quick-start.md](docs/quick-start.md).
 | --- | --- |
 | Android | Experimental (arm64 only) |
 | Developer machine | Linux x64 only |
-| Flutter / Dart | 3.47.9 / 3.13.7 with the Flutter OTA custom engine (downloaded by the CLI; your own Flutter is not changed) |
+| Flutter / Dart | 3.47.9 / 3.13.7 with the Flutter OTA custom engine (downloaded by the CLI; your own Flutter is not changed). 3.50.0 / 3.14.0 from the next release |
 | iOS, macOS, Windows, web apps | Not implemented |
 
 **Adopting the custom engine needs a new store release of your app.** Only code in **feature packages** can be patched. Patched code runs in an interpreter, so CPU-heavy code is slower, and the store binary is larger. Details: [limitations](docs/limitations.md).

@@ -6,7 +6,27 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
-Nothing yet.
+### Added
+- **Flutter 3.50.0 / Dart 3.14.0 toolchain** (`flutter-3.50.0-ota.1`, engine build ID
+  `c9ecf2e22a18d86fc619668200137cfed5ab48b7`) next to Flutter 3.47.9. The bytecode verifier patch
+  was ported to Dart 3.14. The security tests (reference verifier fixtures including B25/B27, and the
+  12-file malformed-patch corpus on a device) give the same results as on 3.47.9. Tested on an
+  x86_64 emulator with arm64 translation; not yet on a physical phone.
+- One signed toolchain index can list several Flutter versions; `toolchain-manifest.json` (format 2)
+  lists each with its engine build ID.
+- CLI:
+  - `toolchain install` and `upgrade` choose the newest toolchain the project can build with
+    (pubspec sdk constraint, Android build tool minimums);
+  - `doctor` checks the Android build tool minimums of the pinned Flutter (3.50: Gradle 9.3.1, AGP
+    9.1.1, KGP 2.4.10).
+
+### Changed
+- `flutter_ota patch android` builds a patch with the toolchain its store release was built with
+  (installing it if needed), so a project that moved to 3.50 can still patch its 3.47.9 release.
+- `flutter_ota toolchain clean --unused` keeps toolchains that local store releases still need.
+- Raising Android build tool versions (and the new `flutter_ota.lock`) no longer blocks a patch for
+  an older release. Other native changes still do. This applies to releases made from this version
+  on.
 
 ## CLI 0.2.0-alpha.1 - 2026-11-13
 
