@@ -16,6 +16,10 @@
 #              the first run. It must be OUTSIDE the repository and must never be committed.
 #   KEY_ID     signing key id (default flutter-ota-toolchain-dev)
 #   NAME       toolchain id (default flutter-<FLUTTER_VERSION>-ota.1)
+#   PINS_FILE  pin set to build (default prototypes/bytecode_engine/pins.env, Flutter 3.47.9; for
+#              example pins-3.50.0.env with LAB=~/.cache/flutter-ota-lab-350). Several toolchains
+#              share one index: build each into the same OUT with the same key; entries of other
+#              toolchains already in OUT's index are kept and the serial is bumped.
 #   RELEASE_LAYOUT=1   write the files for a GitHub release, all flat in OUT: toolchain-index.json,
 #              the overlay, toolchain-manifest.json (versions, engine build ID, SHA-256) and SHA256SUMS
 #   SDK_URL / SDK_SHA256 / SDK_SIZE   the stock Flutter SDK archive; by default the official
@@ -23,7 +27,7 @@
 set -euo pipefail
 HERE=$(cd -- "$(dirname -- "$0")" && pwd)
 REPO=$(cd -- "$HERE/../.." && pwd)
-PINS="$REPO/prototypes/bytecode_engine/pins.env"
+PINS=${PINS_FILE:-"$REPO/prototypes/bytecode_engine/pins.env"}
 # shellcheck source=../../prototypes/bytecode_engine/pins.env
 source "$PINS"
 LAB=${LAB:-"$HOME/.cache/flutter-ota-lab"}
