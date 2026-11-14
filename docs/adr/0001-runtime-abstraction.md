@@ -1,11 +1,12 @@
 # ADR-0001: The platform is independent of patch execution technology
 
-- **Status:** Proposed
+- **Status:** Accepted (implemented: `PatchRuntime` in `packages/ota_client/lib/src/runtime.dart`)
 - **Date:** 2026-09-30
 
 > **Status update (2026-11-11):** the decision holds. In the code, `PatchRuntime` lives in
 > `packages/ota_client/lib/src/runtime.dart` (there is no separate `ota_runtime_api` package).
-> The Android runtime is built on stock Flutter, not an engine fork (see the
+> The original alpha's Android runtime uses stock Flutter; the bytecode runtime (`FlutterOta`,
+> v0.2.0-alpha) uses the Flutter OTA custom engine (see the
 > [ADR-0011](0011-scope-and-runtime-path.md) update).
 
 ## Context

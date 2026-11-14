@@ -10,7 +10,7 @@ exact texts printed by the server, the CLI, the client or the scripts.
 curl http://localhost:8000/health/ready        # {"status":"ok"}? (use your server URL)
 docker compose ps                              # all services "(healthy)"?
 docker compose logs --tail=100 api             # server errors (local: ./flutter-ota-system.sh logs api)
-adb logcat | grep -E "OtaBoot|OTA:"            # Android device side
+adb logcat | grep -E "flutter_ota|OtaBoot|OTA:"  # Android device side
 ```
 
 Bytecode architecture (`flutter_ota`): run `flutter_ota doctor` and `flutter_ota status`, and read
@@ -20,7 +20,7 @@ the device log with `adb logcat | grep flutter_ota`.
 
 | Message | Cause | Fix |
 |---|---|---|
-| `Because <app> depends on dynamic_modules from path which requires SDK version ^3.13.0, version solving failed.` (`flutter pub get`) | Your global Flutter is older than 3.47.9. After the first release the project depends on the toolchain's `dynamic_modules` loader, which needs Dart 3.13 | Use Flutter 3.47.9 for `flutter pub` and your IDE. `flutter_ota release`/`patch` always use the toolchain's own Flutter |
+| `Because <app> depends on dynamic_modules from path which requires SDK version ^3.13.0, version solving failed.` (`flutter pub get`) | Your Flutter is older than the toolchain in `flutter_ota.lock`. After the first release the project depends on the toolchain's `dynamic_modules` loader, which needs that Dart version (3.13 or 3.14) | Use the Flutter version in `flutter_ota.lock` (3.47.9 or 3.50.0) for `flutter pub` and your IDE. `flutter_ota release`/`patch` always use the toolchain's own Flutter |
 | `Flutter assets will be downloaded from file://…/toolchains/<id>/mirror. Make sure you trust this source!` (during `release android`) | Normal. Flutter prints this because the toolchain points it at the verified engine files inside its own cache (the overlay's local mirror) | Nothing to fix: those files were checked against the signed index when the toolchain was installed (`flutter_ota toolchain doctor` re-checks them) |
 | `[x] android build tools: Gradle … < 9.3.1, …` (doctor) or `Skipping flutter-3.50.0-ota.1: needs newer Android build tools` | Flutter 3.50 refuses to build with older Gradle / Android Gradle plugin / Kotlin Gradle plugin versions | Raise them in `android/gradle/wrapper/gradle-wrapper.properties` and `android/settings.gradle(.kts)` (3.50: 9.3.1 / 9.1.1 / 2.4.10), then `flutter_ota upgrade` |
 | `pubspec.lock changed since the release` when patching an older release after `flutter_ota upgrade` | The project's dependencies were re-resolved with the newer Flutter; the installed app was built with the release's versions | Patch the older release from its own code (release branch or tag), where `pubspec.lock` is the release's (a copy is in `.flutter_ota/releases/<id>/pubspec.lock`) |

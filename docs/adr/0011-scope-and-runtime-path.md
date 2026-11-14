@@ -1,6 +1,6 @@
 # ADR-0011: Scope is real Dart code push, Android engine fork first
 
-- **Status:** Proposed
+- **Status:** Partly superseded (decision 1, see the status updates); decisions 2-5 accepted
 - **Date:** 2026-10-30
 
 > **Status update (2026-11-11):** decision 1 was **superseded in practice**. Android code patches
@@ -10,6 +10,11 @@
 > list in decision 3, **Azure + CI/CD deployment and 1M-install hardening are still planned and
 > not implemented** ([roadmap](../roadmap/README.md)). A follow-up ADR should record the
 > stock-Flutter approach formally.
+>
+> **Update (v0.2.0-alpha):** the released code-patch path is the bytecode architecture: a custom
+> Flutter engine with the Dart bytecode interpreter runs signed `dbc-v1` feature patches, and
+> `libapp.so` is never replaced ([architecture.md](../architecture.md)). Its decision record is
+> still to be written ([ADR index](README.md)).
 
 ## Context
 

@@ -1,7 +1,8 @@
 # Privacy and data handling
 
 What the Flutter OTA System client SDK (`flutter_ota_system`) and the self-hosted server actually
-store and send, traced from the source code of v0.1.0-alpha.1. Use it when you write your app's
+store and send, traced from the source code (the original `OtaClient` runtime of v0.1.0-alpha.1, and the bytecode
+runtime `FlutterOta` since v0.2.0-alpha). Use it when you write your app's
 privacy policy, Google Play **Data safety** answers or other disclosures.
 
 > [!IMPORTANT]
@@ -37,7 +38,14 @@ Exactly these requests leave the device (source:
 
 Every request also carries what any HTTPS client sends: the device's **IP address** (as seen by
 the server or proxy) and a `User-Agent` header (the default `dart:io` value, e.g.
-`Dart/3.12 (dart:io)`).
+`Dart/<version> (dart:io)`).
+
+**Bytecode runtime (`FlutterOta`).** It registers with `application_id` (UUID), `installation_id`,
+`platform`, `arch`, `release_version` and `channel`, and its update check adds
+`current_patch_number`, `supported_formats=dbc-v1` and the ids of patches that failed on the
+device. It keeps its state in the app's private storage: `device.json` (installation id and access
+token), `state.json`, the patch files (`active.otp`, `previous.otp`, `pending.otp`),
+`attempt.json` and `session.json`.
 
 **Not sent by the SDK:** device model, OS version, Android ID, advertising ID, phone number,
 location, user account or any personal content, crash reports or stack traces. Error messages
@@ -122,6 +130,5 @@ for that actual implementation. See [policy/apple-app-store.md](policy/apple-app
 
 ## Related
 
-- [security.md](security.md): security model and limitations
-- [security](security.md): signing keys and the trust model
+- [security.md](security.md): security model, limitations, signing keys and the trust model
 - [policy/google-play.md](policy/google-play.md): Google Play policy considerations

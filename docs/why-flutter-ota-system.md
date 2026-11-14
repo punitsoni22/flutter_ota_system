@@ -8,7 +8,7 @@ not. It also compares it fairly with [Shorebird](https://shorebird.dev/), the es
 code push service.
 
 > [!IMPORTANT]
-> Flutter OTA System is an **alpha** (v0.1.0-alpha.1). It has been tested internally on **Linux**
+> Flutter OTA System is an **alpha** (v0.3.0-alpha). It has been tested internally on **Linux**
 > and a **small number of Android devices** only. It has had no independent security audit and no
 > load tests, and it is **not production-validated**. Shorebird is far more mature. This page
 > compares **architectural approaches**; it does not claim that one technology is better.
@@ -221,7 +221,7 @@ Not sure? Run both on a test app. Flutter OTA System's local stack starts with o
 | Platforms tested | Linux (development) and Android 13 / arm64-v8a phones (the bytecode architecture on one phone) |
 | iOS | **Not implemented** |
 | macOS / Windows | Not supported as development machines; not tested as Docker hosts |
-| Code patches | Android arm64, Dart code in feature packages only, Flutter 3.47.9 with the custom engine; the exact store build is required; interpreted code is slower for CPU-heavy work |
+| Code patches | Android arm64, Dart code in feature packages only, Flutter 3.47.9 or 3.50.0 with the custom engine; the exact store build is required; interpreted code is slower for CPU-heavy work |
 | Distribution | `v0.3.0-alpha`: packages `flutter_ota_system` and `flutter_ota_cli` on pub.dev; the custom toolchains (Flutter 3.47.9 and 3.50.0) are downloaded by the CLI from the GitHub release (Linux x64 hosts only) |
 | Security | No independent audit; one shared admin API key; no RBAC, SSO or audit log; open device registration; no rate limiting |
 | Signing | Developer-owned keys with rotation and revocation (bytecode); server key for the original alpha; no KMS/HSM |

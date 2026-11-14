@@ -1,7 +1,7 @@
 # Bytecode verifier
 
-Status: experimental alpha (part of the Flutter OTA custom engine). Pinned Dart VM only (Dart 3.13.7, revision `416e33b0`, bytecode
-format 3). Android only. Not production-ready.
+Status: experimental alpha (part of the Flutter OTA custom engine). Pinned Dart VMs only: Dart 3.13.7
+(revision `416e33b0`, bytecode format 3) and Dart 3.14.0 (revision `fa8c1270`, ported in v0.3.0-alpha). Android only. Not production-ready.
 
 Why it exists: the pinned Dart VM never verifies the instructions of a dynamic module. During
 security testing, two validly signed modules with one changed byte each (B25: a reserved opcode;
@@ -64,18 +64,10 @@ checks in `interpreter.cc` to the instructions that index memory (`LoadFieldTOS`
 | Signed FFI module (guard bypassed) refused by the VM verifier | Android 13 arm64 phone, release build | **passed**: `opcode FfiCall is not allowed in a dynamic module` |
 | Whole corpus (67 signed files, verify-only): main process alive | Android 13 arm64 phone, release build | **passed**: same main process (same pid) after all 67 files; details below |
 
-Device corpus results (2026-11-12, verify-only):
-
-- 53 malformed B-files: 49 refused. 9 were clean rejections. 40 aborted the separate verifier
-  process: these are header- or section-level corruptions where the reader aborts before function
-  verification starts. The abort stayed in the separate process and the app stayed alive.
-- 4 malformed files were accepted but are harmless: B04 (last byte cut off), B17 (unknown host
-  class), B32 (garbage appended) and B33 (module duplicated). They load and behave correctly (the
-  smoke test prints its normal output). Phase 3 had 6 accepted files; B25 and B27 are now refused.
-- 9 signature/compatibility negatives were refused before any load; the 2 valid controls were
-  accepted.
-- So the verifier fixes the instruction-level cases (B25, B27, FFI). Header- and section-level
-  corruptions still abort the reader; this is contained by the separate process, not fixed.
+On the device corpus (2026-11-12), instruction-level faults (B25, B27, FFI) are rejected cleanly.
+Header- and section-level corruptions abort the separate verifier process (contained, not fixed),
+and the app stays alive. Four malformed files are accepted but harmless (they load and behave
+correctly).
 
 Run the Linux check:
 
@@ -92,6 +84,6 @@ dart --packages=$DART_SRC/.dart_tool/package_config.json bin/bc_verify.dart fixt
 - Not a type checker: residual risk of type confusion into VM runtime entries (for example
   instantiating a type with a wrong argument). Mitigated by the signature, the separate verifier process and
   the runtime guards, not eliminated.
-- Valid only for the pinned VM and bytecode format 3. A toolchain change needs a review of the
+- Valid only for the pinned VMs. A toolchain change needs a review of the
   opcode table and stack-effect table; the manifest's toolchain id makes such a change visible.
 - The verifier adds load time; it was not optimised. On the test phone, verifying a small demo patch in the separate process took 295 ms (in the background).

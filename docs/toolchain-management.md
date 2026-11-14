@@ -4,8 +4,8 @@
 # Toolchain management
 
 Status: **experimental alpha** (`v0.3.0-alpha`). Linux x64 developer machines only, Android
-arm64 apps, one toolchain: `flutter-3.47.9-ota.1` (Flutter 3.47.9 / Dart 3.13.7 with our custom
-engine). The toolchain is published as assets of the GitHub release, and `flutter_ota` downloads
+arm64 apps, two toolchains: `flutter-3.47.9-ota.1` (Flutter 3.47.9 / Dart 3.13.7) and
+`flutter-3.50.0-ota.1` (Flutter 3.50.0 / Dart 3.14.0), with our custom engine. The toolchain is published as assets of the GitHub release, and `flutter_ota` downloads
 and verifies it for you.
 
 This page explains:
@@ -15,7 +15,9 @@ This page explains:
 3. the index, lock file and cache formats;
 4. how an install is protected;
 5. how the owner builds and signs the release files;
-6. how a developer can build the toolchain themselves.
+6. how a developer can build the toolchain themselves;
+7. Flutter upgrades;
+8. known limits.
 
 Commands are listed in the [CLI reference](cli-reference.md#toolchain).
 

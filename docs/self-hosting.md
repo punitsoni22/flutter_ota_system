@@ -15,7 +15,7 @@ It runs the API (FastAPI), PostgreSQL and a file server for patches with **one c
 > [platform notes](#platform-notes-macos-and-windows-not-tested) below. A production-style server
 > setup exists but is **not yet verified end to end**
 > ([operations.md](operations.md#single-server-deployment-draft)). Planned installation
-> improvements: [roadmap/installation-improvements.md](roadmap/installation-improvements.md).
+> improvements: [roadmap](roadmap/README.md#planned--not-implemented).
 
 > [!WARNING]
 > This stack is for **local development and evaluation only**. Its signing key is a local
@@ -51,7 +51,7 @@ automatically when the API starts.
 | Docker Engine (tested on Linux) or Docker Desktop (not tested) | the server | 24 or newer, with **Compose v2.20+** | `docker compose version` |
 | Free ports `8000` and `8080` on 127.0.0.1 | the server | — | change them in `.env` if taken ([below](#ports-are-taken-or-a-second-stack)) |
 | Python 3.10+ with `venv` | the `ota` CLI only | 3.10 or newer | `python3 --version` |
-| Flutter OTA toolchain | connecting an app (not the server) | Flutter 3.47.9 with the custom engine, installed by `flutter_ota` ([quick start](quick-start.md)) | `flutter_ota toolchain doctor` |
+| Flutter OTA toolchain | connecting an app (not the server) | Flutter 3.47.9 or 3.50.0 with the custom engine, installed by `flutter_ota` ([quick start](quick-start.md)) | `flutter_ota toolchain doctor` |
 | Android emulator or phone + `adb` | the example app only (Android is the only tested app platform) | — | `adb devices` |
 
 Only Docker is needed to run the server. Nothing else is installed on your computer: the server

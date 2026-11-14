@@ -9,11 +9,11 @@ This guide takes a Flutter app from zero to a working OTA patch with the bytecod
 
 You need:
 - Linux x64 with Git, Docker (for the server) and about 10 GB of free disk;
-- **Flutter 3.47.9 or 3.50.0** for `flutter pub` and your IDE: the same version as the toolchain your project pins (step 4). After the first release your project depends on the toolchain's `dynamic_modules` package, which needs Dart 3.13, so an older Flutter can no longer run `flutter pub get` in it. Ways to get 3.47.9 next to your usual Flutter:
-  - [fvm](https://fvm.app): `fvm use 3.47.9` in the project;
-  - or after step 4, use the toolchain's own copy: `~/.cache/flutter_ota/toolchains/flutter-3.47.9-ota.1/flutter/bin/flutter` (point your IDE's Flutter SDK path at `…/flutter`).
+- **Flutter 3.47.9 or 3.50.0** for `flutter pub` and your IDE: the same version as the toolchain your project pins (step 4). After the first release your project depends on the toolchain's `dynamic_modules` package, which needs the Dart version of your toolchain (3.13 or 3.14), so an older Flutter can no longer run `flutter pub get` in it. Ways to get that version next to your usual Flutter:
+  - [fvm](https://fvm.app): `fvm use 3.47.9` (or `3.50.0`) in the project;
+  - or after step 4, use the toolchain's own copy: `~/.cache/flutter_ota/toolchains/<toolchain id>/flutter/bin/flutter` (point your IDE's Flutter SDK path at `…/flutter`).
 
-  Only 3.47.9 was tested. The OTA builds always use the toolchain's own Flutter;
+  No other versions were tested. The OTA builds always use the toolchain's own Flutter;
 - an Android arm64 phone for testing;
 - your app's feature code in **feature packages** (see step 6).
 
@@ -88,7 +88,8 @@ flutter_ota toolchain doctor
 
 What `install` does:
 - reads the toolchain index of this CLI version (a GitHub release asset), and checks its ES256 signature against the key built into the CLI;
-- downloads the official Flutter 3.47.9 SDK archive from Google (about 1.6 GB) and our overlay (about 54 MB) from the GitHub release, and checks the size and SHA-256 of both;
+- in a project without `flutter_ota.lock`, picks the newest toolchain the project can build with ([toolchain management](toolchain-management.md#21-where-it-comes-from));
+- downloads the official Flutter SDK archive from Google (3.47.9 or 3.50.0; about 1.5 GB) and our overlay (about 54 MB) from the GitHub release, and checks the size and SHA-256 of both;
 - resumes an interrupted download when you run it again.
 
 The first `release android` also downloads about 2 GB of Android build tools into the toolchain cache. To use your own mirror instead, see [toolchain management](toolchain-management.md).

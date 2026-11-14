@@ -8,7 +8,7 @@ seriously. Flutter OTA System is **alpha software** and has **not been independe
 
 | Version | Supported |
 |---|---|
-| `0.1.x-alpha` and the unreleased bytecode architecture on `main` | Yes, best effort |
+| `flutter_ota_cli` 0.3.x-alpha, `flutter_ota_system` 0.2.x-alpha, and `main` | Yes, best effort |
 | anything older | No |
 
 ## Reporting a vulnerability

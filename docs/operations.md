@@ -13,8 +13,8 @@ Running a Flutter OTA System server: deployment, monitoring, logs, backups and r
 > [!IMPORTANT]
 > **Status: draft, not yet verified end to end.** Docker is Flutter OTA System's official installation
 > method, but this production-style setup has **not** been tested from a clean server for
-> v0.1.0-alpha.1. Test it on a throwaway server first. Planned work:
-> [roadmap/installation-improvements.md](roadmap/installation-improvements.md).
+> any release so far (up to v0.3.0-alpha). Test it on a throwaway server first. Planned work:
+> [roadmap](roadmap/README.md#planned--not-implemented).
 
 Linux is the only host OS the maintainers have tested Flutter OTA System on (with the local stack); other
 host operating systems are not tested.
@@ -86,7 +86,7 @@ ota app list
 | Path | Who can call it |
 |---|---|
 | `/v1/devices/*`, `/v1/updates/check`, `/v1/events/*` | Apps (registration is open; the rest needs a device token) |
-| `/cdn/patches/*` | Anyone: signed diffs |
+| `/cdn/patches/*` | Anyone: signed patch files |
 | `/v1/admin/*`, `/admin` | Admin API key (restrict at the network level too) |
 | Store builds | Never public: admin API only |
 | `/docs`, `/openapi.json` | Off in production |
@@ -129,7 +129,7 @@ logs are your best record of admin actions, because there is no audit log.
 there is no per-device history. Events are best effort: the client keeps unsent events and retries
 on the next call.
 
-**Device logs** (Android, for debugging): `adb logcat | grep -E "OtaBoot|OTA:"`. `OtaBoot` logs
+**Device logs** (Android, for debugging): `adb logcat | grep -E "flutter_ota|OtaBoot|OTA:"`. `OtaBoot` logs
 lines such as `Running patch <id>`, `Patch <id> did not confirm its last start: skipping it`, and
 `OTA boot failed, running the store code`. Lines starting with `OTA:` come from the integration
 helper in [flutter-integration.md](flutter-integration.md).

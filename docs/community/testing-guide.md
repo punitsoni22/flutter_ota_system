@@ -27,7 +27,7 @@ Run the areas you can, in order. Each row links to the exact commands.
 |---|---|---|---|
 | 1 | Fresh server installation | `./flutter-ota-system.sh setup` ([self-hosting §2](../self-hosting.md#2-get-the-code-and-run-setup)) | Setup ends with the URLs; no errors |
 | 2 | Server check | `./flutter-ota-system.sh demo` ([self-hosting §4](../self-hosting.md#4-verify-the-server-seed-publish-a-test-patch-check)) | Last line: `RESULT: all checks passed …` |
-| 3 | Toolchain | Build it ([toolchain management §6](../toolchain-management.md#6-building-the-toolchain-yourself)), then `flutter_ota toolchain install` and `toolchain doctor` | Every doctor check `[ok]` |
+| 3 | Toolchain | `flutter_ota toolchain install` (downloads and verifies it), then `flutter_ota toolchain doctor` | Every doctor check `[ok]` |
 | 4 | Project setup | `flutter_ota init`, `keys init`, `doctor` in your app or the [demo app](../../packages/ota_client/example/README.md) ([quick start](../quick-start.md)) | Every doctor check `[ok]` |
 | 5 | Store release | `flutter_ota release android --kind apk`, install the APK on an arm64 phone | The app starts; the log shows `NO_PATCH the store code runs` |
 | 6 | Feature patch | Change a feature package (try a freezed model), `flutter_ota patch android --channel staging`, promote | The command ends with "uploaded"; the patch shows in `flutter_ota status` |
@@ -48,7 +48,8 @@ for one specific problem. Please include:
 - **Environment:** host OS and version, `docker version`, `docker compose version`;
 - **Flutter:** `flutter --version`;
 - **Device:** phone model or emulator, Android version, ABI (`adb shell getprop ro.product.cpu.abi`);
-- **Flutter OTA System version:** `v0.1.0-alpha.1` or the commit (`git rev-parse --short HEAD`);
+- **Flutter OTA System version:** `flutter_ota --version` (CLI), the `flutter_ota_system` version from
+  `pubspec.lock`, or the commit (`git rev-parse --short HEAD`);
 - **Which rows you tested** and the result of each;
 - **Installation problems:** the command and its full output;
 - **Patch failures:** the result message from the app and the CLI output;
