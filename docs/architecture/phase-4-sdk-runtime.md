@@ -183,21 +183,10 @@ Changes compared with the prototype:
   emulator address are refused. Redirects are checked hop by hop and never downgraded from
   https. `OtaClient` keeps its https-only rule. Patches stay protected by their signatures.
 
-## 8. Testing record (Linux, targeted)
+## 8. Testing
 
-| Test | Result |
-| --- | --- |
-| Existing package tests (`ota_client_test`, `security_test`) | 84/84 before, 84/84 after |
-| Ported `patch_security` tests (`test/security/`) | 69/69 |
-| New runtime tests (`test/runtime/`: config, state machine, facade, transport) | 84/84 |
-| Whole package | 237/237 |
-| `flutter analyze` (pinned Flutter 3.47.9) | no issues |
-| Java type check of the plugin (`javac` against `android.jar` + Flutter embedding jar) | compiles; no Gradle/APK build |
-
-Device test (one Android 13 arm64 phone, demo app): download, verification, separate-process
-verification (295 ms), activation at the next start, patch load (3.8 ms), confirmation, and server
-rollback back to the store code all worked. Not yet tested on a device with the production SDK:
-the crash-recovery paths (they were tested on a device with the Phase 3C prototype runtime).
+Tested on Linux (unit tests) and end to end on one Android 13 arm64 phone; see
+[limitations](../limitations.md#not-tested-yet).
 
 ## 9. Open issues
 
@@ -205,7 +194,7 @@ the crash-recovery paths (they were tested on a device with the Phase 3C prototy
 - Optional config fields read by the SDK but not yet set by the CLI: `required_approvals`,
   `host_owned_packages`.
 - The SDK's `pubspec.yaml` still allows Flutter `>=3.44.9` for the classic API. The bytecode
-  runtime itself needs the pinned toolchain (Flutter 3.47.9). The code was not compiled with
+  runtime itself needs a pinned toolchain (Flutter 3.47.9 or 3.50.0). The code was not compiled with
   3.44.9 here.
 - `Es256Verifier` (ported unchanged) does not check that a public key lies on the curve. Root keys
   come from the build config, so this is not exploitable by a patch, but the config parser could

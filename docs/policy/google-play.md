@@ -44,6 +44,12 @@ In short: the app **downloads data that it turns into a native `.so` file and th
 outside Google Play's update mechanism. The other runtime, `MockPatchRuntime` (`mock-v1`),
 downloads an inert data file that the app reads; no code is downloaded or executed.
 
+**Bytecode architecture (`dbc-v1`).** It never downloads a `.so` file or replaces `libapp.so`.
+Patches are Dart bytecode run by the Dart VM interpreter in the custom engine of the store build.
+Whether Google Play's interpreter provisions cover this has **not** been reviewed by Google or a
+lawyer; no compatibility is claimed. The `public_store` policy approval is not required for
+`dbc-v1` yet ([backend protocol §7](../architecture/phase-4-backend-protocol.md#7-known-limits)).
+
 ## Relevant Google Play provisions
 
 From [Device and Network Abuse](https://support.google.com/googleplay/android-developer/answer/16559646)

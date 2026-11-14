@@ -13,7 +13,7 @@ Flutter OTA System `v0.3.0-alpha` is an **experimental alpha**:
 | Android | **Experimental**. The bytecode architecture was tested end to end on **one Android 13 arm64 phone**, plus compatibility runs on Android 14, 16 and 17 (16 KB memory pages) **emulators**. Those were x86_64 emulators running arm64 code through translation: not proof for real arm64 devices or other manufacturers |
 | ABI | **arm64-v8a** only |
 | Developer machine (CLI, toolchain, builds) | **Linux x64** only. The toolchain's host binaries exist only for Linux x64 (no Linux arm64, macOS or Windows hosts) |
-| Flutter / Dart | **3.47.9 / 3.13.7**, with the Flutter OTA custom engine (engine `89c39edf`, Dart `416e33b`). No other version |
+| Flutter / Dart | **3.47.9 / 3.13.7** (engine `89c39edf`, Dart `416e33b`) and **3.50.0 / 3.14.0** (engine `371f7720`, Dart `fa8c127`), with the Flutter OTA custom engine. No other version |
 | Stock Flutter engine | Cannot load bytecode patches |
 | iOS | Not implemented |
 | macOS, Windows, Linux, web **apps** | Not implemented |
@@ -76,7 +76,6 @@ These are planned for the final testing phase:
 - crash-recovery paths with the production SDK on a device (they were tested on a device with the earlier prototype runtime);
 - OS eviction and phone reboots during activation;
 - AAB delivery through Google Play internal testing (to test compatibility, not to claim approval);
-- toolchain upgrades to a second Flutter version;
 - security fuzzing of uploads and of the device verifier;
 - load and scale testing of the backend.
 

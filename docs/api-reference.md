@@ -1,6 +1,6 @@
 # API reference
 
-All endpoints of the Flutter OTA System server v0.1.0-alpha.1, taken from
+All endpoints of the Flutter OTA System server (v0.3.0-alpha), taken from
 [`backend/app/routers/`](../backend/app/routers/), [`main.py`](../backend/app/main.py) and the
 schemas in [`schemas.py`](../backend/app/schemas.py).
 
@@ -83,7 +83,7 @@ curl -X POST http://localhost:8000/v1/devices/register \
 `GET /v1/updates/check` · device token
 
 Returns patch **metadata** only; the bytes are downloaded from `download_url`. The decision is
-described in [architecture.md](releases-and-patches.md#patch-life-cycle).
+described in [releases and patches](releases-and-patches.md#patch-life-cycle).
 
 | Query parameter | Required | Rules / default |
 |---|---|---|
@@ -258,7 +258,7 @@ curl -X POST -H "X-API-Key: $OTA_API_KEY" -F name=qa http://localhost:8000/v1/ad
 
 | Method and path | Body | Success | Errors |
 |---|---|---|---|
-| `POST /v1/admin/releases/{release_id}/patches` | JSON `{artifact_format? (default "mock-v1"), note? (≤ 2000)}`. Formats: `mock-v1`, `aot-bidiff-android-v1`, `evc-v1` | `201 PatchOut` (`draft`, next number) | `404`, `422 AOT patches are Android-only`, `409 Could not allocate a patch number, retry` |
+| `POST /v1/admin/releases/{release_id}/patches` | JSON `{artifact_format? (default "mock-v1"), note? (≤ 2000)}`. Formats: `mock-v1`, `aot-bidiff-android-v1`, `evc-v1`, `dbc-v1` (Android, [see below](#developer-signed-patches-dbc-v1-and-trust)) | `201 PatchOut` (`draft`, next number) | `404`, `422 AOT patches are Android-only`, `409 Could not allocate a patch number, retry` |
 | `GET /v1/admin/releases/{release_id}/patches` | — | `200 [PatchOut]` ordered by number | `404` |
 | `GET /v1/admin/patches/{patch_id}` | — | `200 PatchOut` | `404 Patch not found` |
 | `POST /v1/admin/patches/{patch_id}/artifacts` | **form** `arch`, file `file`, `result_sha256?` (64 lowercase hex). The server stores the file and **signs** the artifact | `201 PatchOut` | `404`, `409 Artifacts can only be added to a draft patch`, `409 Patch already has a <arch> artifact`, `422` (AOT: base artifact missing, or `result_sha256` missing/invalid) |

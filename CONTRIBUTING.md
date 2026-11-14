@@ -43,8 +43,8 @@ careful fixes are the most useful contributions right now.
 | Git, Bash, curl | recent | everything |
 | Python | 3.13 (what CI and the image use) | backend, CLI |
 | Docker + Compose v2 | Docker 24+ | local stack, end-to-end test |
-| Flutter | **3.47.9** (Dart 3.13.7) for the example app and the bytecode runtime; the classic `OtaClient` API still allows ≥ 3.44.9 | `ota_client`, its example app, `flutter_ota_cli` |
-| Flutter OTA toolchain | built locally ([toolchain management](docs/toolchain-management.md)) | release and patch builds, device tests of the bytecode architecture (Linux x64 only) |
+| Flutter | **3.47.9** (Dart 3.13.7) for the example app and the bytecode runtime, or 3.50.0 (Dart 3.14.0); the classic `OtaClient` API still allows ≥ 3.44.9 | `ota_client`, its example app, `flutter_ota_cli` |
+| Flutter OTA toolchain | downloaded by `flutter_ota toolchain install`, or built locally ([toolchain management](docs/toolchain-management.md)) | release and patch builds, device tests of the bytecode architecture (Linux x64 only) |
 | shellcheck | any | shell scripts |
 
 ```bash

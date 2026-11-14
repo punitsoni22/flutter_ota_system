@@ -7,7 +7,7 @@
 
 There are two patch paths, with different trust models:
 
-| | Bytecode architecture (`dbc-v1`, unreleased, experimental) | Original alpha (`v0.1.0-alpha.1`) |
+| | Bytecode architecture (`dbc-v1`, experimental, since v0.2.0-alpha) | Original alpha (`v0.1.0-alpha.1`) |
 | --- | --- | --- |
 | Who signs | **The developer**, on their own machine | The **server**, with one server-held key |
 | Server holds a private signing key | **No** | Yes |

@@ -4,10 +4,6 @@ For maintainers of `punitsoni22/flutter_ota_system`. These settings live in GitH
 repository, so they must be changed by an admin in the web interface. GitHub occasionally renames
 menus. Where a name differs, the older name is given in brackets.
 
-The internal pre-publication audit (2026-11-11) found private vulnerability reporting **off** and
-`main` **not protected**. Since then, `main` has been protected by a ruleset that requires a pull
-request. Other settings could not be checked without admin access.
-
 Do not treat a setting as enabled until you have checked it with the **Verify** step.
 
 All security settings below are on one page: **Settings → Advanced Security** (older interface:
@@ -121,11 +117,3 @@ bypass role. **Settings → Branches** shows `main` as protected.
 - **Settings → General → Features:** keep **Issues** on. Enable **Discussions** only if you will
   answer them.
 
-## 8. Before creating the release
-
-1. Push the release-preparation commit, then wait for CI to be green.
-2. Create the tag `v0.1.0-alpha.1` on that commit.
-3. Create the GitHub release from the tag:
-   - tick **Set as a pre-release**;
-   - use [v0.1.0-alpha.1.md](v0.1.0-alpha.1.md) as the text, with links changed to absolute
-     GitHub URLs.

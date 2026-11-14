@@ -3,7 +3,7 @@
 How an app uses the `flutter_ota_system` package. The setup steps are in the [quick start](quick-start.md).
 
 **Status: experimental alpha (`v0.3.0-alpha`).**
-- Supports Android arm64, with the Flutter OTA toolchain (Flutter 3.47.9 plus our custom engine).
+- Supports Android arm64, with the Flutter OTA toolchain (Flutter 3.47.9 or 3.50.0 plus our custom engine).
 - The bytecode runtime was tested end to end on one Android 13 arm64 phone.
 - A normal Flutter SDK cannot load patches.
 
@@ -15,7 +15,7 @@ In your Flutter project folder:
 flutter pub add flutter_ota_system
 ```
 
-Use Flutter 3.47.9 (Dart 3.13) for `flutter pub` and your IDE: after the first `flutter_ota release android`, the project depends on the toolchain's `dynamic_modules` package, which needs Dart 3.13. (The original `OtaClient` runtime alone works on Flutter 3.44.9+.) Your app is **built** by the `flutter_ota` CLI with its own Flutter 3.47.9 toolchain (`flutter_ota release android`), never by your global Flutter. Install the CLI with `dart pub global activate flutter_ota_cli` (see the [quick start](quick-start.md#1-install)).
+Use the Flutter version your project's toolchain pins (3.47.9 / Dart 3.13 or 3.50.0 / Dart 3.14) for `flutter pub` and your IDE: after the first `flutter_ota release android`, the project depends on the toolchain's `dynamic_modules` package, which needs that Dart version. (The original `OtaClient` runtime alone works on Flutter 3.44.9+.) Your app is **built** by the `flutter_ota` CLI with its own toolchain (`flutter_ota release android`), never by your global Flutter. Install the CLI with `dart pub global activate flutter_ota_cli` (see the [quick start](quick-start.md#1-install)).
 
 ## The code you write once
 

@@ -1,6 +1,6 @@
 # ADR-0002: Patch signature scheme and canonical encoding
 
-- **Status:** Proposed
+- **Status:** Accepted for `mock-v1` and `aot-bidiff-android-v1` (server-signed). `dbc-v1` patches use developer-signed manifests instead ([backend protocol §2-3](../architecture/phase-4-backend-protocol.md#2-the-patch-file))
 - **Date:** 2026-09-30
 
 ## Context

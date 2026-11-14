@@ -19,11 +19,12 @@
 
 ## Why the Android implementation cannot be assumed to work on iOS
 
-The Android code-patch runtime depends on Android-specific mechanisms: an Android content
+The original alpha's Android code-patch runtime depends on Android-specific mechanisms: an Android content
 provider that runs before the app, Android's `FlutterLoader`, and loading a rebuilt `libapp.so`
 from the app's private files directory ([google-play.md](google-play.md#what-the-android-code-patch-runtime-actually-does)).
 iOS apps are built differently (the compiled Dart code is part of the signed app bundle), and the
-plugin has no iOS code at all. Nothing in the Android implementation carries over.
+plugin has no iOS code at all. Nothing in the Android implementation carries over. The bytecode
+runtime depends on a custom Flutter engine built for Android arm64 only; no iOS engine exists.
 
 ## Guideline 2.5.2
 

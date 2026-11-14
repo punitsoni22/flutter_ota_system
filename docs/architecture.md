@@ -5,12 +5,12 @@ Flutter OTA System has three parts:
 - your **self-hosted backend** verifies, stores and delivers;
 - the **user's phone** verifies again and runs the patch.
 
-This page describes the **bytecode architecture** (experimental, unreleased). The [original alpha](#original-alpha-architecture) is summarised at the end.
+This page describes the **bytecode architecture** (experimental; released in v0.2.0-alpha, Flutter 3.50 added in v0.3.0-alpha). The [original alpha](#original-alpha-architecture) is summarised at the end.
 
 ```text
 ┌──────────────── DEVELOPER MACHINE (Linux x64) ────────────────┐
 │ flutter_ota CLI                                               │
-│  ├─ toolchain manager: signed index → Flutter 3.47.9 + overlay│
+│  ├─ toolchain manager: signed index → Flutter SDK + overlay  │
 │  │   (custom engine, gen_snapshot, dart2bytecode, guard,       │
 │  │    bytecode verifier, dynamic_modules)                      │
 │  ├─ release android: APK/AAB with the custom engine            │
@@ -42,7 +42,7 @@ This page describes the **bytecode architecture** (experimental, unreleased). Th
 All compilation and signing happen here, or in your own CI. Nothing is compiled on a server, and no source code is uploaded.
 
 **Toolchain**
-- A stock Flutter 3.47.9 SDK, plus our **overlay**:
+- A stock Flutter SDK (3.47.9 or 3.50.0, one toolchain per project), plus our **overlay**:
   - an engine with the Dart bytecode interpreter and our bytecode verifier;
   - `gen_snapshot`, the compiler tools and the `dynamic_modules` loader package.
 - The CLI downloads it from a signed index, verifies it, caches it and pins it in `flutter_ota.lock`.
@@ -85,13 +85,7 @@ See [feature patching](feature-patching.md).
 | [`auth.py`](../backend/app/auth.py) | Admin API key, device JWTs |
 | [`models.py`](../backend/app/models.py), [`migrations/`](../backend/migrations/versions/) | Database tables and Alembic migrations |
 
-**What `dbc.py` checks on upload:**
-- the patch is bound to the right app, release and baseline `libapp.so` hash;
-- the certificate chain leads to a registered, non-revoked root;
-- the signature and any approvals verify;
-- the module hash and size match the manifest;
-- the patch id is unique and the sequence number is higher than before;
-- the patch has not expired.
+**What `dbc.py` checks on upload:** see [security: who checks it](security.md#who-checks-it).
 
 The server stores the signed file **unchanged**. It **never signs** `dbc-v1` patches and never needs the developer's private keys.
 
