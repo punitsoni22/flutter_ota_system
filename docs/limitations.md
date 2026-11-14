@@ -27,7 +27,10 @@ The original alpha (`v0.1.0-alpha.1`, server-signed `libapp.so` patches) runs on
 
 **Adopting it**
 - **Custom engine.** Your app must be built with the Flutter OTA toolchain. Adopting it, or moving to a new toolchain, needs a **new store release**.
-- **One Flutter version.** Only Flutter 3.47.9 is supported today. Each new Flutter version needs an engine and toolchain build by the project owner.
+- **Flutter versions.**
+  - Flutter 3.47.9 is published (v0.2.0-alpha).
+  - Flutter 3.50.0 is supported from the next release. It was tested on an x86_64 emulator with arm64 translation; it is not yet tested on a physical phone.
+  - Each Flutter version needs its own engine and toolchain build by the project owner. A store release is always patched with the toolchain it was built with. Patch an older release from that release's code (its `pubspec.lock`); see [toolchain management](toolchain-management.md#7-flutter-upgrades).
 
 **What can be patched**
 - **Feature packages only.** Only code in local feature packages can be patched. Anything else needs a new store release:

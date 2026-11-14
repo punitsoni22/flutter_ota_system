@@ -1,3 +1,13 @@
+## Unreleased
+
+* Several Flutter toolchains side by side (Flutter 3.47.9 and 3.50.0):
+  * `patch android` uses the toolchain of the store release;
+  * `toolchain install` / `upgrade` pick the newest toolchain the project can build with;
+  * `doctor` checks the Android build tool minimums of the pinned Flutter;
+  * `toolchain clean --unused` keeps toolchains that local releases still need.
+* Raising Android build tool versions no longer blocks patches for releases made from this version
+  on.
+
 ## 0.2.0-alpha.2
 
 Text and display fixes found in the public v0.2.0-alpha validation (no behaviour change):
