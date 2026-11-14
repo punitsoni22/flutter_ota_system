@@ -17,7 +17,7 @@
   <a href="https://github.com/punitsoni22/flutter_ota_system/actions/workflows/ci.yml"><img src="https://github.com/punitsoni22/flutter_ota_system/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI"></a>
   <br>
   <img src="https://img.shields.io/badge/Android-arm64-3DDC84?logo=android&logoColor=white" alt="Android arm64">
-  <img src="https://img.shields.io/badge/Flutter-3.47.9%20(custom%20engine)-02569B?logo=flutter&logoColor=white" alt="Flutter 3.47.9 with a custom engine">
+  <img src="https://img.shields.io/badge/Flutter-3.47.9%20%7C%203.50.0%20(custom%20engine)-02569B?logo=flutter&logoColor=white" alt="Flutter 3.47.9 and 3.50.0 with a custom engine">
   <img src="https://img.shields.io/badge/backend-FastAPI%20%C2%B7%20PostgreSQL-3776AB?logo=python&logoColor=white" alt="FastAPI and PostgreSQL">
 </p>
 
@@ -48,7 +48,7 @@ Flutter OTA System started with an Android approach that patched the compiled ap
 > - The bytecode architecture has been tested on Linux (development) and **one Android 13 arm64 phone**.
 > - It has not been independently security-audited, load-tested or validated in production.
 > - No app store has reviewed or approved it.
-> - Release `v0.2.0-alpha` is the first release of this architecture: Android **arm64** apps, **Flutter 3.47.9** with our custom engine, built on **Linux x64**.
+> - Release `v0.3.0-alpha`: Android **arm64** apps, **Flutter 3.47.9 or 3.50.0** with our custom engine, built on **Linux x64**. The CLI picks the toolchain that fits your project.
 >
 > Read [limitations](docs/limitations.md) and [security](docs/security.md) before you try it. Use at your own risk ([Apache-2.0](LICENSE), no warranty).
 
@@ -172,7 +172,7 @@ The full walkthrough is in [docs/quick-start.md](docs/quick-start.md).
 | --- | --- |
 | Android | Experimental (arm64 only) |
 | Developer machine | Linux x64 only |
-| Flutter / Dart | 3.47.9 / 3.13.7 with the Flutter OTA custom engine (downloaded by the CLI; your own Flutter is not changed). 3.50.0 / 3.14.0 from the next release |
+| Flutter / Dart | 3.47.9 / 3.13.7 and 3.50.0 / 3.14.0, with the Flutter OTA custom engine (downloaded by the CLI; your own Flutter is not changed) |
 | iOS, macOS, Windows, web apps | Not implemented |
 
 **Adopting the custom engine needs a new store release of your app.** Only code in **feature packages** can be patched. Patched code runs in an interpreter, so CPU-heavy code is slower, and the store binary is larger. Details: [limitations](docs/limitations.md).

@@ -222,7 +222,7 @@ Not sure? Run both on a test app. Flutter OTA System's local stack starts with o
 | iOS | **Not implemented** |
 | macOS / Windows | Not supported as development machines; not tested as Docker hosts |
 | Code patches | Android arm64, Dart code in feature packages only, Flutter 3.47.9 with the custom engine; the exact store build is required; interpreted code is slower for CPU-heavy work |
-| Distribution | `v0.2.0-alpha`: packages `flutter_ota_system` and `flutter_ota_cli` on pub.dev; the custom toolchain is downloaded by the CLI from the GitHub release (Linux x64 hosts only) |
+| Distribution | `v0.3.0-alpha`: packages `flutter_ota_system` and `flutter_ota_cli` on pub.dev; the custom toolchains (Flutter 3.47.9 and 3.50.0) are downloaded by the CLI from the GitHub release (Linux x64 hosts only) |
 | Security | No independent audit; one shared admin API key; no RBAC, SSO or audit log; open device registration; no rate limiting |
 | Signing | Developer-owned keys with rotation and revocation (bytecode); server key for the original alpha; no KMS/HSM |
 | Deployment | Local stack tested; single-server `deploy/` setup not verified |

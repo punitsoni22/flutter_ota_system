@@ -56,7 +56,7 @@ Nothing in Flutter OTA System is production-validated yet (see the warning in th
 - **Final deep-testing phase** for the bytecode architecture: more devices and Android versions,
   large apps (size, start-up, memory), crash recovery on device, store-release compatibility,
   security fuzzing ([limitations](../limitations.md#not-tested-yet)).
-- **Flutter 3.50 / Dart 3.14** as a second toolchain: implemented, for the next release.
+- **Flutter 3.50 / Dart 3.14** as a second toolchain: released in v0.3.0-alpha.
   - Engine ported; the security tests match 3.47.9.
   - Tested on one physical Android 13 phone (small test) and on an emulator (full tests).
   - See [toolchain management](../toolchain-management.md#7-flutter-upgrades).

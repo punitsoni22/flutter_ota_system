@@ -4,7 +4,7 @@ The Flutter SDK of **[Flutter OTA System](https://github.com/punitsoni22/flutter
 
 > [!WARNING]
 > **Experimental alpha. Not production-ready.**
-> - Android only. The bytecode runtime is **Android arm64 only**, with the Flutter OTA custom engine (Flutter 3.47.9), and was tested end to end on **one Android 13 arm64 phone**.
+> - Android only. The bytecode runtime is **Android arm64 only**, with the Flutter OTA custom engine (Flutter 3.47.9 or 3.50.0), and was tested end to end on **one Android 13 arm64 phone**.
 > - Apps are built on **Linux x64** machines with the `flutter_ota` CLI.
 > - iOS, macOS, Windows, Linux and web apps are not supported.
 > - No independent security audit, and no app-store approval of any kind.
@@ -89,7 +89,7 @@ The server signs these patches; the app trusts the public keys you compile in. `
 
 | | Bytecode runtime | Original alpha runtime |
 | --- | --- | --- |
-| Flutter | 3.47.9 (Dart 3.13) for `flutter pub` and your IDE; the app is built with Flutter 3.47.9 / Dart 3.13.7 and the Flutter OTA custom engine (downloaded by `flutter_ota`) | 3.44.9 or newer |
+| Flutter | 3.47.9 (Dart 3.13) or 3.50.0 (Dart 3.14) for `flutter pub` and your IDE, the same version your project's toolchain pins; the app is built with that version and the Flutter OTA custom engine (downloaded by `flutter_ota`) | 3.44.9 or newer |
 | Platform | Android arm64 | Android |
 | Developer machine | Linux x64 | Linux (the only tested host) |
 | Server | A self-hosted Flutter OTA System server | Same |

@@ -2,7 +2,7 @@
 
 How an app uses the `flutter_ota_system` package. The setup steps are in the [quick start](quick-start.md).
 
-**Status: experimental alpha (`v0.2.0-alpha`).**
+**Status: experimental alpha (`v0.3.0-alpha`).**
 - Supports Android arm64, with the Flutter OTA toolchain (Flutter 3.47.9 plus our custom engine).
 - The bytecode runtime was tested end to end on one Android 13 arm64 phone.
 - A normal Flutter SDK cannot load patches.

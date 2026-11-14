@@ -51,4 +51,4 @@ Flutter OTA System is an experimental, self-hosted OTA update platform for Flutt
 | [Decision records](adr/README.md) | Architecture decisions |
 | [Roadmap](roadmap/README.md) | What is planned |
 | [Prototypes](../prototypes/README.md) | The research prototypes behind the bytecode architecture |
-| [CHANGELOG](../CHANGELOG.md) · Release notes: [v0.2.0-alpha](release/v0.2.0-alpha.md) · [v0.1.0-alpha.1](release/v0.1.0-alpha.1.md) | What changed |
+| [CHANGELOG](../CHANGELOG.md) · Release notes: [v0.3.0-alpha](release/v0.3.0-alpha.md) · [v0.2.0-alpha](release/v0.2.0-alpha.md) · [v0.1.0-alpha.1](release/v0.1.0-alpha.1.md) | What changed |
