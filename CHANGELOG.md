@@ -10,8 +10,10 @@ All notable changes to this project are documented here. The format follows
 - **Flutter 3.50.0 / Dart 3.14.0 toolchain** (`flutter-3.50.0-ota.1`, engine build ID
   `c9ecf2e22a18d86fc619668200137cfed5ab48b7`) next to Flutter 3.47.9. The bytecode verifier patch
   was ported to Dart 3.14. The security tests (reference verifier fixtures including B25/B27, and the
-  12-file malformed-patch corpus on a device) give the same results as on 3.47.9. Tested on an
-  x86_64 emulator with arm64 translation; not yet on a physical phone.
+  12-file malformed-patch corpus on a device) give the same results as on 3.47.9. Tested on
+  one physical Android 13 arm64 phone (release APK, patch, rollback, malformed patches B25/B27 and
+  case 28) and on an x86_64 emulator with arm64 translation (full corpus, AAB, cross-version
+  patching).
 - One signed toolchain index can list several Flutter versions; `toolchain-manifest.json` (format 2)
   lists each with its engine build ID.
 - CLI:
