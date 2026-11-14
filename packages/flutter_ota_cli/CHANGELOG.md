@@ -1,4 +1,8 @@
-## Unreleased
+## 0.3.0-alpha
+
+Flutter 3.50.0 support next to Flutter 3.47.9. The default toolchain index is the
+`toolchain-index.json` asset of the `v0.3.0-alpha` GitHub release (both toolchains, signed with
+`flutter-ota-toolchain-1`).
 
 * Several Flutter toolchains side by side (Flutter 3.47.9 and 3.50.0):
   * `patch android` uses the toolchain of the store release;

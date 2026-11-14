@@ -18,4 +18,4 @@ const Map<String, String> embeddedToolchainKeys = {
 /// release pins its own index; override it with `flutter_ota config set toolchain-index-url <url>`
 /// or `FLUTTER_OTA_TOOLCHAIN_INDEX` (for example a local mirror).
 const String defaultToolchainIndexUrl =
-    'https://github.com/punitsoni22/flutter_ota_system/releases/download/v0.2.0-alpha/toolchain-index.json';
+    'https://github.com/punitsoni22/flutter_ota_system/releases/download/v0.3.0-alpha/toolchain-index.json';
