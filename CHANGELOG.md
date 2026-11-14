@@ -6,13 +6,21 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+Nothing yet.
+
+## [0.3.0-alpha] - 2026-11-14
+
+Flutter 3.50.0 support next to Flutter 3.47.9. CLI `flutter_ota_cli` 0.3.0-alpha; the SDK
+`flutter_ota_system` stays 0.2.0-alpha (no SDK change). Toolchain release assets: one index (serial 2,
+signed by `flutter-ota-toolchain-1`) with both toolchains; the 3.47.9 overlay is unchanged.
+
 ### Added
 - **Flutter 3.50.0 / Dart 3.14.0 toolchain** (`flutter-3.50.0-ota.1`, engine build ID
   `c9ecf2e22a18d86fc619668200137cfed5ab48b7`) next to Flutter 3.47.9. The bytecode verifier patch
   was ported to Dart 3.14. The security tests (reference verifier fixtures including B25/B27, and the
   12-file malformed-patch corpus on a device) give the same results as on 3.47.9. Tested on
-  one physical Android 13 arm64 phone (release APK, patch, rollback, malformed patches B25/B27 and
-  case 28) and on an x86_64 emulator with arm64 translation (full corpus, AAB, cross-version
+  one physical Android 13 arm64 phone (release APK and AAB via bundletool, patch, rollback,
+  malformed patches B25/B27 and case 28) and on an x86_64 emulator with arm64 translation (full corpus, AAB, cross-version
   patching).
 - One signed toolchain index can list several Flutter versions; `toolchain-manifest.json` (format 2)
   lists each with its engine build ID.
@@ -29,6 +37,9 @@ All notable changes to this project are documented here. The format follows
 - Raising Android build tool versions (and the new `flutter_ota.lock`) no longer blocks a patch for
   an older release. Other native changes still do. This applies to releases made from this version
   on.
+- `android/local.properties` (build-machine paths that Flutter rewrites on every build) no longer
+  blocks a patch, so a patch can be built on another machine or with a different toolchain cache
+  folder.
 
 ## CLI 0.2.0-alpha.1 - 2026-11-13
 
@@ -253,6 +264,7 @@ log, one shared admin key, no rate limiting, no Key Vault/KMS signer, no Azure B
 code patches (iOS not tested), the single-server `deploy/` setup is not verified, and there are no
 published load tests.
 
-[Unreleased]: https://github.com/punitsoni22/flutter_ota_system/compare/v0.2.0-alpha...HEAD
+[Unreleased]: https://github.com/punitsoni22/flutter_ota_system/compare/v0.3.0-alpha...HEAD
+[0.3.0-alpha]: https://github.com/punitsoni22/flutter_ota_system/compare/v0.2.0-alpha...v0.3.0-alpha
 [0.2.0-alpha]: https://github.com/punitsoni22/flutter_ota_system/compare/v0.1.0-alpha.1...v0.2.0-alpha
 [0.1.0-alpha.1]: https://github.com/punitsoni22/flutter_ota_system/releases/tag/v0.1.0-alpha.1

@@ -4,12 +4,12 @@ This guide takes a Flutter app from zero to a working OTA patch with the bytecod
 
 > [!WARNING]
 > **Experimental alpha.**
-> - Release `v0.2.0-alpha`: Android **arm64** apps, built on a **Linux x64** machine with Flutter **3.47.9** and our custom engine.
+> - Release `v0.3.0-alpha`: Android **arm64** apps, built on a **Linux x64** machine with Flutter **3.47.9 or 3.50.0** and our custom engine.
 > - Not production-ready, no independent security audit, no app-store approval of any kind.
 
 You need:
 - Linux x64 with Git, Docker (for the server) and about 10 GB of free disk;
-- **Flutter 3.47.9** (Dart 3.13) for `flutter pub` and your IDE; from the next release also 3.50.0, the same version as the toolchain your project pins. After the first release your project depends on the toolchain's `dynamic_modules` package, which needs Dart 3.13, so an older Flutter can no longer run `flutter pub get` in it. Ways to get 3.47.9 next to your usual Flutter:
+- **Flutter 3.47.9 or 3.50.0** for `flutter pub` and your IDE: the same version as the toolchain your project pins (step 4). After the first release your project depends on the toolchain's `dynamic_modules` package, which needs Dart 3.13, so an older Flutter can no longer run `flutter pub get` in it. Ways to get 3.47.9 next to your usual Flutter:
   - [fvm](https://fvm.app): `fvm use 3.47.9` in the project;
   - or after step 4, use the toolchain's own copy: `~/.cache/flutter_ota/toolchains/flutter-3.47.9-ota.1/flutter/bin/flutter` (point your IDE's Flutter SDK path at `…/flutter`).
 

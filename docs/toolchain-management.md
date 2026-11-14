@@ -3,7 +3,7 @@
 
 # Toolchain management
 
-Status: **experimental alpha** (`v0.2.0-alpha`). Linux x64 developer machines only, Android
+Status: **experimental alpha** (`v0.3.0-alpha`). Linux x64 developer machines only, Android
 arm64 apps, one toolchain: `flutter-3.47.9-ota.1` (Flutter 3.47.9 / Dart 3.13.7 with our custom
 engine). The toolchain is published as assets of the GitHub release, and `flutter_ota` downloads
 and verifies it for you.
@@ -66,26 +66,27 @@ You need no other setting: each CLI version has the URL of its own toolchain ind
 
 ### 2.1 Where it comes from
 
-For `v0.2.0-alpha`, the index is
-`https://github.com/punitsoni22/flutter_ota_system/releases/download/v0.2.0-alpha/toolchain-index.json`.
-The [GitHub release](https://github.com/punitsoni22/flutter_ota_system/releases/tag/v0.2.0-alpha)
-has these files:
+For `v0.3.0-alpha`, the index is
+`https://github.com/punitsoni22/flutter_ota_system/releases/download/v0.3.0-alpha/toolchain-index.json`
+(serial 2, signed by `flutter-ota-toolchain-1`). The
+[GitHub release](https://github.com/punitsoni22/flutter_ota_system/releases/tag/v0.3.0-alpha) has
+these files:
 
 | File | What it is |
 | --- | --- |
 | `toolchain-index.json` | The signed index (ES256). **The only file the CLI trusts**; every other download is checked against it |
-| `flutter-3.47.9-ota.1-linux-x64.tar.gz` | Our overlay: 53,806,362 bytes, SHA-256 `8887b78bb89e26ff8e4d752389f697fd322499a2c6feaf0eb929e9d81df8dd5d` |
-| `toolchain-manifest.json` | For people: versions, engine commit `89c39edfdfae2949f6806e4a315c0c08522238b7`, engine ELF build ID `cbce549523681a8db4ebd7a27a2876625867f64a`, sizes and SHA-256 |
+| `flutter-3.47.9-ota.1-linux-x64.tar.gz` | Overlay for Flutter 3.47.9: 53,806,362 bytes, SHA-256 `8887b78bb89e26ff8e4d752389f697fd322499a2c6feaf0eb929e9d81df8dd5d`, engine build ID `cbce549523681a8db4ebd7a27a2876625867f64a` (identical to v0.2.0-alpha) |
+| `flutter-3.50.0-ota.1-linux-x64.tar.gz` | Overlay for Flutter 3.50.0: 55,122,803 bytes, SHA-256 `7eae80a19277b75256e319f3aab5f5371a59fc1a67a6a4f5d66c3e33d4a154bc`, engine build ID `c9ecf2e22a18d86fc619668200137cfed5ab48b7` |
+| `toolchain-manifest.json` | For people (format 2): per toolchain the versions, engine commit, engine build ID, sizes and SHA-256 |
 | `SHA256SUMS` | SHA-256 of the release files, for a manual check with `sha256sum -c` |
 
-The stock **Flutter 3.47.9 SDK** archive (`tar.xz`, 1,582,752,184 bytes) is not a release file:
-the CLI downloads it from Google's official Flutter release URL listed in the signed index, and
-checks it against the size and SHA-256 recorded there.
+The stock **Flutter SDK** archives are not release files: the CLI downloads them from Google's
+official Flutter release URLs listed in the signed index (3.47.9: 1,582,752,184 bytes; 3.50.0:
+1,517,633,656 bytes) and checks each against the size and SHA-256 recorded there. CLI 0.2.0-alpha.x
+still uses the v0.2.0-alpha index (Flutter 3.47.9 only).
 
-**Several Flutter versions.** One index can list several toolchains: Flutter 3.47.9 now, and
-**Flutter 3.50.0 (`flutter-3.50.0-ota.1`, engine build ID
-`c9ecf2e22a18d86fc619668200137cfed5ab48b7`) from the next release**. The release then carries one
-overlay per toolchain; `toolchain-manifest.json` (format 2) lists every toolchain with its engine
+**Several Flutter versions.** One index lists several toolchains. The release carries one overlay
+per toolchain; `toolchain-manifest.json` (format 2) lists every toolchain with its engine
 build ID, and `SHA256SUMS` covers every overlay. Each toolchain is installed in its own folder of the
 cache, with its own Gradle home, so they never affect each other.
 
@@ -409,8 +410,8 @@ change to the Android build files also blocks a patch, so patch them from their 
 
 - Linux x64 hosts only. macOS and Windows would need separate engine host builds, which do not
   exist.
-- Toolchains: Flutter 3.47.9 / Dart 3.13.7 (published in v0.2.0-alpha), and Flutter 3.50.0 /
-  Dart 3.14.0 from the next release.
+- Toolchains: Flutter 3.47.9 / Dart 3.13.7 (since v0.2.0-alpha) and Flutter 3.50.0 / Dart 3.14.0
+  (since v0.3.0-alpha).
   - 3.50.0 was tested on an Android 14 x86_64 emulator with arm64 translation: release APK/AAB,
     patches, rollback, the malformed-patch corpus, and patching a 3.47.9 release after the project
     moved to 3.50.

@@ -1,6 +1,6 @@
 # Compatibility and limitations
 
-Flutter OTA System `v0.2.0-alpha` is an **experimental alpha**:
+Flutter OTA System `v0.3.0-alpha` is an **experimental alpha**:
 - It has been tested internally only: Linux x64 for development, one Android 13 arm64 phone end to end, and Android emulators.
 - It is **not production-ready**.
 - It has **not** been independently security-audited or load-tested.
@@ -18,8 +18,8 @@ Flutter OTA System `v0.2.0-alpha` is an **experimental alpha**:
 | iOS | Not implemented |
 | macOS, Windows, Linux, web **apps** | Not implemented |
 | Backend | Linux Docker stack tested. The single-server deploy (`deploy/`, Caddy) is a draft and not verified end to end |
-| Packages | `flutter_ota_system` (SDK) and `flutter_ota_cli` (CLI), both `0.2.0-alpha` on pub.dev. Use Flutter 3.47.9 (Dart 3.13) for `flutter pub` in an OTA project (the `dynamic_modules` loader needs Dart 3.13); apps are built with the toolchain |
-| Toolchain distribution | `flutter-3.47.9-ota.1`, downloaded and verified by the CLI from the `v0.2.0-alpha` GitHub release ([toolchain management](toolchain-management.md)) |
+| Packages | `flutter_ota_system` 0.2.0-alpha (SDK) and `flutter_ota_cli` 0.3.0-alpha (CLI) on pub.dev. Use the Flutter version of your pinned toolchain (3.47.9 or 3.50.0) for `flutter pub` in an OTA project; apps are built with the toolchain |
+| Toolchain distribution | `flutter-3.47.9-ota.1` and `flutter-3.50.0-ota.1`, downloaded and verified by the CLI from the `v0.3.0-alpha` GitHub release ([toolchain management](toolchain-management.md)) |
 
 The original alpha (`v0.1.0-alpha.1`, server-signed `libapp.so` patches) runs on stock Flutter 3.44.9+. It has its own limits, listed [below](#original-alpha-limitations).
 
@@ -28,8 +28,8 @@ The original alpha (`v0.1.0-alpha.1`, server-signed `libapp.so` patches) runs on
 **Adopting it**
 - **Custom engine.** Your app must be built with the Flutter OTA toolchain. Adopting it, or moving to a new toolchain, needs a **new store release**.
 - **Flutter versions.**
-  - Flutter 3.47.9 is published (v0.2.0-alpha).
-  - Flutter 3.50.0 is supported from the next release. It was tested on one physical Android 13 arm64 phone (release APK, a patch, rollback, and the B25/B27 and memory-fault malformed patches), and more widely on an x86_64 emulator with arm64 translation.
+  - Flutter 3.47.9 (since v0.2.0-alpha) and Flutter 3.50.0 (since v0.3.0-alpha).
+  - Flutter 3.50.0 was tested on one physical Android 13 arm64 phone (release APK and AAB installed with bundletool, a patch, rollback, and the B25/B27 and memory-fault malformed patches), and more widely on an x86_64 emulator with arm64 translation.
   - Each Flutter version needs its own engine and toolchain build by the project owner. A store release is always patched with the toolchain it was built with. Patch an older release from that release's code (its `pubspec.lock`); see [toolchain management](toolchain-management.md#7-flutter-upgrades).
 
 **What can be patched**

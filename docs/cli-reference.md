@@ -11,7 +11,7 @@ The local server stack is driven by `./flutter-ota-system.sh` (see [self-hosting
 
 ## `flutter_ota`
 
-Experimental alpha (`0.2.0-alpha`). It runs on **Linux x64** machines and builds **Android arm64** apps with its own Flutter 3.47.9 toolchain.
+Experimental alpha (`0.3.0-alpha`). It runs on **Linux x64** machines and builds **Android arm64** apps with its own Flutter toolchain (3.47.9 or 3.50.0, chosen per project).
 
 **Install it** from pub.dev. It needs Dart 3.8 or newer (the `dart` of any recent Flutter install), but has only been tested with Dart 3.13.7.
 

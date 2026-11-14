@@ -15,7 +15,8 @@ your signing keys, your control.
 Everything happens on **your** machine:
 
 - **Toolchain:** downloads, verifies and caches the Flutter OTA toolchain (Flutter 3.47.9 /
-  Dart 3.13.7 with our custom engine) automatically. Your global Flutter is never used or changed.
+  Dart 3.13.7 or Flutter 3.50.0 / Dart 3.14.0, with our custom engine) automatically, choosing the newest one
+  your project can build with. Your global Flutter is never used or changed.
 - **Keys:** creates your signing keys (`keys init`): an offline root key and a certified signer key.
 - **Store release:** builds the store AAB/APK with the custom engine and registers the release with
   your server (`release android`). You upload the AAB to the store yourself.
@@ -36,7 +37,7 @@ You also need your own Flutter OTA System server
 | Developer machine | Linux x64, about 10 GB of free disk, internet access for the first install |
 | Dart | 3.8 or newer to run the CLI (for example the `dart` of your Flutter install); tested with 3.13.7 |
 | App | A Flutter Android app, arm64-v8a only |
-| Toolchain | Flutter 3.47.9 with the Flutter OTA engine: **downloaded by the CLI** (about 1.6 GB, plus about 2 GB of Android build tools at the first release build) |
+| Toolchain | Flutter 3.47.9 or 3.50.0 with the Flutter OTA engine, chosen per project: **downloaded by the CLI** (about 1.6 GB, plus about 2 GB of Android build tools at the first release build) |
 
 ## Install
 
