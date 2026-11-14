@@ -124,6 +124,13 @@ void main() {
     expectRefused('native code changed');
   });
 
+  test('android/local.properties (machine paths) does not block a patch', () {
+    f.write('android/local.properties', 'flutter.sdk=/home/a/cache/toolchains/flutter-3.47.9-ota.1/flutter\n');
+    recordFeatureSnapshot(f.app, releaseDir);
+    f.write('android/local.properties', 'flutter.sdk=/home/b/other-cache/toolchains/flutter-3.47.9-ota.1/flutter\n');
+    expect(plan().refusals, isEmpty);
+  });
+
   test('a snapshot without per-file hashes (older releases) keeps the strict group rule', () {
     f.write('android/settings.gradle.kts', 'id("com.android.application") version "9.0.1"\n');
     recordFeatureSnapshot(f.app, releaseDir);
