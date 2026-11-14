@@ -29,7 +29,7 @@ The original alpha (`v0.1.0-alpha.1`, server-signed `libapp.so` patches) runs on
 - **Custom engine.** Your app must be built with the Flutter OTA toolchain. Adopting it, or moving to a new toolchain, needs a **new store release**.
 - **Flutter versions.**
   - Flutter 3.47.9 is published (v0.2.0-alpha).
-  - Flutter 3.50.0 is supported from the next release. It was tested on an x86_64 emulator with arm64 translation; it is not yet tested on a physical phone.
+  - Flutter 3.50.0 is supported from the next release. It was tested on one physical Android 13 arm64 phone (release APK, a patch, rollback, and the B25/B27 and memory-fault malformed patches), and more widely on an x86_64 emulator with arm64 translation.
   - Each Flutter version needs its own engine and toolchain build by the project owner. A store release is always patched with the toolchain it was built with. Patch an older release from that release's code (its `pubspec.lock`); see [toolchain management](toolchain-management.md#7-flutter-upgrades).
 
 **What can be patched**
