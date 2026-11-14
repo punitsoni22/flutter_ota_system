@@ -2,4 +2,4 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /// Keep in sync with pubspec.yaml.
-const cliVersion = '0.2.0-alpha.2';
+const cliVersion = '0.3.0-alpha';
