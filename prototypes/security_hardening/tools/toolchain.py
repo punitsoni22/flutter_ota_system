@@ -15,6 +15,7 @@ id = SHA-256 of the canonical JSON of all other fields (same encoding as package
 """
 import hashlib
 import json
+import os
 import pathlib
 import re
 import sys
@@ -32,12 +33,21 @@ def tree_hash(root: pathlib.Path, paths) -> str:
 
 
 def pins():
+    """The pin set: PINS_FILE if set (for example bytecode_engine/pins-3.50.0.env), else the baseline."""
     out = {}
-    for line in (HERE.parent / "bytecode_engine/pins.env").read_text().splitlines():
+    path = pathlib.Path(os.environ.get("PINS_FILE") or HERE.parent / "bytecode_engine/pins.env")
+    for line in path.read_text().splitlines():
         if "=" in line and not line.startswith("#"):
             k, v = line.split("=", 1)
             out[k.strip()] = v.strip()
     return out
+
+
+def engine_patch(dart_revision: str) -> pathlib.Path:
+    """Same rule as scripts/engine_patch.sh: the baseline patch, or the port for this Dart revision."""
+    base = (HERE / "engine_patch/BASE_DART_REVISION").read_text().strip()
+    name = "0001-dart-bytecode-verifier.patch" if dart_revision == base else f"0001-dart-bytecode-verifier-{dart_revision[:7]}.patch"
+    return HERE / "engine_patch" / name
 
 
 def main():
@@ -51,7 +61,7 @@ def main():
         "dart": p["DART_VERSION"],
         "engine": p["ENGINE_COMMIT"][:8],
         "dart_revision": p["DART_REVISION"][:8],
-        "engine_patch_sha256": hashlib.sha256((HERE / "engine_patch/0001-dart-bytecode-verifier.patch").read_bytes()).hexdigest(),
+        "engine_patch_sha256": hashlib.sha256(engine_patch(p["DART_REVISION"]).read_bytes()).hexdigest(),
         "compiler_sha256": tree_hash(dart, [dart / "pkg/dart2bytecode/lib", dart / "pkg/dart2bytecode/bin"]),
         "generator_sha256": tree_hash(repo, [
             repo / "real_app_compatibility/tools/pkg_rename/bin/pkg_rename.dart",
