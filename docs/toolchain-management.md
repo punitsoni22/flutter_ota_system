@@ -417,9 +417,11 @@ change to the Android build files also blocks a patch, so patch them from their 
   - 3.50.0 was tested on an Android 14 x86_64 emulator with arm64 translation: release APK/AAB,
     patches, rollback, the malformed-patch corpus, and patching a 3.47.9 release after the project
     moved to 3.50.
-  - On one physical Android 13 arm64 phone (release APK, a patch, rollback, and the B25/B27 and memory-fault malformed patches): same results as 3.47.9.
-- The install was tested on Linux x64 with the official Flutter 3.47.9 archive downloaded over
-  HTTPS: the download resumed after an interruption, `toolchain doctor` passed, and a release
-  build of a new `flutter create` app worked and packaged the OTA `libflutter.so`.
+  - On one physical Android 13 arm64 phone (release APK and AAB installed with bundletool, a patch,
+    rollback, and the B25/B27 and memory-fault malformed patches): same results as 3.47.9.
+- The install was tested on Linux x64 with the official Flutter archives downloaded over HTTPS:
+  the download resumed after an interruption, `toolchain doctor` passed, and a release build of a
+  new `flutter create` app worked and packaged the OTA `libflutter.so`. Both toolchains were also
+  installed side by side from the signed v0.3.0-alpha index into an empty cache.
 - The first Gradle build needs internet access to the usual public repositories (about 2 GB into
   the toolchain's `gradle-home`).
