@@ -23,6 +23,8 @@ import '../toolchain/disk_space.dart';
 import '../toolchain/index.dart';
 import '../toolchain/install_lock.dart';
 import '../toolchain/manager.dart';
+import '../toolchain/selection.dart';
+import '../doctor/android_build_versions.dart';
 import '../toolchain/trusted_keys.dart';
 import '../version.dart';
 
@@ -363,7 +365,19 @@ class _ToolchainInstall extends _Cmd {
     } else {
       final compatible = index.compatible;
       if (compatible.isEmpty) throw CliException('The index lists no toolchain for $supportedHost hosts.');
-      entry = compatible.last;
+      // No pin yet: the newest toolchain this project can build with (Dart constraint, Android
+      // build tool minimums).
+      final choice = chooseToolchain(compatible, projectDir: projectDir);
+      for (final s in choice.skipped) {
+        ctx.out.writeln('Skipping $s');
+      }
+      if (choice.entry == null) {
+        throw CliException(
+          'No toolchain in the index fits this project. Raise the Android build tool versions or the '
+          'pubspec.yaml sdk constraint, or name a toolchain:  flutter_ota toolchain install <id>',
+        );
+      }
+      entry = choice.entry!;
     }
     await m.install(entry, force: argResults!['force'] == true);
     if (projectDir != null && lock == null) {
@@ -543,7 +557,21 @@ class _UpgradeCommand extends _Cmd {
       target = e;
     } else {
       if (compatible.isEmpty) throw CliException('No compatible toolchain in the index.');
-      target = compatible.last;
+      // Default: the newest toolchain this project can build with; say why newer ones do not fit.
+      final choice = chooseToolchain(compatible, projectDir: projectDir);
+      for (final s in choice.skipped) {
+        ctx.out.writeln('Not offered: $s');
+      }
+      if (choice.entry == null) throw CliException('No toolchain in the index fits this project.');
+      target = choice.entry!;
+    }
+    final min = minimumsFor(target.flutter);
+    final problems = min == null ? const <String>[] : AndroidBuildVersions.read(projectDir).problemsAgainst(min);
+    if (problems.isNotEmpty) {
+      ctx.out.writeln(
+        'Warning: Flutter ${target.flutter} refuses to build this project until you raise ${problems.join(', ')} '
+        '(android/gradle/wrapper/gradle-wrapper.properties, android/settings.gradle(.kts)).',
+      );
     }
     if (lock != null && lock.matches(target)) {
       ctx.out.writeln('Already on ${target.id}. Nothing to do.');

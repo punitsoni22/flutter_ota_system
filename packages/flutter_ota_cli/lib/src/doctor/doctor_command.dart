@@ -7,6 +7,7 @@ import 'package:args/command_runner.dart';
 
 import '../context.dart';
 import '../errors.dart';
+import 'android_build_versions.dart';
 import '../keys/key_store.dart';
 import '../project/lockfile.dart';
 import '../project/project.dart';
@@ -130,6 +131,20 @@ class DoctorCommand extends Command<int> {
         }
       } else {
         add(_Status.ok, lockFileName, '${lock.toolchain} (Flutter ${lock.flutter})');
+        final min = minimumsFor(lock.flutter);
+        if (min != null) {
+          final problems = AndroidBuildVersions.read(dir).problemsAgainst(min);
+          if (problems.isEmpty) {
+            add(_Status.ok, 'android build tools', 'meet the Flutter ${lock.flutter} minimums');
+          } else {
+            add(
+              _Status.error,
+              'android build tools',
+              '${problems.join(', ')} (Flutter ${lock.flutter} refuses to build below these)',
+              'raise them in android/gradle/wrapper/gradle-wrapper.properties and android/settings.gradle(.kts)',
+            );
+          }
+        }
         try {
           final tc = await ToolchainManager(ctx).resolve(lock);
           add(_Status.ok, 'toolchain', 'installed and verified (${tc.root})');

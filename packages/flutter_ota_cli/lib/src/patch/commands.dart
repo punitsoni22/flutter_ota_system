@@ -13,6 +13,7 @@ import '../project/lockfile.dart';
 import '../project/project.dart';
 import '../toolchain/manager.dart';
 import 'module_builder.dart';
+import 'release_record.dart';
 import 'pipeline.dart';
 
 /// Environment variable with the path of a `bc_verify` AOT snapshot, used ONLY when the toolchain
@@ -64,7 +65,27 @@ class PatchAndroidCommand extends Command<int> {
     }
     final lock = Lockfile.readIn(projectDir);
     if (lock == null) throw CliException('No $lockFileName in $projectDir. Run `flutter_ota toolchain install` first.');
-    final tc = await ToolchainManager(ctx).resolve(lock, lockPath: p.join(projectDir, lockFileName));
+    // A patch must be built with the toolchain its store release was built with (the installed app
+    // only runs bytecode from that exact toolchain), even when the project has moved on to another one.
+    final release = ReleaseRecord.find(projectDir, releaseId: a['release'] as String?);
+    final m = ToolchainManager(ctx);
+    final ResolvedToolchain tc;
+    if (release.toolchainId == lock.toolchainId) {
+      tc = await m.resolve(lock, lockPath: p.join(projectDir, lockFileName));
+    } else {
+      ctx.out.writeln(
+        'Release ${release.releaseId} was built with ${release.toolchainName}; this project now pins '
+        '${lock.toolchain}. Building the patch with ${release.toolchainName}.',
+      );
+      tc = await m.resolve(
+        await releaseToolchainLock(
+          m,
+          releaseId: release.releaseId,
+          toolchain: release.toolchainName,
+          toolchainId: release.toolchainId,
+        ),
+      );
+    }
     final tools = toolsFor(tc, ctx.environment);
     final pipeline = PatchPipeline(
       ctx: ctx,
@@ -85,6 +106,42 @@ class PatchAndroidCommand extends Command<int> {
     );
     return 0;
   }
+}
+
+/// The lock-like pin of the toolchain a store release was built with ([toolchain], [toolchainId]
+/// from its release.json): from the install record when it is installed, otherwise from the
+/// verified index (installing it). The index entry must carry the release's exact toolchain id, so
+/// a mirror cannot swap in another toolchain.
+Future<Lockfile> releaseToolchainLock(
+  ToolchainManager m, {
+  required String releaseId,
+  required String toolchain,
+  required String toolchainId,
+}) async {
+  final installed = m.installed()[toolchain];
+  if (installed != null && installed['toolchain_id'] == toolchainId) {
+    String f(String k) => '${installed[k] ?? ''}';
+    return Lockfile(
+      toolchain: toolchain,
+      toolchainId: toolchainId,
+      flutter: f('flutter'),
+      dart: f('dart'),
+      engine: f('engine'),
+      dartRevision: f('dart_revision'),
+    );
+  }
+  final index = await m.loadIndex();
+  final entry = index.byId(toolchain);
+  if (entry == null || entry.toolchainId != toolchainId) {
+    throw CliException(
+      'Release $releaseId was built with $toolchain ($toolchainId), which is not '
+      'installed and not in the verified toolchain index (${index.source}). Patches for this release need that '
+      'exact toolchain.',
+    );
+  }
+  m.ctx.out.writeln('Installing ${entry.id} for release $releaseId...');
+  await m.install(entry);
+  return Lockfile.fromEntry(entry);
 }
 
 /// The patch tools of an installed toolchain.

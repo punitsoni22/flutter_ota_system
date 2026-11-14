@@ -87,6 +87,9 @@ class ReleaseRecord {
   String get libappSha256 => _str('libapp_sha256');
   String get interfaceSha256 => _str('interface_sha256');
   String get toolchainId => _str('toolchain_id');
+
+  /// Name of the toolchain the release was built with (for example `flutter-3.47.9-ota.1`).
+  String get toolchainName => _str('toolchain');
   String get createdAt => (json['created_at'] as String?) ?? '';
   String? get canonicalBuildRoot => json['canonical_build_root'] as String?;
   String? get serverUrl => json['server_url'] as String?;

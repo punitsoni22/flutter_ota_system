@@ -255,7 +255,8 @@ class ToolchainManager {
     }
   }
 
-  /// Toolchain ids pinned by known projects whose lock file still exists and still pins them.
+  /// Toolchain ids in use by known projects: pinned by their lock file, or recorded by one of their
+  /// local store releases.
   Set<String> pinnedToolchains() {
     final pinned = <String>{};
     _readProjects().forEach((lockPath, id) {
@@ -267,8 +268,30 @@ class ToolchainManager {
       } on CliException {
         // Unreadable lock: ignore.
       }
+      // Store releases of the project keep their toolchain in use: patches for an installed app
+      // must be built with the toolchain its release was built with, even after `upgrade`.
+      pinned.addAll(releaseToolchains(p.dirname(lockPath)));
     });
     return pinned;
+  }
+
+  /// Toolchain names recorded by the local store releases of [projectDir]
+  /// (`.flutter_ota/releases/*/release.json`, field `toolchain`).
+  static Set<String> releaseToolchains(String projectDir) {
+    final out = <String>{};
+    final root = Directory(p.join(projectDir, '.flutter_ota', 'releases'));
+    if (!root.existsSync()) return out;
+    for (final d in root.listSync().whereType<Directory>()) {
+      final f = File(p.join(d.path, 'release.json'));
+      if (!f.existsSync()) continue;
+      try {
+        final t = (jsonDecode(f.readAsStringSync()) as Map)['toolchain'];
+        if (t is String && t.isNotEmpty) out.add(t);
+      } on FormatException {
+        // Unreadable record: ignore.
+      }
+    }
+    return out;
   }
 
   /// Health checks of one installed toolchain. Never runs or changes the global Flutter.
