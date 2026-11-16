@@ -8,4 +8,4 @@ PyJWT>=2.15.1
 cryptography>=50.0.2
 python-multipart>=0.0.33
 alembic>=1.20.1
-boto3>=1.43.126
+boto3>=1.44.2
