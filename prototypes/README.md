@@ -19,6 +19,7 @@ official demo app is [packages/ota_client/example](../packages/ota_client/exampl
 | [bytecode_engine/](bytecode_engine/README.md) | Phase 1: pinned toolchain (`pins.env`), engine build scripts and a minimal host app that loads one bytecode patch | Kept: its pinned toolchain and scripts are reused by later phases |
 | [real_app_compatibility/](real_app_compatibility/README.md) | Phase 2: a multi-package host app, patch and probe modules, the `pkg_rename` tool and recorded device results | Kept: its packages, patches, scripts and tools are reused by later phases |
 | [security_hardening/](security_hardening/README.md) | Phase 3: patch security (`patch_security`), `patch_guard`, the in-VM bytecode verifier engine patch, `bc_verify`, device security suites | Kept: the guard, verifier patch and `bc_verify` are used by the product toolchain |
+| [redirect_stubs/](redirect_stubs/README.md) | Adaptive patch levels: any Dart change in the app ships as a patch whose size follows the change (redirect stubs, the `ota_redirect` tool, a 51-case local proof and the Shot 2 device run) | Experimental: used by `flutter_ota release/patch android --engine redirect` |
 
 Both are kept for reproducibility: every result in the reports can be traced to the scripts and
 recorded output here. Their apps exist only to test the engine; do not use them as integration

@@ -1,0 +1,17 @@
+name: ota_redirect
+description: >-
+  Shot 1 spike: source-level redirect stubs for function-level OTA patches.
+  `instrument` prepares a store build; `patch` turns a code change into a patch library.
+publish_to: none
+version: 0.0.1
+
+environment:
+  sdk: ^3.8.0
+
+# Exact versions: the tool uses analyzer APIs that change between minor versions, and it is run
+# with whatever Dart the OTA toolchain ships (pubspec.lock is not committed).
+dependencies:
+  analyzer: 14.5.0
+  _fe_analyzer_shared: 109.0.0
+  path: 1.9.1
+  crypto: 3.0.8
