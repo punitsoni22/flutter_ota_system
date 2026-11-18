@@ -1,0 +1,5 @@
+# Copyright 2026 The Punit Authors
+# SPDX-License-Identifier: Apache-2.0
+# Patch chain, patch 2: v2 plus a one-line change (firstOr returns the middle element).
+base: v2
+from_v2: 

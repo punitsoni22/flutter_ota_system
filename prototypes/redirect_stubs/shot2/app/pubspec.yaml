@@ -1,0 +1,18 @@
+# Shot 2 device app (template). run_shot2.sh copies it to a work folder, adds the Android
+# project (flutter create) and the test cases, and points flutter_ota_system at this checkout.
+name: ota_shot2
+description: Shot 2 device test app for the redirect patch engine.
+publish_to: none
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.12.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_ota_system:
+    path: ../../../../packages/ota_client
+
+flutter:
+  uses-material-design: true

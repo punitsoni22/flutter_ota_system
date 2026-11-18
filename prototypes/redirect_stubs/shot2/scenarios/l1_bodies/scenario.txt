@@ -1,0 +1,5 @@
+# Copyright 2026 The Punit Authors
+# SPDX-License-Identifier: Apache-2.0
+# Size ladder: changed bodies in five files (level 1).
+base: v1
+from_v2: src/async_gen.dart src/ext_enum.dart src/generics.dart src/oop.dart src/privates.dart

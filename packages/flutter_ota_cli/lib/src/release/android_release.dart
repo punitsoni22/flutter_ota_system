@@ -20,6 +20,7 @@ import '../context.dart';
 import '../errors.dart';
 import '../keys/key_store.dart';
 import '../project/lockfile.dart';
+import '../redirect/redirect_engine.dart';
 import '../server/admin_client.dart';
 import '../server/app_state.dart';
 import '../toolchain/manager.dart';
@@ -52,7 +53,22 @@ class AndroidReleaseOptions {
     this.environment = defaultEnvironment,
     this.serverUrl,
     this.channel,
+    this.engine = featureEngine,
+    this.skipLeaves = false,
+    this.interfaceScope = interfaceScopeAll,
   });
+
+  /// Patch engine this store build is prepared for: `feature` (feature packages and slots) or
+  /// `redirect` (EXPERIMENTAL: every function and initializer of the app can be replaced).
+  final String engine;
+
+  /// Redirect engine only: tiny leaf functions get no check (a patch re-points their callers).
+  final bool skipLeaves;
+
+  /// Redirect engine only, EXPERIMENTAL: `all` (every library of the store build, the default) or
+  /// `app` (only the app package and the safe `dart:` libraries; patches cannot use Flutter or
+  /// other packages directly). For measuring what the interface costs.
+  final String interfaceScope;
 
   /// `aab` or `apk`.
   final String kind;
@@ -381,6 +397,21 @@ class AndroidRelease {
       what: 'flutter pub get (build copy)',
       record: commands,
     );
+    var privateClasses = const <({String library, String className})>[];
+    if (options.engine == redirectEngine) {
+      // EXPERIMENTAL: prepare the build copy so every function and initializer can be patched.
+      // Everything below (dynamic interface, link.dill, the store build) sees the prepared code.
+      _say('  Redirect engine: adding patch slots to the build copy');
+      final out = await runRedirectTool(
+        dartBin: tc.dartBin,
+        toolDir: redirectToolDir(ctx.environment),
+        args: ['instrument', copyApp, if (options.skipLeaves) '--skip-leaves'],
+        environment: env,
+      );
+      _say('  ${out.trim().split('\n').last}');
+      saveRedirectBaseline(projectDir: dir, instrumentedApp: copyApp, releaseDir: tmp);
+      privateClasses = redirectPrivateClasses(p.join(copyApp, 'ota_manifest.json'));
+    }
     final packages = readPackageConfig(p.join(copyApp, '.dart_tool', 'package_config.json'));
     final copyReal = Directory(copy.root).resolveSymbolicLinksSync();
     final local = [
@@ -441,7 +472,12 @@ class AndroidRelease {
       for (final x in local)
         if (hostAll.contains(x.name) && x.name != loaderPackageName) x.name,
     ]..sort();
-    final iface = buildDynamicInterface(libs1, exclude: {entryUri});
+    final iface = buildDynamicInterface(
+      libs1,
+      exclude: {entryUri},
+      privateClasses: privateClasses,
+      onlyPackages: options.interfaceScope == interfaceScopeApp ? {app.packageName} : null,
+    );
     for (final d in [tmp, copyWork.path]) {
       File(p.join(d, dynamicInterfaceName)).writeAsStringSync(iface.yaml);
     }
@@ -630,6 +666,9 @@ class AndroidRelease {
       'link_defines': defines,
       'build_args': buildArgs,
       'cli_version': cliVersion,
+      'patch_engine': options.engine,
+      if (options.engine == redirectEngine) 'redirect_skip_leaves': options.skipLeaves,
+      if (options.interfaceScope != interfaceScopeAll) 'interface_scope': options.interfaceScope,
       'created_at': DateTime.now().toUtc().toIso8601String(),
       'registered': null,
     };

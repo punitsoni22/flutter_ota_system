@@ -1,0 +1,5 @@
+# Copyright 2026 The Punit Authors
+# SPDX-License-Identifier: Apache-2.0
+# Size ladder: new fields, a field type change, new enum values (level 3).
+base: v1
+from_v2: src/models.dart src/refuse.dart

@@ -6,6 +6,7 @@ import 'package:path/path.dart' as p;
 
 import '../context.dart';
 import '../keys/key_store.dart';
+import '../redirect/redirect_engine.dart';
 import 'android_release.dart';
 
 /// `flutter_ota release`.
@@ -32,7 +33,32 @@ class _ReleaseAndroid extends Command<int> {
         help: 'Trust environment compiled into the app; patch signer certificates must match it.',
       )
       ..addOption('channel', help: 'Update channel compiled into the app (default in the SDK: production).')
-      ..addOption('server-url', help: 'Override the configured server URL for this run.');
+      ..addOption('server-url', help: 'Override the configured server URL for this run.')
+      ..addOption(
+        'engine',
+        allowed: patchEngines,
+        defaultsTo: featureEngine,
+        help:
+            'Patch engine this store build is prepared for. "redirect" is EXPERIMENTAL: every '
+            'function and initializer of the app can be patched (needs $redirectToolEnv).',
+      )
+      ..addFlag(
+        'skip-leaves',
+        negatable: false,
+        help:
+            'Redirect engine: tiny leaf functions get no check (faster hot loops; a patch '
+            're-points their callers instead).',
+      )
+      ..addOption(
+        'interface-scope',
+        allowed: interfaceScopes,
+        defaultsTo: interfaceScopeAll,
+        hide: true,
+        help:
+            'EXPERIMENTAL, redirect engine only: "app" lists only the app package and the dart: '
+            'libraries in the dynamic interface (patches cannot use Flutter or other packages '
+            'directly). For measuring the cost of the interface.',
+      );
   }
 
   final CliContext ctx;
@@ -49,6 +75,9 @@ class _ReleaseAndroid extends Command<int> {
   @override
   Future<int> run() async {
     final r = argResults!;
+    if (r['interface-scope'] != interfaceScopeAll && r['engine'] != redirectEngine) {
+      usageException('--interface-scope needs --engine $redirectEngine.');
+    }
     final result = await AndroidRelease(
       ctx,
       AndroidReleaseOptions(
@@ -58,6 +87,9 @@ class _ReleaseAndroid extends Command<int> {
         environment: r['environment'] as String,
         serverUrl: r['server-url'] as String?,
         channel: r['channel'] as String?,
+        engine: r['engine'] as String,
+        skipLeaves: r['skip-leaves'] as bool,
+        interfaceScope: r['interface-scope'] as String,
         extraArgs: r.rest,
       ),
     ).run();

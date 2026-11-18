@@ -19,6 +19,7 @@ import '../features/discovery.dart';
 import '../features/package_graph.dart';
 import '../features/snapshot.dart';
 import '../project/project.dart';
+import '../redirect/redirect_engine.dart';
 import '../server/admin_client.dart';
 import '../signing/certificate.dart';
 import '../signing/key_store.dart';
@@ -43,8 +44,13 @@ class PatchOptions {
 }
 
 class PatchResult {
-  PatchResult({required this.plan, this.containerPath, this.manifest, this.serverPatchId, this.uploaded = false});
-  final PatchPlan plan;
+  PatchResult({this.plan, this.redirect, this.containerPath, this.manifest, this.serverPatchId, this.uploaded = false});
+
+  /// Feature engine: the package plan. Null for the redirect engine.
+  final PatchPlan? plan;
+
+  /// Redirect engine (EXPERIMENTAL): what the patch tool decided. Null for the feature engine.
+  final RedirectPatchSource? redirect;
   final String? containerPath;
   final Map<String, Object?>? manifest;
   final String? serverPatchId;
@@ -115,6 +121,13 @@ class PatchPipeline {
       'Patch for release ${release.releaseId}${release.version == null ? '' : ' (version ${release.version})'}, '
       'environment ${release.environment}',
     );
+    if (release.patchEngine == redirectEngine) return _executeRedirect(o, release, appId);
+    if (release.patchEngine != featureEngine) {
+      throw CliException(
+        'Release ${release.releaseId} was built for the patch engine "${release.patchEngine}", which this CLI '
+        'does not know.',
+      );
+    }
 
     _say('[1/7] Reading the project (flutter pub get with the toolchain SDK)');
     final pg = await run(
@@ -235,6 +248,164 @@ class PatchPipeline {
     } finally {
       canon.release();
     }
+    return _ship(
+      o,
+      release: release,
+      appId: appId,
+      built: built,
+      sequence: sequence,
+      server: server,
+      what: 'features ${plan.features.join(', ')}',
+      summaryFields: {
+        'packages': plan.packages.toList()..sort(),
+        'features': plan.features,
+        'reasons': plan.why,
+        'renames': built.renames,
+      },
+      result: ({containerPath, manifest, serverPatchId, uploaded = false}) => PatchResult(
+        plan: plan,
+        containerPath: containerPath,
+        manifest: manifest,
+        serverPatchId: serverPatchId,
+        uploaded: uploaded,
+      ),
+    );
+  }
+
+  /// Redirect engine (EXPERIMENTAL): the patch tool diffs the app package against the source the
+  /// store build was made from and writes a module package that fills the store build's hidden
+  /// slots; the module is then guarded, compiled, verified, signed and uploaded like any patch.
+  Future<PatchResult> _executeRedirect(PatchOptions o, ReleaseRecord release, String appId) async {
+    final baseline = RedirectBaseline(release.dir)..check();
+    final toolDir = redirectToolDir(ctx.environment);
+    _say('  patch engine: redirect (EXPERIMENTAL)');
+
+    _say('[1/7] Reading the project (flutter pub get with the toolchain SDK)');
+    final pg = await run(
+      tools.flutterBin,
+      ['pub', 'get'],
+      workingDirectory: projectDir,
+      environment: processEnvironment,
+    );
+    if (pg.exitCode != 0) throw CliException('flutter pub get failed:\n${tail('${pg.stdout}\n${pg.stderr}')}');
+    final project = ProjectPackages.load(projectDir);
+    final appName = pubspecName(p.join(projectDir, 'pubspec.yaml'));
+    final diff = diffFeatureSnapshots(loadFeatureSnapshot(release.dir), captureFeatureSnapshot(projectDir));
+    final (refusals, notes) = redirectRefusals(diff, appName, release.hostPackages);
+    for (final n in notes) {
+      _say('  note: $n');
+    }
+    if (refusals.isNotEmpty) {
+      throw CliException(
+        'This change cannot be shipped as a patch:\n${refusals.map((r) => '  - $r').join('\n')}',
+        exitCode: 3,
+      );
+    }
+
+    // Sequence: higher than every patch of this release on the server and locally.
+    var sequence = release.localHighestSequence() + 1;
+    PatchServer? server;
+    if (!o.dryRun) {
+      server = _server(release);
+      sequence = max(sequence, await server.highestSequence(release.releaseId) + 1);
+    }
+    final moduleName = 'ota_patch_$sequence';
+
+    final canon = CanonicalBuildRoot.acquire(ctx.environment, log: ctx.log);
+    final BuiltModule built;
+    final RedirectPatchSource source;
+    try {
+      if (release.canonicalBuildRoot != null && release.canonicalBuildRoot != canon.path) {
+        throw CliException(
+          'Release ${release.releaseId} was built in the canonical build root ${release.canonicalBuildRoot}, '
+          'this build uses ${canon.path}. Set $canonicalBuildRootEnv=${release.canonicalBuildRoot} for patches of this release.',
+        );
+      }
+      final mapping = _linkCanonical(canon, project);
+      final workDir = p.join(canon.path, 'patch', moduleName);
+      if (Directory(workDir).existsSync()) Directory(workDir).deleteSync(recursive: true);
+
+      _say('[2/7] Changes since the store release (ota_redirect patch)');
+      source = await generateRedirectPatch(
+        dartBin: tools.dartBin,
+        toolDir: toolDir,
+        baseline: baseline,
+        projectDir: projectDir,
+        outDir: p.join(workDir, 'src', moduleName),
+        moduleName: moduleName,
+        environment: processEnvironment,
+        log: _say,
+      );
+      if (source.refused.isNotEmpty) {
+        throw CliException(
+          'This change cannot be shipped as a patch:\n${source.refused.map((r) => '  - $r').join('\n')}',
+          exitCode: 3,
+        );
+      }
+      if (source.isEmpty) {
+        _say('No file of $appName changed since release ${release.releaseId}. Nothing to patch.');
+        return PatchResult(redirect: source);
+      }
+
+      _say('[3/7] Generated code: not checked by the redirect engine (patches ship the source as it is)');
+
+      _say('[4/7] Building the module (guard, compile, verify)');
+      final fullMapping = PathMapping({..._mappingPairs, p.join(canon.path, 'patch'): p.join(canon.path, 'patch')});
+      built = await ModuleBuilder(tools: tools, run: run, log: _say, environment: processEnvironment).buildPackage(
+        moduleName: moduleName,
+        moduleDir: source.packageDir,
+        appName: appName,
+        appRoot: baseline.instrumented,
+        appPackageConfig: project.config.path,
+        hostPackagesJson: release.hostPackagesJson,
+        linkDill: release.linkDill,
+        dynamicInterface: release.dynamicInterface,
+        workDir: workDir,
+        mapping: fullMapping,
+        canonicalFlutterSdk: mapping.map(Directory(tools.flutterSdk).resolveSymbolicLinksSync()) ?? tools.flutterSdk,
+        requireVerifier: !o.dryRun,
+      );
+    } finally {
+      canon.release();
+    }
+
+    return _ship(
+      o,
+      release: release,
+      appId: appId,
+      built: built,
+      sequence: sequence,
+      server: server,
+      what: 'level ${source.level}',
+      summaryFields: {'engine': redirectEngine, 'redirect_report': source.report},
+      result: ({containerPath, manifest, serverPatchId, uploaded = false}) => PatchResult(
+        redirect: source,
+        containerPath: containerPath,
+        manifest: manifest,
+        serverPatchId: serverPatchId,
+        uploaded: uploaded,
+      ),
+    );
+  }
+
+  /// Steps 5-7, shared by both engines: manifest, local signature, summary, upload.
+  Future<PatchResult> _ship(
+    PatchOptions o, {
+    required ReleaseRecord release,
+    required String appId,
+    required BuiltModule built,
+    required int sequence,
+    required PatchServer? server,
+    required String what,
+    required Map<String, Object?> summaryFields,
+    required PatchResult Function({
+      String? containerPath,
+      Map<String, Object?>? manifest,
+      String? serverPatchId,
+      bool uploaded,
+    })
+    result,
+  }) async {
     final module = File(built.modulePath).readAsBytesSync();
     _say(
       '  module: ${module.length} bytes${built.verifierOutput == null ? ' (reference verifier NOT run)' : ', ${built.verifierOutput}'}',
@@ -283,10 +454,7 @@ class PatchPipeline {
       'release_id': release.releaseId,
       'sequence': sequence,
       'manifest': manifest,
-      'packages': plan.packages.toList()..sort(),
-      'features': plan.features,
-      'reasons': plan.why,
-      'renames': built.renames,
+      ...summaryFields,
       'guard': built.guardReport == null
           ? null
           : {'accepted': built.guardReport!['accepted'], 'findings': built.guardReport!['findings']},
@@ -298,11 +466,11 @@ class PatchPipeline {
     File(p.join(outDir.path, 'patch.json')).writeAsStringSync(const JsonEncoder.withIndent('  ').convert(summary));
 
     _say('[6/7] Summary');
-    _say('  manifest patch_id ${manifest['patch_id']}, sequence $sequence, features ${plan.features.join(', ')}');
+    _say('  manifest patch_id ${manifest['patch_id']}, sequence $sequence, $what');
     _say('  files: ${outDir.path}');
     if (o.dryRun) {
       _say('[7/7] Dry run: nothing was uploaded.');
-      return PatchResult(plan: plan, containerPath: containerPath, manifest: manifest);
+      return result(containerPath: containerPath, manifest: manifest);
     }
 
     _say('[7/7] Uploading');
@@ -327,13 +495,7 @@ class PatchPipeline {
       } else {
         _say('  not published. Publish it with:  ota patch publish $id --channel <channel> --percent <n>');
       }
-      return PatchResult(
-        plan: plan,
-        containerPath: containerPath,
-        manifest: manifest,
-        serverPatchId: id,
-        uploaded: true,
-      );
+      return result(containerPath: containerPath, manifest: manifest, serverPatchId: id, uploaded: true);
     } finally {
       s.close();
     }

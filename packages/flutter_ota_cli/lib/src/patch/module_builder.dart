@@ -334,60 +334,17 @@ class ModuleBuilder {
     }
 
     // 5. Compile.
-    log('  dart2bytecode: compiling against the release kernel and interface');
-    final module = p.join(spec.workDir, 'module.bc');
-    final c = await _tool(tools.dart2bytecode, [
-      '--target',
-      'flutter',
-      '--platform',
-      p.join(
-        spec.canonicalFlutterSdk,
-        'bin',
-        'cache',
-        'artifacts',
-        'engine',
-        'common',
-        'flutter_patched_sdk_product',
-        'platform_strong.dill',
-      ),
-      '--import-dill',
-      spec.linkDill,
-      '--validate',
-      spec.dynamicInterface,
-      '--packages',
-      canon(configPath),
-      '-o',
-      module,
-      canon(p.join(srcDir, spec.moduleName, 'lib', 'entry.dart')),
-    ]);
-    if (c.exitCode != 0 || !File(module).existsSync() || File(module).lengthSync() == 0) {
-      final out = '${c.stdout}\n${c.stderr}';
-      final hint = out.contains('in a dynamic module')
-          ? '\nHint: the patch uses a class of the store build in a way the dynamic interface does not allow '
-                '(for example extending it). If it comes from freezed_annotation, see docs/feature-patching.md.'
-          : '';
-      throw CliException('dart2bytecode failed (exit ${c.exitCode}):\n${tail(out)}$hint');
-    }
+    final module = await _compile(
+      linkDill: spec.linkDill,
+      dynamicInterface: spec.dynamicInterface,
+      canonicalFlutterSdk: spec.canonicalFlutterSdk,
+      packageConfig: canon(configPath),
+      entry: canon(p.join(srcDir, spec.moduleName, 'lib', 'entry.dart')),
+      out: p.join(spec.workDir, 'module.bc'),
+    );
 
     // 6. Reference verifier.
-    String? verifierOutput;
-    if (tools.bcVerify != null) {
-      log('  bc_verify: checking the bytecode with the reference verifier');
-      final v = await _tool(tools.bcVerify!, [module]);
-      if (v.exitCode != 0 || !v.stdout.trimLeft().startsWith('OK')) {
-        throw CliException(
-          'The reference bytecode verifier rejected the module:\n${tail('${v.stdout}\n${v.stderr}')}',
-          exitCode: 4,
-        );
-      }
-      verifierOutput = v.stdout.trim();
-    } else if (requireVerifier) {
-      throw CliException(
-        'The reference bytecode verifier (bc_verify) is not available: the toolchain has no '
-        'tools/bc_verify.aot. Patches are never uploaded without it. Install a toolchain that ships it '
-        '(toolchain builders only: set FLUTTER_OTA_BC_VERIFY to a bc_verify AOT snapshot), or use --dry-run.',
-      );
-    }
+    final verifierOutput = await _verify(module, requireVerifier: requireVerifier);
 
     final versions = <String, String>{};
     for (final x in spec.packages) {
@@ -402,6 +359,172 @@ class ModuleBuilder {
       verifierOutput: verifierOutput,
       packageVersions: versions,
     );
+  }
+
+  /// Builds a module from a ready module package (redirect engine): the package [moduleDir]
+  /// (written by `ota_redirect patch`) imports the app package [appName], which resolves to the
+  /// INSTRUMENTED source of the store build [appRoot] (the patch fills its hidden slots). No
+  /// package is renamed; everything else is the store build's resolution.
+  ///
+  /// Steps: package config (canonical paths), patch_guard on the module package, dart2bytecode
+  /// against the release kernel and interface, reference verifier.
+  Future<BuiltModule> buildPackage({
+    required String moduleName,
+    required String moduleDir,
+    required String appName,
+    required String appRoot,
+    required String appPackageConfig,
+    required String hostPackagesJson,
+    required String linkDill,
+    required String dynamicInterface,
+    required String workDir,
+    required PathMapping mapping,
+    required String canonicalFlutterSdk,
+    bool requireVerifier = true,
+  }) async {
+    Directory(workDir).createSync(recursive: true);
+    if (!p.isWithin(workDir, moduleDir)) {
+      throw CliException('The module package $moduleDir must be inside the work directory $workDir.');
+    }
+
+    // Package config: the store build's resolution, the app package at its instrumented source,
+    // and the module package.
+    final base = readPackageConfig(appPackageConfig);
+    if (!base.any((b) => b.name == appName)) throw CliException('$appPackageConfig has no package $appName.');
+    final entries = <ConfigPackage>[
+      for (final b in base)
+        if (b.name == appName) ConfigPackage(b.name, _real(appRoot), {...b.json, 'rootUri': ''}) else b,
+      ConfigPackage(moduleName, _real(moduleDir), {
+        'name': moduleName,
+        'rootUri': '',
+        'packageUri': 'lib/',
+        'languageVersion': '3.8',
+      }),
+    ];
+    final configPath = p.join(moduleDir, '.dart_tool', 'package_config.json');
+    Directory(p.dirname(configPath)).createSync(recursive: true);
+    File(configPath).writeAsStringSync(canonicalPackageConfig(entries, mapping));
+    String canon(String real) => mapping.map(_real(real)) ?? real;
+    final storeBuild = _storeBuildPackages(hostPackagesJson);
+    final hostPkgs = [
+      for (final b in base)
+        if (storeBuild.contains(b.name)) b.name,
+    ]..sort();
+
+    log('  patch_guard: analysing the module sources');
+    final guardJson = p.join(workDir, 'guard.json');
+    final g = await _tool(tools.patchGuard, [
+      '--root',
+      canon(p.dirname(moduleDir)),
+      '--package-config',
+      canon(configPath),
+      '--module-packages',
+      moduleName,
+      '--host-packages',
+      hostPackagesJson,
+      '--sdk',
+      p.join(canonicalFlutterSdk, 'bin', 'cache', 'dart-sdk'),
+      '--json',
+      guardJson,
+    ]);
+    Map<String, Object?>? guardReport;
+    try {
+      guardReport = jsonDecode(File(guardJson).readAsStringSync()) as Map<String, Object?>;
+    } on Object {
+      guardReport = null;
+    }
+    if (g.exitCode == patchGuardRejected) {
+      throw CliException('The patch was rejected by the security guard:\n${tail(g.stderr, 40)}', exitCode: 4);
+    }
+    if (g.exitCode != 0 || guardReport?['accepted'] != true) {
+      throw CliException('patch_guard failed (exit ${g.exitCode}):\n${tail('${g.stdout}\n${g.stderr}')}');
+    }
+
+    final module = await _compile(
+      linkDill: linkDill,
+      dynamicInterface: dynamicInterface,
+      canonicalFlutterSdk: canonicalFlutterSdk,
+      packageConfig: canon(configPath),
+      entry: canon(p.join(moduleDir, 'lib', 'entry.dart')),
+      out: p.join(workDir, 'module.bc'),
+    );
+    final verifierOutput = await _verify(module, requireVerifier: requireVerifier);
+    return BuiltModule(
+      modulePath: module,
+      renames: const {},
+      hostPackages: hostPkgs,
+      guardReport: guardReport,
+      verifierOutput: verifierOutput,
+      packageVersions: const {},
+    );
+  }
+
+  /// dart2bytecode of [entry] against the release kernel, validated against its interface.
+  Future<String> _compile({
+    required String linkDill,
+    required String dynamicInterface,
+    required String canonicalFlutterSdk,
+    required String packageConfig,
+    required String entry,
+    required String out,
+  }) async {
+    log('  dart2bytecode: compiling against the release kernel and interface');
+    final c = await _tool(tools.dart2bytecode, [
+      '--target',
+      'flutter',
+      '--platform',
+      p.join(
+        canonicalFlutterSdk,
+        'bin',
+        'cache',
+        'artifacts',
+        'engine',
+        'common',
+        'flutter_patched_sdk_product',
+        'platform_strong.dill',
+      ),
+      '--import-dill',
+      linkDill,
+      '--validate',
+      dynamicInterface,
+      '--packages',
+      packageConfig,
+      '-o',
+      out,
+      entry,
+    ]);
+    if (c.exitCode != 0 || !File(out).existsSync() || File(out).lengthSync() == 0) {
+      final text = '${c.stdout}\n${c.stderr}';
+      final hint = text.contains('in a dynamic module')
+          ? '\nHint: the patch uses a class of the store build in a way the dynamic interface does not allow '
+                '(for example extending it). If it comes from freezed_annotation, see docs/feature-patching.md.'
+          : '';
+      throw CliException('dart2bytecode failed (exit ${c.exitCode}):\n${tail(text)}$hint');
+    }
+    return out;
+  }
+
+  /// Reference verifier; null output when it is not available and not required.
+  Future<String?> _verify(String module, {required bool requireVerifier}) async {
+    if (tools.bcVerify != null) {
+      log('  bc_verify: checking the bytecode with the reference verifier');
+      final v = await _tool(tools.bcVerify!, [module]);
+      if (v.exitCode != 0 || !v.stdout.trimLeft().startsWith('OK')) {
+        throw CliException(
+          'The reference bytecode verifier rejected the module:\n${tail('${v.stdout}\n${v.stderr}')}',
+          exitCode: 4,
+        );
+      }
+      return v.stdout.trim();
+    }
+    if (requireVerifier) {
+      throw CliException(
+        'The reference bytecode verifier (bc_verify) is not available: the toolchain has no '
+        'tools/bc_verify.aot. Patches are never uploaded without it. Install a toolchain that ships it '
+        '(toolchain builders only: set FLUTTER_OTA_BC_VERIFY to a bc_verify AOT snapshot), or use --dry-run.',
+      );
+    }
+    return null;
   }
 
   static String canonical(Map<String, String> m) =>
