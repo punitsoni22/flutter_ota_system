@@ -23,6 +23,11 @@ const featureEngine = 'feature';
 const redirectEngine = 'redirect';
 const patchEngines = [featureEngine, redirectEngine];
 
+/// Dynamic interface scope of a store build (`release android --interface-scope`, EXPERIMENTAL).
+const interfaceScopeAll = 'all';
+const interfaceScopeApp = 'app';
+const interfaceScopes = [interfaceScopeAll, interfaceScopeApp];
+
 /// Environment variable with the folder of the `ota_redirect` tool.
 const redirectToolEnv = 'FLUTTER_OTA_REDIRECT_TOOL';
 
@@ -61,6 +66,27 @@ Future<String> runRedirectTool({
     throw CliException('ota_redirect ${args.first} failed (exit ${r.exitCode}):\n${r.stdout}\n${r.stderr}');
   }
   return '${r.stdout}';
+}
+
+/// The private classes, mixins and enums the instrumented app exposes to patches (manifest
+/// `private_types`), for the dynamic interface. Older manifests have none.
+List<({String library, String className})> redirectPrivateClasses(String manifestPath) {
+  final Object? j;
+  try {
+    j = jsonDecode(File(manifestPath).readAsStringSync());
+  } on Object catch (e) {
+    throw CliException('Cannot read the redirect manifest $manifestPath: $e');
+  }
+  final list = j is Map ? j['private_types'] : null;
+  if (list == null) return const [];
+  if (list is! List) throw CliException('$manifestPath: private_types is not a list.');
+  return [
+    for (final e in list)
+      if (e is Map && e['library'] is String && e['class'] is String)
+        (library: e['library'] as String, className: e['class'] as String)
+      else
+        throw CliException('$manifestPath: invalid private_types entry $e.'),
+  ];
 }
 
 /// Paths of the redirect baseline of one release (`<release>/redirect/`).

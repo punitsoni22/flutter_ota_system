@@ -44,11 +44,16 @@ class Instrumenter {
     'supers': <String>[],
     'accessors': <String>[], // keys of private declarations that got an accessor
     'leaves': <String>[], // exe keys left without a check (tiny leaves)
+    // Private classes, mixins and enums a patch reaches through their `ota$p` type alias. The
+    // dynamic interface must list them by name: a library entry covers public declarations only,
+    // so without it a patch cannot call their constructors or members.
+    'private_types': <Map<String, String>>[],
   };
 
   Map<String, Object?> get slots => manifest['slots'] as Map<String, Object?>;
   List<String> get supers => manifest['supers'] as List<String>;
   List<String> get accessors => manifest['accessors'] as List<String>;
+  List<Map<String, String>> get privateTypes => manifest['private_types'] as List<Map<String, String>>;
 
   int guards = 0;
   int initSlots = 0;
@@ -372,6 +377,7 @@ class Instrumenter {
     if (box.isPrivate) {
       tail.writeln('typedef ota\$p$b${box.tpDecl} = $b${box.tpNames};');
       accessors.add('${box.unit.rel}::::$b');
+      privateTypes.add({'library': 'package:${idx.pkg}/${box.unit.rel}', 'class': b});
     }
   }
 

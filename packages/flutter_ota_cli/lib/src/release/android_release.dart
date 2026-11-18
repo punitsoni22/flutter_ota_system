@@ -55,6 +55,7 @@ class AndroidReleaseOptions {
     this.channel,
     this.engine = featureEngine,
     this.skipLeaves = false,
+    this.interfaceScope = interfaceScopeAll,
   });
 
   /// Patch engine this store build is prepared for: `feature` (feature packages and slots) or
@@ -63,6 +64,11 @@ class AndroidReleaseOptions {
 
   /// Redirect engine only: tiny leaf functions get no check (a patch re-points their callers).
   final bool skipLeaves;
+
+  /// Redirect engine only, EXPERIMENTAL: `all` (every library of the store build, the default) or
+  /// `app` (only the app package and the safe `dart:` libraries; patches cannot use Flutter or
+  /// other packages directly). For measuring what the interface costs.
+  final String interfaceScope;
 
   /// `aab` or `apk`.
   final String kind;
@@ -391,6 +397,7 @@ class AndroidRelease {
       what: 'flutter pub get (build copy)',
       record: commands,
     );
+    var privateClasses = const <({String library, String className})>[];
     if (options.engine == redirectEngine) {
       // EXPERIMENTAL: prepare the build copy so every function and initializer can be patched.
       // Everything below (dynamic interface, link.dill, the store build) sees the prepared code.
@@ -403,6 +410,7 @@ class AndroidRelease {
       );
       _say('  ${out.trim().split('\n').last}');
       saveRedirectBaseline(projectDir: dir, instrumentedApp: copyApp, releaseDir: tmp);
+      privateClasses = redirectPrivateClasses(p.join(copyApp, 'ota_manifest.json'));
     }
     final packages = readPackageConfig(p.join(copyApp, '.dart_tool', 'package_config.json'));
     final copyReal = Directory(copy.root).resolveSymbolicLinksSync();
@@ -464,7 +472,12 @@ class AndroidRelease {
       for (final x in local)
         if (hostAll.contains(x.name) && x.name != loaderPackageName) x.name,
     ]..sort();
-    final iface = buildDynamicInterface(libs1, exclude: {entryUri});
+    final iface = buildDynamicInterface(
+      libs1,
+      exclude: {entryUri},
+      privateClasses: privateClasses,
+      onlyPackages: options.interfaceScope == interfaceScopeApp ? {app.packageName} : null,
+    );
     for (final d in [tmp, copyWork.path]) {
       File(p.join(d, dynamicInterfaceName)).writeAsStringSync(iface.yaml);
     }
@@ -655,6 +668,7 @@ class AndroidRelease {
       'cli_version': cliVersion,
       'patch_engine': options.engine,
       if (options.engine == redirectEngine) 'redirect_skip_leaves': options.skipLeaves,
+      if (options.interfaceScope != interfaceScopeAll) 'interface_scope': options.interfaceScope,
       'created_at': DateTime.now().toUtc().toIso8601String(),
       'registered': null,
     };

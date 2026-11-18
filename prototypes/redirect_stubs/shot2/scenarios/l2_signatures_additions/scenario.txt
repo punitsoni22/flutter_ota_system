@@ -1,0 +1,5 @@
+# Copyright 2026 The Punit Authors
+# SPDX-License-Identifier: Apache-2.0
+# Size ladder: changed signatures and new code (level 2).
+base: v1
+from_v2: src/sigs.dart src/additions.dart

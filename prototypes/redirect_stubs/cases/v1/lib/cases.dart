@@ -116,6 +116,8 @@ final Map<String, Case> cases = {
   // ---- known limit: background isolate
   'c43_isolate': () => inIsolate(3),
   'c43b_same_fn_main_isolate': () => heavy(3),
+  'c43c_isolate_run_tearoff': () => inIsolateTearOff(),
+  'c43d_isolate_spawn': () => inIsolateSpawn(3),
 };
 
 Future<List<String>> runAll() async {

@@ -8,6 +8,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_ota_cli/src/build_support/canonical_paths.dart';
+import 'package:flutter_ota_cli/src/build_support/dynamic_interface.dart';
 import 'package:flutter_ota_cli/src/errors.dart';
 import 'package:flutter_ota_cli/src/features/snapshot.dart';
 import 'package:flutter_ota_cli/src/patch/module_builder.dart';
@@ -46,6 +47,78 @@ void main() {
       expect(() => redirectToolDir({}), throwsA(isA<CliException>()));
       expect(() => redirectToolDir({redirectToolEnv: tmp.path}), throwsA(isA<CliException>()));
       expect(redirectToolDir({redirectToolEnv: _toolDir}), p.normalize(_toolDir));
+    });
+  });
+
+  group('dynamic interface: private classes reached through type aliases', () {
+    const libs = ['dart:core', 'dart:async', 'package:shop/main.dart', 'package:shop/src/a.dart'];
+
+    test('without private classes the file is exactly the policy-2 file', () {
+      final plain = buildDynamicInterface(libs);
+      expect(buildDynamicInterface(libs, privateClasses: const []).yaml, plain.yaml);
+      expect(plain.yaml, isNot(contains('class:')));
+    });
+
+    test('each private class is listed by name in every section, sorted and once', () {
+      final iface = buildDynamicInterface(
+        libs,
+        privateClasses: [
+          (library: 'package:shop/src/a.dart', className: '_Mode'),
+          (library: 'package:shop/src/a.dart', className: '_Calc'),
+          (library: 'package:shop/src/a.dart', className: '_Calc'),
+        ],
+      );
+      const entries =
+          "  - library: 'package:shop/src/a.dart'\n    class: '_Calc'\n"
+          "  - library: 'package:shop/src/a.dart'\n    class: '_Mode'\n";
+      expect(entries.allMatches(iface.yaml).length, 4, reason: iface.yaml);
+      for (final s in ['callable:', 'can-be-used-as-type:', 'extendable:', 'can-be-overridden:']) {
+        expect(iface.yaml, contains('$s\n'));
+      }
+    });
+
+    test('entries of unlisted libraries, public names and dart: libraries are dropped', () {
+      final iface = buildDynamicInterface(
+        libs,
+        exclude: {'package:shop/main.dart'},
+        privateClasses: [
+          (library: 'package:shop/main.dart', className: '_Hidden'),
+          (library: 'package:other/x.dart', className: '_X'),
+          (library: 'package:shop/src/a.dart', className: 'Public'),
+          (library: 'dart:core', className: '_StringBase'),
+        ],
+      );
+      expect(iface.yaml, isNot(contains('class:')));
+    });
+
+    test('the experimental app scope keeps only the app package and the dart: libraries', () {
+      final iface = buildDynamicInterface(
+        [...libs, 'package:flutter/widgets.dart', 'package:collection/collection.dart'],
+        onlyPackages: {'shop'},
+      );
+      expect(iface.libraries, ['dart:async', 'dart:core', 'package:shop/main.dart', 'package:shop/src/a.dart']);
+      expect(iface.yaml, contains('# EXPERIMENTAL scope: only the packages shop.'));
+      expect(buildDynamicInterface(libs, onlyPackages: null).yaml, buildDynamicInterface(libs).yaml);
+    });
+
+    test('the manifest lists them; older manifests have none', () {
+      final m = File(p.join(tmp.path, 'm.json'));
+      m.writeAsStringSync(
+        jsonEncode({
+          'private_types': [
+            {'library': 'package:shop/src/a.dart', 'class': '_Calc'},
+          ],
+        }),
+      );
+      expect(redirectPrivateClasses(m.path), [(library: 'package:shop/src/a.dart', className: '_Calc')]);
+      m.writeAsStringSync(jsonEncode({'slots': {}}));
+      expect(redirectPrivateClasses(m.path), isEmpty);
+      m.writeAsStringSync(
+        jsonEncode({
+          'private_types': [42],
+        }),
+      );
+      expect(() => redirectPrivateClasses(m.path), throwsA(isA<CliException>()));
     });
   });
 
@@ -351,6 +424,14 @@ void main() {
         expect(out, contains('guards'));
         saveRedirectBaseline(projectDir: project, instrumentedApp: buildCopy, releaseDir: release);
         final baseline = RedirectBaseline(release)..check();
+        // The private classes the patch of privates.dart reaches (the Shot 2 compile error).
+        expect(
+          redirectPrivateClasses(baseline.manifest),
+          containsAll([
+            (library: 'package:app/src/privates.dart', className: '_Calc'),
+            (library: 'package:app/src/privates.dart', className: '_Mode'),
+          ]),
+        );
 
         // No change yet: nothing to patch.
         final none = await generateRedirectPatch(

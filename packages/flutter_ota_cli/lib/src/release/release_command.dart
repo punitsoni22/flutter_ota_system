@@ -38,14 +38,26 @@ class _ReleaseAndroid extends Command<int> {
         'engine',
         allowed: patchEngines,
         defaultsTo: featureEngine,
-        help: 'Patch engine this store build is prepared for. "redirect" is EXPERIMENTAL: every '
+        help:
+            'Patch engine this store build is prepared for. "redirect" is EXPERIMENTAL: every '
             'function and initializer of the app can be patched (needs $redirectToolEnv).',
       )
       ..addFlag(
         'skip-leaves',
         negatable: false,
-        help: 'Redirect engine: tiny leaf functions get no check (faster hot loops; a patch '
+        help:
+            'Redirect engine: tiny leaf functions get no check (faster hot loops; a patch '
             're-points their callers instead).',
+      )
+      ..addOption(
+        'interface-scope',
+        allowed: interfaceScopes,
+        defaultsTo: interfaceScopeAll,
+        hide: true,
+        help:
+            'EXPERIMENTAL, redirect engine only: "app" lists only the app package and the dart: '
+            'libraries in the dynamic interface (patches cannot use Flutter or other packages '
+            'directly). For measuring the cost of the interface.',
       );
   }
 
@@ -63,6 +75,9 @@ class _ReleaseAndroid extends Command<int> {
   @override
   Future<int> run() async {
     final r = argResults!;
+    if (r['interface-scope'] != interfaceScopeAll && r['engine'] != redirectEngine) {
+      usageException('--interface-scope needs --engine $redirectEngine.');
+    }
     final result = await AndroidRelease(
       ctx,
       AndroidReleaseOptions(
@@ -74,6 +89,7 @@ class _ReleaseAndroid extends Command<int> {
         channel: r['channel'] as String?,
         engine: r['engine'] as String,
         skipLeaves: r['skip-leaves'] as bool,
+        interfaceScope: r['interface-scope'] as String,
         extraArgs: r.rest,
       ),
     ).run();
